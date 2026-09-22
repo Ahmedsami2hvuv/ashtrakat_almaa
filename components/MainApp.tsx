@@ -275,7 +275,7 @@ export default function MainApp() {
     }
   }, [])
 
-  // تحميل البيانات من localStorage
+  // تحميل البيانات من localStorage كنسخة احتياطية سريعة عند البدء
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -289,11 +289,92 @@ export default function MainApp() {
         if (data.collectorPhone) setCollectorPhone(data.collectorPhone)
         if (data.rangeFrom) setRangeFrom(data.rangeFrom)
         if (data.rangeTo) setRangeTo(data.rangeTo)
-        return
       }
     } catch {
       // استخدام الافتراضي
     }
+  }, [])
+
+  // تحميل البيانات من السيرفر (سوبابيس) لضمان التزامن الكامل بين الهاتف والحاسوب
+  useEffect(() => {
+    async function loadServerData() {
+      try {
+        // جلب المناطق والأفرع
+        const resAreas = await fetch('/api/areas')
+        if (resAreas.ok) {
+          const areasData = await resAreas.json()
+          if (Array.isArray(areasData) && areasData.length > 0) setAreas(areasData)
+        }
+
+        // جلب الأسعار
+        const resPricing = await fetch('/api/pricing')
+        if (resPricing.ok) {
+          const pricingData = await resPricing.json()
+          if (pricingData && (pricingData.سكني || pricingData.تجاري)) setPricing(pricingData)
+        }
+
+        // جلب بيانات المحصل
+        const resCollector = await fetch('/api/collector')
+        if (resCollector.ok) {
+          const collectorData = await resCollector.json()
+          if (collectorData) {
+            if (collectorData.name) setCollectorName(collectorData.name)
+            if (collectorData.phone) setCollectorPhone(collectorData.phone)
+            if (collectorData.range_from) setRangeFrom(collectorData.range_from)
+            if (collectorData.range_to) setRangeTo(collectorData.range_to)
+          }
+        }
+
+        // جلب المشتركين
+        const resSubscribers = await fetch('/api/subscribers')
+        if (resSubscribers.ok) {
+          const subsData = await resSubscribers.json()
+          if (Array.isArray(subsData)) {
+            const mappedSubs: Subscriber[] = subsData.map((s: any) => ({
+              id: Number(s.id),
+              name: s.name || '',
+              phone: s.phone || '',
+              areaId: s.area_id || '',
+              branchId: s.branch_id || '',
+              propertyType: s.property_type || 'سكني',
+              meterType: s.meter_type || '4 متر',
+              detailedAddress: s.detailed_address || '',
+              doorImage: s.door_image || undefined,
+              location: (s.location_lat && s.location_lng) ? { lat: s.location_lat, lng: s.location_lng, link: s.location_link || '' } : undefined,
+              order: Number(s.id),
+              statuses: []
+            }))
+            setSubscribers(mappedSubs)
+          }
+        }
+
+        // جلب الدفعات والفترات
+        const resPayments = await fetch('/api/payments')
+        if (resPayments.ok) {
+          const paymentsData = await resPayments.json()
+          if (Array.isArray(paymentsData)) {
+            const mappedBilling: BillingRecords = {}
+            paymentsData.forEach((p: any) => {
+              const subId = Number(p.subscriber_id)
+              const year = Number(p.year)
+              const period = Number(p.period)
+              if (!mappedBilling[subId]) mappedBilling[subId] = {}
+              if (!mappedBilling[subId][year]) {
+                mappedBilling[subId][year] = Array.from({ length: 6 }, () => ({ oldDebtManual: null, paid: 0 }))
+              }
+              mappedBilling[subId][year][period] = {
+                oldDebtManual: p.is_manual ? Number(p.old_debt) : null,
+                paid: Number(p.paid) || 0
+              }
+            })
+            setBilling(mappedBilling)
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching data from server:', err)
+      }
+    }
+    loadServerData()
   }, [])
 
   // الحفظ التلقائي في localStorage
@@ -315,6 +396,45 @@ export default function MainApp() {
       )
     } catch {}
   }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo])
+
+  // المزامنة التلقائية لبيانات المحصل إلى السيرفر عند تغييرها (مع debounce لمنع كثرة الطلبات)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetch('/api/collector', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: collectorName,
+          phone: collectorPhone,
+          rangeFrom,
+          rangeTo
+        })
+      }).catch(console.error)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [collectorName, collectorPhone, rangeFrom, rangeTo])
+
+  // المزامنة التلقائية للتسعير إلى السيرفر عند تغييره
+  useEffect(() => {
+    if (!pricing || subscribers.length === 0) return
+    Object.keys(pricing).forEach((propType) => {
+      const subPricing = pricing[propType as PropertyType]
+      if (subPricing) {
+        Object.keys(subPricing).forEach((meterType) => {
+          const amount = subPricing[meterType as MeterType]
+          fetch('/api/pricing', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              propertyType: propType,
+              meterType,
+              amount
+            })
+          }).catch(console.error)
+        })
+      }
+    })
+  }, [pricing])
 
   // تسجيل الدخول
   const handleLogin = (e: React.FormEvent) => {
@@ -511,6 +631,11 @@ export default function MainApp() {
     const cleanVal = value.replace(/[^0-9\-]/g, '')
     const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
 
+    let targetOldDebt = 0
+    let targetPaid = 0
+    let targetRemaining = 0
+    let targetIsManual = false
+
     setBilling((prev) => {
       const copy = { ...prev }
       if (!copy[subId]) copy[subId] = {}
@@ -543,8 +668,35 @@ export default function MainApp() {
       }
 
       copy[subId][year] = yearRecords
+
+      // جلب الحساب النهائي لإرساله للسيرفر
+      const finalBilling = calculateBilling(subId, year, copy, subscribers, pricing)
+      const finalRow = finalBilling.rows[periodIdx]
+      if (finalRow) {
+        targetOldDebt = finalRow.old
+        targetPaid = finalRow.paid
+        targetRemaining = finalRow.remaining
+        targetIsManual = finalRow.isManual
+      }
+
       return copy
     })
+
+    // إرسال البيانات المحدثة إلى قاعدة البيانات مباشرة
+    fetch('/api/payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscriberId: subId,
+        period: periodIdx,
+        year,
+        periodLabel: PERIODS[periodIdx],
+        oldDebt: targetOldDebt,
+        paid: targetPaid,
+        remaining: targetRemaining,
+        isManual: targetIsManual
+      })
+    }).catch(console.error)
 
     const key = `${subId}_${year}_${periodIdx}_${field}`
     setPendingEdits((prev) => {
@@ -596,6 +748,22 @@ export default function MainApp() {
 
     setSubscribers((prev) => [...prev, created])
 
+    // إرسال المشترك الجديد إلى قاعدة البيانات مباشرة للتزامن
+    fetch('/api/subscribers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: created.id,
+        name: created.name,
+        areaId: created.areaId,
+        branchId: created.branchId,
+        phone: created.phone,
+        propertyType: created.propertyType,
+        meterType: created.meterType,
+        detailedAddress: created.detailedAddress
+      })
+    }).catch(console.error)
+
     // إنشاء سجلات الديون للسنوات 2026، 2027، 2028
     setBilling((prev) => {
       const copy = { ...prev }
@@ -627,6 +795,22 @@ export default function MainApp() {
     setSubscribers((prev) =>
       prev.map((s) => (s.id === editSub.id ? { ...s, ...editSub } as Subscriber : s))
     )
+
+    // إرسال التحديث إلى قاعدة البيانات للتزامن
+    fetch(`/api/subscribers/${editSub.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: editSub.name,
+        areaId: editSub.areaId,
+        branchId: editSub.branchId,
+        phone: editSub.phone,
+        propertyType: editSub.propertyType,
+        meterType: editSub.meterType,
+        detailedAddress: editSub.detailedAddress
+      })
+    }).catch(console.error)
+
     setShowEditModal(false)
   }
 
@@ -761,6 +945,25 @@ export default function MainApp() {
 
     if (toAdd.length > 0) {
       setSubscribers((prev) => [...prev, ...toAdd])
+
+      // مزامنة كافة المشتركين الجدد مع قاعدة البيانات
+      toAdd.forEach((s) => {
+        fetch('/api/subscribers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: s.id,
+            name: s.name,
+            areaId: s.areaId,
+            branchId: s.branchId,
+            phone: s.phone,
+            propertyType: s.propertyType,
+            meterType: s.meterType,
+            detailedAddress: s.detailedAddress
+          })
+        }).catch(console.error)
+      })
+
       setBilling((prev) => {
         const copy = { ...prev }
         toAdd.forEach((s) => {
@@ -2389,6 +2592,20 @@ export default function MainApp() {
                             branches: [{ id: `b_${Date.now()}`, name: 'الرئيسي' }]
                           }
                           setAreas((prev) => [...prev, newArea])
+
+                          // مزامنة مع السيرفر
+                          fetch('/api/areas', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ type: 'area', id: newArea.id, name: newArea.name })
+                          }).catch(console.error)
+
+                          fetch('/api/areas', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ type: 'branch', id: newArea.branches[0].id, areaId: newArea.id, name: newArea.branches[0].name })
+                          }).catch(console.error)
+
                           setNewAreaName('')
                         }}
                         className="h-10 px-5 bg-slate-900 text-white rounded-2xl text-[11px] font-bold"
@@ -2412,6 +2629,12 @@ export default function MainApp() {
                               onClick={() => {
                                 if (editingAreaName.trim()) {
                                   setAreas((prev) => prev.map((a) => (a.id === area.id ? { ...a, name: editingAreaName.trim() } : a)))
+                                  // مزامنة مع السيرفر
+                                  fetch('/api/areas', {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ type: 'area', id: area.id, name: editingAreaName.trim() })
+                                  }).catch(console.error)
                                 }
                                 setEditingAreaId(null)
                               }}
@@ -2455,6 +2678,12 @@ export default function MainApp() {
                                             : a
                                         )
                                       )
+                                      // مزامنة مع السيرفر
+                                      fetch('/api/areas', {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ type: 'branch', id: br.id, name: editingBranchName.trim() })
+                                      }).catch(console.error)
                                     }
                                     setEditingBranchId(null)
                                   }}
@@ -2487,13 +2716,21 @@ export default function MainApp() {
                               if (e.key === 'Enter') {
                                 const input = e.target as HTMLInputElement
                                 if (!input.value.trim()) return
+                                const brId = `b_${Date.now()}`
+                                const brName = input.value.trim()
                                 setAreas((prev) =>
                                   prev.map((a) =>
                                     a.id === area.id
-                                      ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
+                                      ? { ...a, branches: [...a.branches, { id: brId, name: brName }] }
                                       : a
                                   )
                                 )
+                                // مزامنة مع السيرفر
+                                fetch('/api/areas', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ type: 'branch', id: brId, areaId: area.id, name: brName })
+                                }).catch(console.error)
                                 input.value = ''
                               }
                             }}
@@ -2502,13 +2739,21 @@ export default function MainApp() {
                             onClick={() => {
                               const input = document.getElementById(`add_br_${area.id}`) as HTMLInputElement
                               if (!input || !input.value.trim()) return
+                              const brId = `b_${Date.now()}`
+                              const brName = input.value.trim()
                               setAreas((prev) =>
                                 prev.map((a) =>
                                   a.id === area.id
-                                    ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
+                                    ? { ...a, branches: [...a.branches, { id: brId, name: brName }] }
                                     : a
                                 )
                               )
+                              // مزامنة مع السيرفر
+                              fetch('/api/areas', {
+                                method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ type: 'branch', id: brId, areaId: area.id, name: brName })
+                                }).catch(console.error)
                               input.value = ''
                             }}
                             className="h-9 px-4 bg-slate-900 text-white rounded-xl text-[11px] font-bold"

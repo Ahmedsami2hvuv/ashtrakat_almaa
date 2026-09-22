@@ -9,14 +9,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const subscriberId = searchParams.get('subscriber_id')
 
-    if (!subscriberId) {
-      return NextResponse.json({ error: 'subscriber_id مطلوب' }, { status: 400 })
+    let query = supabase.from('payments').select('*')
+
+    if (subscriberId) {
+      query = query.eq('subscriber_id', parseInt(subscriberId))
     }
 
-    const { data, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('subscriber_id', parseInt(subscriberId))
+    const { data, error } = await query
       .order('year', { ascending: true })
       .order('period', { ascending: true })
 
