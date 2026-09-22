@@ -2858,12 +2858,30 @@ export default function MainApp() {
                           )}
                         </div>
 
-                        <button
-                          onClick={handleConfirmImport}
-                          className="mt-3 w-full h-10 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-black transition-colors"
-                        >
-                          تأكيد وحفظ الاستيراد ({formatNumber(parsedImport.length)})
-                        </button>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={handleConfirmImport}
+                            className="flex-1 h-10 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-black transition-colors"
+                          >
+                            تأكيد وحفظ الاستيراد ({formatNumber(parsedImport.length)})
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('هل أنت متأكد من مسح قائمة المشتركين الحالية بالكامل؟ لا يمكن التراجع عن هذه الخطوة.')) {
+                                setSubscribers([])
+                                setBilling({})
+                                // مسح من السيرفر أيضاً
+                                subscribers.forEach(s => {
+                                  fetch(`/api/subscribers/${s.id}`, { method: 'DELETE' }).catch(console.error)
+                                })
+                                localStorage.removeItem(STORAGE_KEY)
+                              }
+                            }}
+                            className="h-10 px-4 border border-red-200 text-red-600 rounded-xl text-[11px] font-bold hover:bg-red-50"
+                          >
+                            تفريغ الكل
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
