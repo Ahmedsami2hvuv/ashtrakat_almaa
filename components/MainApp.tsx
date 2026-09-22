@@ -1,819 +1,1432 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Area, Subscriber, PaymentRow } from '@/lib/types'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 
-// ثوابت الفترات
-const PERIODS_PER_YEAR = 6
-const CURRENT_YEAR = new Date().getFullYear()
-const CURRENT_MONTH = new Date().getMonth() + 1
-const CURRENT_PERIOD = Math.ceil(CURRENT_MONTH / 2)
+// أنواع البيانات
+export type PropertyType = 'سكني' | 'تجاري'
+export type MeterType = '3 متر' | '4 متر' | '5 متر' | '6 متر'
 
-function getPeriodLabel(period: number, year: number): string {
-  return `${period}/${year}`
+export interface Branch {
+  id: string
+  name: string
 }
 
-function getCurrentPeriodIndex(rows: PaymentRow[]): number {
-  return rows.findIndex(
-    (r) => r.period === CURRENT_PERIOD && r.year === CURRENT_YEAR
-  )
+export interface Area {
+  id: string
+  name: string
+  branches: Branch[]
 }
 
-function formatNumber(n: number): string {
-  return n.toLocaleString('en-US')
+export interface Subscriber {
+  id: number
+  name: string
+  phone: string
+  areaId: string
+  branchId: string
+  propertyType: PropertyType
+  meterType: MeterType
+  detailedAddress: string
+  doorImage?: string
+  location?: { lat: number; lng: number; link: string }
+  order: number
+  statuses?: string[]
 }
+
+export type Pricing = Record<PropertyType, Record<MeterType, number>>
+export type BillingPeriodRecord = { oldDebtManual: number | null; paid: number }
+export type BillingRecords = Record<number, Record<number, BillingPeriodRecord[]>>
+export type ParsedImportItem = { id: number; name: string; raw: string; statuses: string[]; note?: string }
+
+const STORAGE_KEY = 'ashtrakat_almaa_v1_data'
+const AUTH_STORAGE_KEY = 'ashtrakat_almaa_auth_token'
+
+// السنوات المطلوبة حصراً
+const YEARS = [2026, 2027, 2028]
+const PERIODS = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
+const METERS: MeterType[] = ['3 متر', '4 متر', '5 متر', '6 متر']
 
 // حالات المشترك
-const STATUS_CONFIG: Record<string, { dot: string; label: string }> = {
-  'مسدد': { dot: 'bg-emerald-400', label: 'مسدد' },
-  'متبقي': { dot: 'bg-slate-900', label: 'متبقي' },
-  'عليه دين': { dot: 'bg-red-500', label: 'عليه دين' },
-  'فائض': { dot: 'bg-sky-500', label: 'فائض' },
-  'جديد': { dot: 'bg-amber-500', label: 'جديد' },
+const STATUS_OPTIONS = [
+  'ممتنع',
+  'مؤجر',
+  'مؤجر لا يعلم بالتفاصيل',
+  'يدفع بالدائرة',
+  'يجب فحص حسابه',
+  'يدفع باستمرار',
+  'مفلش'
+] as const
+
+const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  'ممتنع': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+  'مؤجر': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', dot: 'bg-sky-500' },
+  'مؤجر لا يعلم بالتفاصيل': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', dot: 'bg-amber-800' },
+  'يدفع بالدائرة': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', dot: 'bg-sky-500' },
+  'يجب فحص حسابه': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-500' },
+  'يدفع باستمرار': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  'مفلش': { bg: 'bg-zinc-100', text: 'text-zinc-700', border: 'border-zinc-300', dot: 'bg-zinc-500' }
 }
 
-// أنواع المتر
-const METER_TYPES = ['3 متر', '4 متر', '5 متر', '6 متر']
+const DEFAULT_AREAS: Area[] = [
+  { id: 'area_1', name: 'شارع الكهرباء', branches: [{ id: 'b_1', name: 'فرع المولدة' }, { id: 'b_2', name: 'فرع الفيترجي' }, { id: 'b_3', name: 'الرئيسي' }] },
+  { id: 'area_2', name: 'حي الجامعة', branches: [{ id: 'b_4', name: 'الفرع الاول' }, { id: 'b_5', name: 'الفرع الثاني' }] },
+  { id: 'area_3', name: 'حي العسكري', branches: [{ id: 'b_6', name: 'الرئيسي' }] },
+  { id: 'area_4', name: 'حي النفط', branches: [{ id: 'b_7', name: 'الرئيسي' }] }
+]
 
-function generatePaymentRows(
-  remainingPrev: number,
-  fee: number,
-  pricing: Record<string, Record<string, number>>,
-  propertyType: string,
-  meterType: string,
-  existingPayments: PaymentRow[]
-): PaymentRow[] {
-  const rows: PaymentRow[] = []
-  const price = pricing[propertyType]?.[meterType] || 0
-  let totalCarried = remainingPrev + fee
+const DEFAULT_PRICING: Pricing = {
+  سكني: { '3 متر': 15000, '4 متر': 24600, '5 متر': 28000, '6 متر': 36000 },
+  تجاري: { '3 متر': 20000, '4 متر': 30000, '5 متر': 40000, '6 متر': 50000 }
+}
 
-  for (let y = CURRENT_YEAR - 1; y <= CURRENT_YEAR + 1; y++) {
-    for (let p = 1; p <= PERIODS_PER_YEAR; p++) {
-      if (y > CURRENT_YEAR || (y === CURRENT_YEAR && p > CURRENT_PERIOD)) break
+function formatNumber(n: number | string | null | undefined): string {
+  if (n === null || n === undefined || isNaN(Number(n))) return '0'
+  return Number(n).toLocaleString('en-US')
+}
 
-      const existing = existingPayments.find((ep) => ep.period === p && ep.year === y)
-      const old = existing ? existing.old : totalCarried
-      const paid = existing ? existing.paid : 0
-      const remaining = old + price - paid
+// حساب الديون لفترات سنة معينة
+function calculateBilling(
+  subId: number,
+  year: number,
+  billingRecords: BillingRecords,
+  subscribers: Subscriber[],
+  pricing: Pricing
+) {
+  const sub = subscribers.find((s) => s.id === subId)
+  const emptyRes = {
+    rows: [] as Array<{
+      periodLabel: string
+      old: number
+      due: number
+      paid: number
+      remaining: number
+      isManual: boolean
+    }>,
+    remainingPrev: 0,
+    fee: 0,
+    totalCarried: 0,
+    due: 24600,
+    totalRemaining: 0
+  }
+  if (!sub) return emptyRes
 
-      rows.push({
-        period: p,
-        year: y,
-        periodLabel: getPeriodLabel(p, y),
-        old,
-        paid,
-        remaining,
-        isManual: existing?.isManual,
-      })
+  const due = pricing[sub.propertyType]?.[sub.meterType] ?? 24600
 
-      totalCarried = remaining
+  // الدين السابق من السنة السابقة (فقط لـ 2027 و 2028)
+  let prevRemaining = 0
+  if (year > 2026) {
+    const prevBilling = calculateBilling(subId, year - 1, billingRecords, subscribers, pricing)
+    if (prevBilling.rows.length > 0) {
+      prevRemaining = prevBilling.rows[prevBilling.rows.length - 1].remaining
     }
   }
 
-  return rows
+  // بداية السنة بسيطة: القديم + الفائدة = الناتج
+  const fee = prevRemaining > 0 ? Math.round(prevRemaining * 0.1) : 0
+  const totalCarried = prevRemaining + fee
+
+  const rows: Array<{
+    periodLabel: string
+    old: number
+    due: number
+    paid: number
+    remaining: number
+    isManual: boolean
+  }> = []
+
+  for (let p = 0; p < 6; p++) {
+    const rec = billingRecords[subId]?.[year]?.[p]
+    const paid = rec?.paid ?? 0
+    const manualOld = rec?.oldDebtManual
+    const isManual = manualOld !== null && manualOld !== undefined
+    const oldDebt: number = isManual ? (manualOld as number) : (p === 0 ? totalCarried : rows[p - 1].remaining)
+
+    // معادلة الدين: المتبقي = الدين القديم + المستحق - المدفوع
+    const remaining = oldDebt + due - paid
+
+    rows.push({
+      periodLabel: PERIODS[p],
+      old: oldDebt,
+      due,
+      paid,
+      remaining,
+      isManual
+    })
+  }
+
+  const totalRemaining = rows.length > 0 ? rows[rows.length - 1].remaining : 0
+
+  return {
+    rows,
+    remainingPrev: prevRemaining,
+    fee,
+    totalCarried,
+    due,
+    totalRemaining
+  }
 }
 
-function getSubscriberStatus(subscriber: Subscriber): string {
-  if (!subscriber.payments || subscriber.payments.length === 0) return 'جديد'
-  const lastPayment = subscriber.payments[subscriber.payments.length - 1]
-  if (lastPayment.remaining === 0) return 'مسدد'
-  if (lastPayment.remaining < 0) return 'فائض'
-  return 'عليه دين'
-}
-
-function getDue(subscriber: Subscriber): number {
-  if (!subscriber.payments || subscriber.payments.length === 0) return 0
-  const lastPayment = subscriber.payments[subscriber.payments.length - 1]
-  return lastPayment.remaining
+// دالة ترتيب البحث حسب الاسم الأول ثم الثاني ثم الثالث
+function searchRank(name: string, query: string): number {
+  const words = name.trim().split(/\s+/)
+  const q = query.trim()
+  if (!q) return 999
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].startsWith(q)) return i
+  }
+  if (name.includes(q)) return 10 + name.indexOf(q)
+  return 1000
 }
 
 export default function MainApp() {
-  // بيانات رئيسية
-  const [areas, setAreas] = useState<Area[]>([])
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
-  const [pricing, setPricing] = useState<Record<string, Record<string, number>>>({
-    'سكني': { '3 متر': 15000, '4 متر': 20000, '5 متر': 25000, '6 متر': 30000 },
-    'تجاري': { '3 متر': 20000, '4 متر': 25000, '5 متر': 30000, '6 متر': 35000 },
-  })
-  const [collectorName, setCollectorName] = useState('')
-  const [collectorPhone, setCollectorPhone] = useState('')
-  const [rangeFrom, setRangeFrom] = useState(1)
-  const [rangeTo, setRangeTo] = useState(9999)
-  const [loading, setLoading] = useState(true)
+  // رمز الدخول المطلوب
+  const REQUIRED_PIN = process.env.NEXT_PUBLIC_APP_PIN || 'AHMEDHLAWAADAHAM'
 
-  // فلاتر
-  const [selectedArea, setSelectedArea] = useState<string | null>(null)
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
-  const [filterTypes, setFilterTypes] = useState({ سكني: true, تجاري: true })
+  // حالة تسجيل الدخول
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [pinInput, setPinInput] = useState<string>('')
+  const [pinError, setPinError] = useState<string>('')
+
+  // البيانات الأساسية
+  const [areas, setAreas] = useState<Area[]>(DEFAULT_AREAS)
+  const [pricing, setPricing] = useState<Pricing>(DEFAULT_PRICING)
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
+  const [billing, setBilling] = useState<BillingRecords>({})
+  const [collectorName, setCollectorName] = useState<string>('احمد المحصل')
+  const [collectorPhone, setCollectorPhone] = useState<string>('07801234567')
+  const [rangeFrom, setRangeFrom] = useState<number>(5203)
+  const [rangeTo, setRangeTo] = useState<number>(6202)
+
+  // البحث والفلترة
+  const [searchOpen, setSearchOpen] = useState<boolean>(false)
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState<boolean>(false)
+  const [filterTypes, setFilterTypes] = useState<{ سكني: boolean; تجاري: boolean }>({ سكني: true, تجاري: true })
   const [filterAreas, setFilterAreas] = useState<string[]>([])
   const [filterBranches, setFilterBranches] = useState<string[]>([])
   const [filterStatuses, setFilterStatuses] = useState<string[]>([])
-  const [showFilterPanel, setShowFilterPanel] = useState(false)
+  const [filterAreaSearch, setFilterAreaSearch] = useState<string>('')
+  const [filterBranchSearch, setFilterBranchSearch] = useState<string>('')
 
-  // المشترك المحدد
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('')
-  const [showContactModal, setShowContactModal] = useState(false)
+  // الاختيار الحالي
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null)
+  const [branchDrawerAreaId, setBranchDrawerAreaId] = useState<string | null>(null)
+  const [selectedSubId, setSelectedSubId] = useState<number | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(2026) // السنة الحالية 2026 افتراضياً
 
-  // نموذج إضافة مشترك
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [newSub, setNewSub] = useState({ idStr: '', name: '', areaId: '', branchId: '', phone: '' })
-  const [addError, setAddError] = useState('')
-
-  // نموذج تعديل مشترك
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [editSub, setEditSub] = useState<Partial<Subscriber>>({})
-  const [showAddAreaInEdit, setShowAddAreaInEdit] = useState(false)
-  const [showAddBranchInEdit, setShowAddBranchInEdit] = useState(false)
-
-  // الإعدادات
-  const [showSettings, setShowSettings] = useState(false)
+  // النوافذ المنبثقة
+  const [showAddModal, setShowAddModal] = useState<boolean>(false)
+  const [showEditModal, setShowEditModal] = useState<boolean>(false)
+  const [showContactModal, setShowContactModal] = useState<boolean>(false)
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
   const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import'>('collector')
-  const [newAreaName, setNewAreaName] = useState('')
-  const [newBranchName, setNewBranchName] = useState('')
-  const [editingPricingKey, setEditingPricingKey] = useState<string | null>(null)
-  const [editingPricingValue, setEditingPricingValue] = useState('')
-  const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
-  const [editingAreaName, setEditingAreaName] = useState('')
-  const [editingBranchId, setEditingBranchId] = useState<string | null>(null)
-  const [editingBranchName, setEditingBranchName] = useState('')
 
-  // تعديل الدفعات
+  // فورم المشترك
+  const [newSub, setNewSub] = useState({
+    idStr: '',
+    name: '',
+    areaId: '',
+    branchId: '',
+    phone: '',
+    propertyType: 'سكني' as PropertyType,
+    meterType: '4 متر' as MeterType,
+    statuses: [] as string[]
+  })
+  const [editSub, setEditSub] = useState<Partial<Subscriber>>({})
+  const [formError, setFormError] = useState<string>('')
+
+  // إدارة المناطق والتسعير
+  const [newAreaName, setNewAreaName] = useState<string>('')
+  const [newBranchName, setNewBranchName] = useState<string>('')
+  const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
+  const [editingAreaName, setEditingAreaName] = useState<string>('')
+  const [editingBranchId, setEditingBranchId] = useState<string | null>(null)
+  const [editingBranchName, setEditingBranchName] = useState<string>('')
+  const [editingPricingKey, setEditingPricingKey] = useState<string | null>(null)
+  const [editingPricingVal, setEditingPricingVal] = useState<string>('')
+
+  // الاستيراد
+  const [importText, setImportText] = useState<string>('')
+  const [parsedImport, setParsedImport] = useState<ParsedImportItem[]>([])
+  const [importDefaultArea, setImportDefaultArea] = useState<string>('')
+  const [importError, setImportError] = useState<string>('')
+  const [importDuplicates, setImportDuplicates] = useState<number>(0)
+  const [importOverwrite, setImportOverwrite] = useState<boolean>(false)
+
+  // تعديل الدفعات اللحظي
   const [pendingEdits, setPendingEdits] = useState<Record<string, string>>({})
 
-  // السحب والإفلات للتبويبات
-  const [draggingAreaId, setDraggingAreaId] = useState<string | null>(null)
-  const [longPressAreaId, setLongPressAreaId] = useState<string | null>(null)
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  // مراجع السحب
+  const swipeStartX = useRef<number>(0)
+  const swipeStartY = useRef<number>(0)
+  const swipeSubId = useRef<number | null>(null)
 
-  // جلب البيانات من سوبا بيس
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  // الشهر الحالي 0-5
+  const currentPeriodIndex = useMemo(() => {
+    const month = new Date().getMonth() // 0-11
+    return Math.floor(month / 2) // 0-5
+  }, [])
+
+  // فحص تسجيل الدخول عند البدء
+  useEffect(() => {
+    const auth = localStorage.getItem(AUTH_STORAGE_KEY)
+    if (auth === 'true') {
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  // تحميل البيانات من localStorage
+  useEffect(() => {
     try {
-      const [areasRes, subsRes, pricingRes, collectorRes] = await Promise.all([
-        fetch('/api/areas'),
-        fetch(`/api/subscribers?from=${rangeFrom}&to=${rangeTo}`),
-        fetch('/api/pricing'),
-        fetch('/api/collector'),
-      ])
-
-      if (areasRes.ok) {
-        const areasData = await areasRes.json()
-        setAreas(areasData)
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const data = JSON.parse(saved)
+        if (data.areas) setAreas(data.areas)
+        if (data.pricing) setPricing(data.pricing)
+        if (data.subscribers) setSubscribers(data.subscribers)
+        if (data.billing) setBilling(data.billing)
+        if (data.collectorName) setCollectorName(data.collectorName)
+        if (data.collectorPhone) setCollectorPhone(data.collectorPhone)
+        if (data.rangeFrom) setRangeFrom(data.rangeFrom)
+        if (data.rangeTo) setRangeTo(data.rangeTo)
+        return
       }
-
-      if (pricingRes.ok) {
-        const pricingData = await pricingRes.json()
-        if (Object.keys(pricingData).length > 0) setPricing(pricingData)
-      }
-
-      if (collectorRes.ok) {
-        const collectorData = await collectorRes.json()
-        if (collectorData.name) setCollectorName(collectorData.name)
-        if (collectorData.phone) setCollectorPhone(collectorData.phone)
-        if (collectorData.range_from) setRangeFrom(collectorData.range_from)
-        if (collectorData.range_to) setRangeTo(collectorData.range_to)
-      }
-
-      if (subsRes.ok) {
-        const subsData = await subsRes.json()
-        // تحويل بيانات سوبا بيس للشكل المطلوب
-        const subs: Subscriber[] = subsData.map((s: Record<string, unknown>) => ({
-          id: s.id as number,
-          name: s.name as string,
-          areaId: s.area_id as string,
-          branchId: s.branch_id as string,
-          phone: (s.phone as string) || '',
-          propertyType: (s.property_type as 'سكني' | 'تجاري') || 'سكني',
-          meterType: (s.meter_type as string) || '4 متر',
-          detailedAddress: (s.detailed_address as string) || '',
-          location: s.location_lat ? {
-            lat: s.location_lat as number,
-            lng: s.location_lng as number,
-            link: (s.location_link as string) || '',
-          } : undefined,
-          doorImage: (s.door_image as string) || undefined,
-          remainingPrev: (s.remaining_prev as number) || 0,
-          fee: (s.fee as number) || 0,
-          payments: [],
-        }))
-        setSubscribers(subs)
-      }
-    } catch (err) {
-      console.error('خطأ في جلب البيانات:', err)
-    } finally {
-      setLoading(false)
+    } catch {
+      // استخدام الافتراضي
     }
-  }, [rangeFrom, rangeTo])
+  }, [])
 
+  // الحفظ التلقائي في localStorage
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  // جلب دفعات مشترك عند تحديده
-  useEffect(() => {
-    if (selectedId === null) return
-
-    const fetchPayments = async () => {
-      const res = await fetch(`/api/payments?subscriber_id=${selectedId}`)
-      if (!res.ok) return
-
-      const paymentsData = await res.json()
-      const sub = subscribers.find((s) => s.id === selectedId)
-      if (!sub) return
-
-      const existingPayments: PaymentRow[] = paymentsData.map((p: Record<string, unknown>) => ({
-        period: p.period as number,
-        year: p.year as number,
-        periodLabel: p.period_label as string,
-        old: p.old_debt as number,
-        paid: p.paid as number,
-        remaining: p.remaining as number,
-        isManual: p.is_manual as boolean,
-      }))
-
-      const rows = generatePaymentRows(
-        sub.remainingPrev || 0,
-        sub.fee || 0,
-        pricing,
-        sub.propertyType,
-        sub.meterType,
-        existingPayments
+    if (subscribers.length === 0 && areas.length === DEFAULT_AREAS.length) return
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          areas,
+          pricing,
+          subscribers,
+          billing,
+          collectorName,
+          collectorPhone,
+          rangeFrom,
+          rangeTo
+        })
       )
+    } catch {}
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo])
 
-      setSubscribers((prev) =>
-        prev.map((s) => s.id === selectedId ? { ...s, payments: rows } : s)
-      )
-
-      // تحديد الفترة الحالية تلقائياً
-      const currentIdx = getCurrentPeriodIndex(rows)
-      if (currentIdx >= 0 && !selectedPeriod) {
-        setSelectedPeriod(rows[currentIdx].periodLabel)
-      }
+  // تسجيل الدخول
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pinInput.trim() === REQUIRED_PIN) {
+      setIsAuthenticated(true)
+      localStorage.setItem(AUTH_STORAGE_KEY, 'true')
+      setPinError('')
+    } else {
+      setPinError('رمز الدخول غير صحيح، يرجى المحاولة مجدداً')
     }
+  }
 
-    fetchPayments()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    setPinInput('')
+  }
 
-  // المشترك المحدد
-  const selectedSubscriber = subscribers.find((s) => s.id === selectedId) || null
+  // حساب دين المشترك للفترة الحالية في 2026
+  const getSubscriberCurrentDue = useCallback(
+    (subId: number) => {
+      try {
+        const b = calculateBilling(subId, 2026, billing, subscribers, pricing)
+        if (b.rows.length > currentPeriodIndex) {
+          return b.rows[currentPeriodIndex].remaining
+        }
+        return b.totalRemaining
+      } catch {
+        return 0
+      }
+    },
+    [billing, subscribers, pricing, currentPeriodIndex]
+  )
 
-  // قائمة المشتركين بعد الفلاتر
-  const filteredSubscribers = subscribers.filter((s) => {
-    if (!filterTypes[s.propertyType as keyof typeof filterTypes]) return false
-    if (filterAreas.length > 0 && !filterAreas.includes(s.areaId)) return false
-    if (filterBranches.length > 0 && !filterBranches.includes(s.branchId)) return false
-    if (selectedArea && s.areaId !== selectedArea) return false
-    if (selectedBranch && s.branchId !== selectedBranch) return false
+  // المشتركون ضمن نطاق المحصل
+  const subscribersInRange = useMemo(() => {
+    return subscribers.filter((s) => s.id >= rangeFrom && s.id <= rangeTo)
+  }, [subscribers, rangeFrom, rangeTo])
+
+  // فلترة المشتركين حسب النوع
+  const typeFiltered = useMemo(() => {
+    const both = filterTypes.سكني && filterTypes.تجاري
+    const none = !filterTypes.سكني && !filterTypes.تجاري
+    if (both || none) return subscribersInRange
+    if (filterTypes.سكني) return subscribersInRange.filter((s) => s.propertyType === 'سكني')
+    return subscribersInRange.filter((s) => s.propertyType === 'تجاري')
+  }, [subscribersInRange, filterTypes])
+
+  // عدد المشتركين لكل منطقة بناءً على نوع العقار المختار
+  const areaCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    areas.forEach((a) => map.set(a.id, 0))
+    typeFiltered.forEach((s) => {
+      map.set(s.areaId, (map.get(s.areaId) || 0) + 1)
+    })
+    return map
+  }, [typeFiltered, areas])
+
+  // فلترة حسب المناطق المختارة
+  const areaFiltered = useMemo(() => {
+    if (filterAreas.length === 0) return typeFiltered
+    return typeFiltered.filter((s) => filterAreas.includes(s.areaId))
+  }, [typeFiltered, filterAreas])
+
+  // عدد المشتركين لكل فرع بناءً على المناطق المختارة
+  const branchCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    areas.forEach((a) => a.branches.forEach((b) => map.set(b.id, 0)))
+    areaFiltered.forEach((s) => {
+      map.set(s.branchId, (map.get(s.branchId) || 0) + 1)
+    })
+    return map
+  }, [areaFiltered, areas])
+
+  // فلترة حسب الأفرع المختارة
+  const branchFiltered = useMemo(() => {
+    if (filterBranches.length === 0) return areaFiltered
+    return areaFiltered.filter((s) => filterBranches.includes(s.branchId))
+  }, [areaFiltered, filterBranches])
+
+  // عدد المشتركين لكل حالة
+  const statusCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    STATUS_OPTIONS.forEach((st) => map.set(st, 0))
+    branchFiltered.forEach((s) => {
+      ;(s.statuses || []).forEach((st) => {
+        if (map.has(st)) map.set(st, (map.get(st) || 0) + 1)
+      })
+    })
+    return map
+  }, [branchFiltered])
+
+  // عدد المتطابقين في الفلتر التفاعلي
+  const matchingFilterCount = useMemo(() => {
+    let list = branchFiltered
     if (filterStatuses.length > 0) {
-      const status = getSubscriberStatus(s)
-      if (!filterStatuses.includes(status)) return false
+      list = list.filter((s) => (s.statuses || []).some((st) => filterStatuses.includes(st)))
     }
-    return true
-  })
+    return list.length
+  }, [branchFiltered, filterStatuses])
 
   // عدد الفلاتر النشطة
-  const activeFiltersCount =
-    (!filterTypes.سكني || !filterTypes.تجاري ? 1 : 0) +
-    filterAreas.length +
-    filterBranches.length +
-    filterStatuses.length
+  const activeFiltersBadge = useMemo(() => {
+    let count = 0
+    if (filterTypes.سكني !== filterTypes.تجاري) count++
+    if (filterAreas.length > 0) count++
+    if (filterBranches.length > 0) count++
+    if (filterStatuses.length > 0) count++
+    return count
+  }, [filterTypes, filterAreas, filterBranches, filterStatuses])
 
-  // حفظ دفعة
-  const savePayment = async (
-    subscriberId: number,
-    periodIdx: number,
-    field: 'old' | 'paid' | 'rem',
-    value: string
-  ) => {
-    const sub = subscribers.find((s) => s.id === subscriberId)
-    if (!sub || !sub.payments[periodIdx]) return
+  // القائمة المعروضة في الصفحة الرئيسية
+  const displayedSubscribers = useMemo(() => {
+    let list = subscribersInRange
 
-    const row = sub.payments[periodIdx]
-    const numVal = parseInt(value) || 0
-
-    let newOld = row.old
-    let newPaid = row.paid
-    let newRemaining = row.remaining
-
-    if (field === 'old') {
-      newOld = numVal
-      newRemaining = newOld + (pricing[sub.propertyType]?.[sub.meterType] || 0) - newPaid
-    } else if (field === 'paid') {
-      newPaid = numVal
-      newRemaining = newOld + (pricing[sub.propertyType]?.[sub.meterType] || 0) - newPaid
-    } else {
-      newRemaining = numVal
+    // البحث مع الترتيب حسب الاسم الأول فالثاني فالثالث
+    const q = searchQuery.trim()
+    if (q) {
+      list = list.filter(
+        (s) =>
+          String(s.id).includes(q) ||
+          s.name.includes(q) ||
+          s.phone.includes(q)
+      )
+      list = [...list].sort((a, b) => {
+        const rankA = searchRank(a.name, q)
+        const rankB = searchRank(b.name, q)
+        if (rankA !== rankB) return rankA - rankB
+        return a.id - b.id
+      })
     }
 
-    // تحديث محلياً
-    const newPayments = sub.payments.map((p, i) =>
-      i === periodIdx
-        ? { ...p, old: newOld, paid: newPaid, remaining: newRemaining, isManual: field === 'rem' }
-        : p
-    )
+    // فلتر النوع
+    if (filterTypes.سكني !== filterTypes.تجاري) {
+      if (filterTypes.سكني) list = list.filter((s) => s.propertyType === 'سكني')
+      else list = list.filter((s) => s.propertyType === 'تجاري')
+    }
 
-    setSubscribers((prev) =>
-      prev.map((s) => s.id === subscriberId ? { ...s, payments: newPayments } : s)
-    )
+    // المنطقة المحددة من التبويبات العلوية أو الفلتر
+    if (selectedAreaId) {
+      list = list.filter((s) => s.areaId === selectedAreaId)
+      if (activeBranchId) {
+        list = list.filter((s) => s.branchId === activeBranchId)
+      } else if (filterBranches.length > 0) {
+        list = list.filter((s) => filterBranches.includes(s.branchId))
+      }
+    } else {
+      if (filterAreas.length > 0) list = list.filter((s) => filterAreas.includes(s.areaId))
+      if (filterBranches.length > 0) list = list.filter((s) => filterBranches.includes(s.branchId))
+    }
 
-    // حفظ في سوبا بيس
-    await fetch('/api/payments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscriberId,
-        period: row.period,
-        year: row.year,
-        periodLabel: row.periodLabel,
-        oldDebt: newOld,
-        paid: newPaid,
-        remaining: newRemaining,
-        isManual: field === 'rem',
-      }),
+    // فلتر الحالات
+    if (filterStatuses.length > 0) {
+      list = list.filter((s) => (s.statuses || []).some((st) => filterStatuses.includes(st)))
+    }
+
+    return list
+  }, [
+    subscribersInRange,
+    searchQuery,
+    filterTypes,
+    selectedAreaId,
+    activeBranchId,
+    filterAreas,
+    filterBranches,
+    filterStatuses
+  ])
+
+  // مسح الفلاتر
+  const clearAllFilters = () => {
+    setFilterTypes({ سكني: true, تجاري: true })
+    setFilterAreas([])
+    setFilterBranches([])
+    setFilterStatuses([])
+    setFilterAreaSearch('')
+    setFilterBranchSearch('')
+  }
+
+  // حفظ تعديل في جدول الديون
+  const handlePaymentEdit = (subId: number, year: number, periodIdx: number, field: 'old' | 'paid' | 'rem', value: string) => {
+    const cleanVal = value.replace(/[^0-9\-]/g, '')
+    const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
+
+    setBilling((prev) => {
+      const copy = { ...prev }
+      if (!copy[subId]) copy[subId] = {}
+      if (!copy[subId][year]) {
+        copy[subId][year] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+      }
+      const yearRecords = [...copy[subId][year]]
+
+      if (field === 'old') {
+        yearRecords[periodIdx] = {
+          ...yearRecords[periodIdx],
+          oldDebtManual: cleanVal === '' ? null : num
+        }
+      } else if (field === 'paid') {
+        yearRecords[periodIdx] = {
+          ...yearRecords[periodIdx],
+          paid: num
+        }
+      } else if (field === 'rem') {
+        // عند تغيير المتبقي نحسب المدفوع = القديم + المستحق - المتبقي
+        const currentBilling = calculateBilling(subId, year, copy, subscribers, pricing)
+        const row = currentBilling.rows[periodIdx]
+        if (row) {
+          const calculatedPaid = row.old + row.due - num
+          yearRecords[periodIdx] = {
+            ...yearRecords[periodIdx],
+            paid: calculatedPaid
+          }
+        }
+      }
+
+      copy[subId][year] = yearRecords
+      return copy
     })
 
-    setPendingEdits({})
+    const key = `${subId}_${year}_${periodIdx}_${field}`
+    setPendingEdits((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }
 
   // إضافة مشترك
-  const handleAddSubscriber = async () => {
-    setAddError('')
-    const id = parseInt(newSub.idStr)
-    if (!id || !newSub.name.trim() || !newSub.areaId) {
-      setAddError('يرجى تعبئة الحقول الإلزامية')
+  const handleAddSubscriberSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormError('')
+
+    const id = Number(newSub.idStr.replace(/[^0-9]/g, ''))
+    if (!newSub.idStr.trim() || isNaN(id) || id <= 0) {
+      setFormError('رقم المشترك إجباري ويجب أن يكون رقماً صحيحاً')
       return
     }
-    if (subscribers.find((s) => s.id === id)) {
-      setAddError('رقم المشترك موجود مسبقاً')
+    if (subscribers.some((s) => s.id === id)) {
+      setFormError(`رقم المشترك ${formatNumber(id)} موجود مسبقاً!`)
+      return
+    }
+    if (!newSub.name.trim() || newSub.name.trim().length < 2) {
+      setFormError('اسم المشترك إجباري')
+      return
+    }
+    if (!newSub.areaId) {
+      setFormError('يرجى اختيار المنطقة')
       return
     }
 
     const area = areas.find((a) => a.id === newSub.areaId)
     const branchId = newSub.branchId || area?.branches[0]?.id || ''
+    const maxOrder = subscribers.reduce((acc, curr) => Math.max(acc, curr.order), 0)
 
-    const res = await fetch('/api/subscribers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        name: newSub.name.trim(),
-        areaId: newSub.areaId,
-        branchId,
-        phone: newSub.phone || '',
-        propertyType: 'سكني',
-        meterType: '4 متر',
-      }),
+    const created: Subscriber = {
+      id,
+      name: newSub.name.trim(),
+      phone: newSub.phone.trim(),
+      areaId: newSub.areaId,
+      branchId,
+      propertyType: newSub.propertyType,
+      meterType: newSub.meterType,
+      detailedAddress: `قرب ${area?.name || ''}`,
+      order: maxOrder + 1,
+      statuses: newSub.statuses
+    }
+
+    setSubscribers((prev) => [...prev, created])
+
+    // إنشاء سجلات الديون للسنوات 2026، 2027، 2028
+    setBilling((prev) => {
+      const copy = { ...prev }
+      copy[id] = {}
+      YEARS.forEach((y) => {
+        copy[id][y] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+      })
+      return copy
     })
 
-    if (!res.ok) {
-      const err = await res.json()
-      setAddError(err.error || 'خطأ في الحفظ')
+    setShowAddModal(false)
+    setNewSub({
+      idStr: '',
+      name: '',
+      areaId: areas[0]?.id || '',
+      branchId: areas[0]?.branches[0]?.id || '',
+      phone: '',
+      propertyType: 'سكني',
+      meterType: '4 متر',
+      statuses: []
+    })
+  }
+
+  // حفظ تعديل مشترك
+  const handleEditSubscriberSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editSub.id) return
+
+    setSubscribers((prev) =>
+      prev.map((s) => (s.id === editSub.id ? { ...s, ...editSub } as Subscriber : s))
+    )
+    setShowEditModal(false)
+  }
+
+  // استيراد نص
+  const handleParseImport = (text: string) => {
+    setImportError('')
+    if (!text.trim()) {
+      setParsedImport([])
+      setImportDuplicates(0)
       return
     }
 
-    setSubscribers((prev) => [
-      ...prev,
-      {
-        id,
-        name: newSub.name.trim(),
-        areaId: newSub.areaId,
-        branchId,
-        phone: newSub.phone || '',
-        propertyType: 'سكني',
-        meterType: '4 متر',
-        detailedAddress: '',
-        remainingPrev: 0,
-        fee: 0,
-        payments: [],
-      },
-    ])
+    const lines = text.split(/\r?\n/)
+    const seen = new Set<number>()
+    let dupCount = 0
+    const items: ParsedImportItem[] = []
 
-    setShowAddModal(false)
-    setNewSub({ idStr: '', name: '', areaId: '', branchId: '', phone: '' })
-  }
+    for (const rawLine of lines) {
+      const line = rawLine.trim().replace(/^[-•*]\s*/, '')
+      if (!line) continue
 
-  // حفظ تعديل المشترك
-  const handleSaveEdit = async () => {
-    if (!selectedSubscriber) return
+      const match = line.match(/^(\d{1,7})\s*[\t\s]+(.+)$/) || line.match(/^(\d{1,7})\s*[,\-–]\s*(.+)$/) || line.match(/^(\d{1,7})\s+(.+)$/)
+      if (!match) continue
 
-    const res = await fetch(`/api/subscribers/${selectedSubscriber.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: editSub.name,
-        areaId: editSub.areaId,
-        branchId: editSub.branchId,
-        phone: editSub.phone,
-        propertyType: editSub.propertyType,
-        meterType: editSub.meterType,
-      }),
-    })
+      const id = Number(match[1])
+      if (!id) continue
 
-    if (res.ok) {
-      setSubscribers((prev) =>
-        prev.map((s) =>
-          s.id === selectedSubscriber.id ? { ...s, ...editSub } : s
-        )
-      )
-      setShowEditModal(false)
-    }
-  }
+      if (seen.has(id)) {
+        dupCount++
+        continue
+      }
+      seen.add(id)
 
-  // إضافة منطقة
-  const handleAddArea = async (fromEdit = false) => {
-    if (!newAreaName.trim()) return
-    const id = `area_${Date.now()}`
+      const rest = match[2].trim()
+      let name = rest
+      let note: string | undefined = undefined
+      const statuses: string[] = []
 
-    const res = await fetch('/api/areas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'area', id, name: newAreaName.trim() }),
-    })
+      if (rest.includes('/')) {
+        const parts = rest.split('/')
+        name = parts[0].trim()
+        note = parts.slice(1).join(' / ').trim()
+        if (note) {
+          const matchedStatus = STATUS_OPTIONS.find((st) => note?.includes(st))
+          if (matchedStatus) {
+            statuses.push(matchedStatus)
+          } else {
+            name = `${name} (${note})`
+          }
+        }
+      }
 
-    if (res.ok) {
-      setAreas((prev) => [...prev, { id, name: newAreaName.trim(), branches: [] }])
-      setNewAreaName('')
-      if (fromEdit) {
-        setShowAddAreaInEdit(false)
-        setEditSub((prev) => ({ ...prev, areaId: id, branchId: '' }))
+      if (name.length >= 2) {
+        items.push({ id, name, raw: line, statuses, note })
       }
     }
+
+    setImportDuplicates(dupCount)
+    if (items.length === 0) {
+      setImportError('لم يتم التعرف على البيانات. تأكد من الصيغة: رقم اسم المشترك / ملاحظة')
+    }
+    setParsedImport(items)
   }
 
-  // إضافة فرع
-  const handleAddBranch = async (areaId: string, name: string) => {
-    if (!name.trim()) return
-    const id = `branch_${Date.now()}`
+  const handleConfirmImport = () => {
+    if (parsedImport.length === 0) return
+    const defaultAreaId = importDefaultArea || areas[0]?.id || 'area_1'
+    const defaultBranchId = areas.find((a) => a.id === defaultAreaId)?.branches[0]?.id || 'b_1'
 
-    const res = await fetch('/api/areas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'branch', id, areaId, name: name.trim() }),
+    const existingIds = new Set(subscribers.map((s) => s.id))
+    let added = 0
+    let updated = 0
+    let skipped = 0
+    const toAdd: Subscriber[] = []
+    let curOrder = subscribers.reduce((m, s) => Math.max(m, s.order), 0)
+
+    parsedImport.forEach((item) => {
+      if (existingIds.has(item.id)) {
+        if (importOverwrite) {
+          updated++
+          setSubscribers((prev) =>
+            prev.map((s) =>
+              s.id === item.id
+                ? {
+                    ...s,
+                    name: item.name,
+                    statuses: item.statuses.length ? item.statuses : s.statuses
+                  }
+                : s
+            )
+          )
+        } else {
+          skipped++
+        }
+      } else {
+        added++
+        curOrder++
+        toAdd.push({
+          id: item.id,
+          name: item.name,
+          phone: '',
+          areaId: defaultAreaId,
+          branchId: defaultBranchId,
+          propertyType: 'سكني',
+          meterType: '4 متر',
+          detailedAddress: `قرب ${areas.find((a) => a.id === defaultAreaId)?.name || ''}`,
+          order: curOrder,
+          statuses: item.statuses
+        })
+      }
     })
 
-    if (res.ok) {
-      setAreas((prev) =>
-        prev.map((a) =>
-          a.id === areaId
-            ? { ...a, branches: [...a.branches, { id, name: name.trim() }] }
-            : a
-        )
-      )
+    if (toAdd.length > 0) {
+      setSubscribers((prev) => [...prev, ...toAdd])
+      setBilling((prev) => {
+        const copy = { ...prev }
+        toAdd.forEach((s) => {
+          copy[s.id] = {}
+          YEARS.forEach((y) => {
+            copy[s.id][y] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+          })
+        })
+        return copy
+      })
+    }
+
+    alert(`تم الاستيراد بنجاح: ${added} جديد، ${updated} تم تحديثه، ${skipped} موجود مسبقاً، ${importDuplicates} مكرر بالملف`)
+    setImportText('')
+    setParsedImport([])
+    setImportDuplicates(0)
+  }
+
+  // سحب المشترك لليسار لفتح التعديل
+  const handleTouchStart = (e: React.TouchEvent, subId: number) => {
+    swipeStartX.current = e.touches[0].clientX
+    swipeStartY.current = e.touches[0].clientY
+    swipeSubId.current = subId
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, sub: Subscriber) => {
+    if (swipeSubId.current !== sub.id) return
+    const diffX = e.changedTouches[0].clientX - swipeStartX.current
+    const diffY = Math.abs(e.changedTouches[0].clientY - swipeStartY.current)
+    if (diffY < 70 && diffX < -70) {
+      setEditSub({ ...sub })
+      setShowEditModal(true)
     }
   }
 
-  // تعديل أسماء المناطق
-  const handleRenameArea = async (areaId: string, name: string) => {
-    if (!name.trim()) return
-    const res = await fetch('/api/areas', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'area', id: areaId, name: name.trim() }),
-    })
-    if (res.ok) {
-      setAreas((prev) => prev.map((a) => a.id === areaId ? { ...a, name: name.trim() } : a))
-      setEditingAreaId(null)
+  const handleMouseDown = (e: React.MouseEvent, subId: number) => {
+    swipeStartX.current = e.clientX
+    swipeStartY.current = e.clientY
+    swipeSubId.current = subId
+  }
+
+  const handleMouseUp = (e: React.MouseEvent, sub: Subscriber) => {
+    if (swipeSubId.current !== sub.id) return
+    const diffX = e.clientX - swipeStartX.current
+    const diffY = Math.abs(e.clientY - swipeStartY.current)
+    if (diffY < 70 && diffX < -70) {
+      setEditSub({ ...sub })
+      setShowEditModal(true)
     }
   }
 
-  const handleRenameBranch = async (branchId: string, name: string) => {
-    if (!name.trim()) return
-    const res = await fetch('/api/areas', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'branch', id: branchId, name: name.trim() }),
-    })
-    if (res.ok) {
-      setAreas((prev) =>
-        prev.map((a) => ({
-          ...a,
-          branches: a.branches.map((b) => b.id === branchId ? { ...b, name: name.trim() } : b)
-        }))
-      )
-      setEditingBranchId(null)
-    }
-  }
+  const activeSubscriber = useMemo(
+    () => subscribers.find((s) => s.id === selectedSubId) || null,
+    [subscribers, selectedSubId]
+  )
 
-  // حفظ التسعير
-  const handleSavePricing = async (propertyType: string, meterType: string) => {
-    const amount = parseInt(editingPricingValue) || 0
-    await fetch('/api/pricing', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ propertyType, meterType, amount }),
-    })
-    setPricing((prev) => ({
-      ...prev,
-      [propertyType]: { ...prev[propertyType], [meterType]: amount }
-    }))
-    setEditingPricingKey(null)
-  }
+  const activeBilling = useMemo(() => {
+    if (!selectedSubId) return null
+    return calculateBilling(selectedSubId, selectedYear, billing, subscribers, pricing)
+  }, [selectedSubId, selectedYear, billing, subscribers, pricing])
 
-  // حفظ بيانات المحصل
-  const handleSaveCollector = async () => {
-    await fetch('/api/collector', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: collectorName,
-        phone: collectorPhone,
-        rangeFrom,
-        rangeTo,
-      }),
-    })
-  }
-
-  // مسح كل الفلاتر
-  const clearFilters = () => {
-    setFilterTypes({ سكني: true, تجاري: true })
-    setFilterAreas([])
-    setFilterBranches([])
-    setFilterStatuses([])
-  }
-
-  // اسم المنطقة
-  const getAreaName = (id: string) => areas.find((a) => a.id === id)?.name || id
-  const getBranchName = (areaId: string, branchId: string) =>
-    areas.find((a) => a.id === areaId)?.branches.find((b) => b.id === branchId)?.name || branchId
-
-  if (loading) {
+  // ==========================
+  // شاشة تسجيل الدخول بالرمز
+  // ==========================
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0f9ff]">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-sky-200 border-t-slate-900 rounded-full animate-spin mx-auto mb-3"></div>
-          <div className="text-[13px] text-slate-500">جاري التحميل...</div>
+      <div
+        dir="rtl"
+        className="min-h-screen flex items-center justify-center bg-[#f0f9ff] px-4"
+        style={{ fontFamily: 'Tajawal, Inter, system-ui, sans-serif' }}
+      >
+        <div className="bg-white border border-sky-100 rounded-3xl p-8 max-w-[400px] w-full shadow-[0_12px_24px_rgba(0,0,0,0.06)] text-center">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mx-auto mb-4 text-white">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3L4 9v6l8 6 8-6V9l-8-6z" fill="white" opacity="0.9" />
+            </svg>
+          </div>
+          <h2 className="text-[18px] font-bold text-slate-900 mb-1">تسجيل الدخول للنظام</h2>
+          <p className="text-[12px] text-slate-500 mb-6">يرجى إدخال رمز الدخول السري للمتابعة</p>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="رمز الدخول السري..."
+              className="w-full h-12 px-4 border border-slate-200 rounded-2xl text-[14px] text-center font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white transition-colors"
+              autoFocus
+            />
+
+            {pinError && (
+              <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl p-2.5">
+                {pinError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full h-12 bg-slate-900 text-white rounded-2xl text-[13px] font-bold hover:bg-black transition-colors"
+            >
+              دخول
+            </button>
+          </form>
         </div>
       </div>
     )
   }
 
-  // ===== الواجهة الرئيسية =====
+  // ==========================
+  // واجهة التطبيق الرئيسية
+  // ==========================
   return (
-    <div className="min-h-screen bg-[#f0f9ff]" dir="rtl">
-      {/* الهيدر */}
-      <header className="sticky top-0 z-20 bg-slate-900 text-white px-4 py-3 flex items-center justify-between shadow-[0_12px_24px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[18px]">💧</div>
-          <div>
-            <div className="text-[13px] font-bold">اشتراكات الماء</div>
-            <div className="text-[10px] text-white/60 font-mono">{formatNumber(filteredSubscribers.length)} مشترك</div>
+    <div
+      dir="rtl"
+      className="min-h-screen text-slate-800 bg-[#f0f9ff]"
+      style={{ fontFamily: 'Tajawal, Inter, system-ui, -apple-system, sans-serif' }}
+    >
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+
+      {/* الهيدر الرئيسي - الحفاظ على شكل ومقاس الأزرار 100% */}
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
+        <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3L4 9v6l8 6 8-6V9l-8-6z" fill="white" opacity="0.9" />
+              </svg>
+            </div>
+            <h1 className="text-[15px] font-bold tracking-tight text-slate-900">نظام الاشتراكات</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* زر البحث */}
+            <button
+              type="button"
+              aria-label="بحث"
+              onClick={() => {
+                setSearchOpen((p) => !p)
+                if (!searchOpen) setFilterDrawerOpen(false)
+              }}
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+                searchOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <circle cx="11" cy="11" r="6" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </button>
+
+            {/* زر الفلتر */}
+            <button
+              type="button"
+              aria-label="فلتر"
+              onClick={() => {
+                setFilterDrawerOpen((p) => !p)
+                if (!filterDrawerOpen) setSearchOpen(false)
+              }}
+              className={`relative w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+                filterDrawerOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                <path d="M3 6h18M7 12h10M10 18h4" />
+              </svg>
+              {activeFiltersBadge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                  {formatNumber(activeFiltersBadge)}
+                </span>
+              )}
+            </button>
+
+            {/* زر الإعدادات - يبقى 100% بنفس شكله ومقاسه */}
+            <button
+              type="button"
+              aria-label="الاعدادات"
+              onClick={() => {
+                setShowSettingsModal((p) => !p)
+                setSettingsTab('collector')
+                setSearchOpen(false)
+                setFilterDrawerOpen(false)
+              }}
+              className={`w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
+                showSettingsModal ? 'bg-[#0e7490] text-white border-[#0e7490]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+              </svg>
+            </button>
+
+            {/* زر إضافة مشترك - بجانب الإعدادات مباشرة وبنفس المقاس والستايل */}
+            <button
+              type="button"
+              aria-label="اضافة مشترك"
+              onClick={() => {
+                setFormError('')
+                setShowAddModal(true)
+              }}
+              className="w-8 h-8 border rounded-lg flex items-center justify-center transition-colors bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <span className="text-[18px] font-bold leading-none">+</span>
+            </button>
+
+            {/* زر تسجيل الخروج */}
+            <button
+              type="button"
+              title="تسجيل الخروج"
+              onClick={handleLogout}
+              className="w-8 h-8 border rounded-lg flex items-center justify-center transition-colors bg-white border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 text-[11px]"
+            >
+              ✕
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* زر الفلتر */}
-          <button
-            onClick={() => setShowFilterPanel(true)}
-            className={`h-8 px-3 rounded-full border text-[11px] font-bold transition-all ${
-              activeFiltersCount > 0
-                ? 'bg-white text-slate-900 border-white'
-                : 'bg-white/10 border-white/20 text-white'
-            }`}
-          >
-            فلتر {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
-          </button>
 
-          {/* زر إضافة مشترك */}
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="h-8 px-3 rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white"
-          >
-            + إضافة
-          </button>
-
-          {/* زر الإعدادات */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[14px]"
-          >
-            ⚙
-          </button>
-        </div>
-      </header>
-
-      {/* تبويبات المناطق */}
-      <div className="bg-white border-b border-[#e0f2fe] shadow-sm">
-        <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
-          {/* زر الكل */}
-          <button
-            onClick={() => { setSelectedArea(null); setSelectedBranch(null) }}
-            className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
-              !selectedArea
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-white'
-            }`}
-          >
-            الكل • {formatNumber(subscribers.length)}
-          </button>
-
-          {areas.map((area) => {
-            const count = subscribers.filter((s) => s.areaId === area.id).length
-            const isSelected = selectedArea === area.id
-            const isLongPress = longPressAreaId === area.id
-
-            return (
-              <div
-                key={area.id}
-                draggable={isLongPress}
-                onDragStart={() => setDraggingAreaId(area.id)}
-                onDragOver={(e) => { e.preventDefault() }}
-                onDragEnd={() => { setDraggingAreaId(null); setLongPressAreaId(null) }}
-                onMouseDown={() => {
-                  longPressTimer.current = setTimeout(() => setLongPressAreaId(area.id), 600)
-                }}
-                onMouseUp={() => {
-                  if (longPressTimer.current) clearTimeout(longPressTimer.current)
-                }}
-                onMouseLeave={() => {
-                  if (longPressTimer.current) clearTimeout(longPressTimer.current)
-                }}
-                onTouchStart={() => {
-                  longPressTimer.current = setTimeout(() => setLongPressAreaId(area.id), 600)
-                }}
-                onTouchEnd={() => {
-                  if (longPressTimer.current) clearTimeout(longPressTimer.current)
-                }}
-                className={`h-8 px-3 rounded-full border text-[12px] shrink-0 flex items-center gap-2 select-none transition-all ${
-                  isSelected
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : draggingAreaId === area.id
-                    ? 'opacity-40 scale-95'
-                    : 'bg-sky-50 border-sky-100 hover:bg-white text-slate-600'
-                } ${isLongPress ? 'cursor-grab' : 'cursor-pointer'}`}
-              >
-                <button
-                  onClick={() => {
-                    if (!isLongPress) {
-                      setSelectedArea(isSelected ? null : area.id)
-                      setSelectedBranch(null)
-                    }
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <span className="font-medium">{area.name}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-500'
-                  }`}>
-                    {formatNumber(count)}
-                  </span>
-                </button>
-
-                {isLongPress && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setLongPressAreaId(null) }}
-                    className="w-5 h-5 rounded-full bg-white text-slate-900 text-[10px] flex items-center justify-center ml-1"
-                  >
-                    ✕
-                  </button>
-                )}
+        {/* شريط البحث المنسدل */}
+        {searchOpen && (
+          <div className="border-t border-sky-100 bg-white/90 backdrop-blur">
+            <div className="max-w-[1100px] mx-auto px-4 py-3">
+              <div className="relative">
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="بحث برقم المشترك او الاسم او الهاتف..."
+                  className="w-full h-11 pr-4 pl-10 border border-sky-100 rounded-2xl text-[13px] focus:outline-none focus:border-slate-900 bg-sky-50/50 focus:bg-white transition-colors"
+                  autoFocus
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <circle cx="11" cy="11" r="6" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                </span>
               </div>
-            )
-          })}
-        </div>
-
-        {/* أفرع المنطقة المحددة */}
-        {selectedArea && (
-          <div className="px-3 pb-3 pt-0 border-t border-sky-50 bg-sky-50/30">
-            <div className="pt-3 pb-2 flex items-center justify-between">
-              <div className="text-[11px] font-bold text-slate-700">
-                افرع {getAreaName(selectedArea)}
-              </div>
-              <button
-                onClick={() => { setSelectedArea(null); setSelectedBranch(null) }}
-                className="text-[10px] border border-sky-100 bg-white rounded-full px-3 py-1 hover:bg-sky-50"
-              >
-                اغلاق
-              </button>
-            </div>
-            <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
-              <button
-                onClick={() => setSelectedBranch(null)}
-                className={`h-7 px-3 rounded-full border text-[11px] shrink-0 ${
-                  !selectedBranch
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white border-sky-100 text-slate-600'
-                }`}
-              >
-                كل الافرع
-              </button>
-              {(areas.find((a) => a.id === selectedArea)?.branches || []).map((branch) => {
-                const count = subscribers.filter(
-                  (s) => s.areaId === selectedArea && s.branchId === branch.id
-                ).length
-                const isSelected = selectedBranch === branch.id
-
-                return (
-                  <button
-                    key={branch.id}
-                    onClick={() => setSelectedBranch(isSelected ? null : branch.id)}
-                    className={`h-7 px-3 rounded-full border text-[11px] shrink-0 flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
-                    }`}
-                  >
-                    <span>{branch.name}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${
-                      isSelected ? 'bg-white/20' : 'bg-sky-50'
-                    }`}>
-                      {formatNumber(count)}
-                    </span>
-                  </button>
-                )
-              })}
             </div>
           </div>
         )}
-      </div>
 
-      {/* الفلاتر النشطة */}
-      {activeFiltersCount > 0 && (
-        <div className="mx-3 mt-3 flex flex-wrap gap-2 items-center bg-white border border-sky-100 rounded-2xl px-3 py-2.5 shadow-sm">
-          <span className="text-[11px] font-bold text-slate-700">فلتر نشط:</span>
-          {(!filterTypes.سكني || !filterTypes.تجاري) && (
-            <span className="h-6 px-2.5 rounded-full bg-slate-900 text-white text-[10px] flex items-center gap-1">
-              {filterTypes.سكني ? 'سكني' : 'تجاري'}
-              <button onClick={() => setFilterTypes({ سكني: true, تجاري: true })} className="ml-1">✕</button>
-            </span>
-          )}
-          {filterAreas.map((id) => (
-            <span key={id} className="h-6 px-2.5 rounded-full bg-sky-50 border border-sky-100 text-[10px] text-slate-700 flex items-center gap-1">
-              {getAreaName(id)}
-              <button onClick={() => setFilterAreas((p) => p.filter((x) => x !== id))} className="text-slate-400">✕</button>
-            </span>
-          ))}
-          {filterBranches.map((id) => {
-            const area = areas.find((a) => a.branches.some((b) => b.id === id))
-            const branch = area?.branches.find((b) => b.id === id)
-            return (
-              <span key={id} className="h-6 px-2.5 rounded-full bg-amber-50 border border-amber-100 text-[10px] text-slate-700 flex items-center gap-1">
-                {branch?.name || id}
-                <button onClick={() => setFilterBranches((p) => p.filter((x) => x !== id))} className="text-slate-400">✕</button>
-              </span>
-            )
-          })}
-          {filterStatuses.map((s) => (
-            <span key={s} className="h-6 px-2.5 rounded-full bg-violet-50 border border-violet-100 text-[10px] text-slate-700 flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[s]?.dot}`}></span>
-              {s}
-              <button onClick={() => setFilterStatuses((p) => p.filter((x) => x !== s))} className="text-slate-400">✕</button>
-            </span>
-          ))}
-          <button onClick={clearFilters} className="mr-auto h-6 px-3 rounded-full bg-white border border-sky-100 text-[10px] text-slate-600">
-            مسح الكل
-          </button>
-        </div>
-      )}
+        {/* درج الفلتر التفاعلي المتسلسل */}
+        {filterDrawerOpen && (
+          <div className="border-t border-sky-100 bg-white/95 backdrop-blur-xl shadow-[0_12px_24px_rgba(0,0,0,0.06)]">
+            <div className="max-w-[1100px] mx-auto px-4 py-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[13px] font-bold text-slate-900">الفلاتر المتقدمة</h3>
+                  {activeFiltersBadge > 0 && (
+                    <span className="text-[10px] bg-slate-900 text-white rounded-full px-2.5 py-0.5 font-mono">
+                      {formatNumber(activeFiltersBadge)} نشط
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={clearAllFilters}
+                    className="h-8 px-4 rounded-full border border-sky-100 bg-sky-50 text-[11px] font-bold text-slate-700 hover:bg-white"
+                  >
+                    مسح الكل
+                  </button>
+                  <button
+                    onClick={() => setFilterDrawerOpen(false)}
+                    className="w-8 h-8 rounded-xl border border-sky-100 bg-white flex items-center justify-center text-slate-500"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
 
-      {/* قائمة المشتركين */}
+              {/* شبكة الفلاتر الأربعة التفاعلية */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 1. النوع */}
+                <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/40">
+                  <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1 h-4 rounded-full bg-slate-900"></span> النوع
+                    </span>
+                    <span className="text-[9px] bg-white border border-sky-100 rounded-full px-2 py-0.5 text-slate-500">
+                      الخطوة 1
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {(['سكني', 'تجاري'] as const).map((type) => {
+                      const count = subscribersInRange.filter((s) => s.propertyType === type).length
+                      const isChecked = filterTypes[type]
+                      return (
+                        <label
+                          key={type}
+                          className={`flex items-center gap-2.5 h-11 px-3 rounded-xl border cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
+                              : 'bg-white/60 border-sky-100 text-slate-500 hover:bg-white'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => setFilterTypes((p) => ({ ...p, [type]: e.target.checked }))}
+                            className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                          />
+                          <span className="text-[12px] font-medium flex-1">{type}</span>
+                          <span
+                            className={`text-[11px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                              isChecked ? 'bg-white/20 text-white' : 'bg-sky-50 border border-sky-100 text-slate-600'
+                            }`}
+                          >
+                            {formatNumber(count)}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. المناطق المتحدثة فوراً */}
+                <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                  <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1 h-4 rounded-full bg-sky-500"></span> المناطق
+                    </span>
+                    <span className="text-[9px] bg-sky-50 border border-sky-100 rounded-full px-2 py-0.5 text-slate-500">
+                      الخطوة 2
+                    </span>
+                  </div>
+                  <div className="relative mb-2.5">
+                    <input
+                      value={filterAreaSearch}
+                      onChange={(e) => setFilterAreaSearch(e.target.value)}
+                      placeholder="بحث في المناطق..."
+                      className="w-full h-8 pr-3 pl-8 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                    />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">⌕</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+                    {areas
+                      .filter((a) => filterAreaSearch.trim() === '' || a.name.includes(filterAreaSearch.trim()))
+                      .map((area) => {
+                        const count = areaCounts.get(area.id) || 0
+                        const isChecked = filterAreas.includes(area.id)
+                        const disabled = count === 0 && !isChecked
+                        return (
+                          <label
+                            key={area.id}
+                            className={`flex items-center gap-2.5 h-9 px-3 rounded-xl border cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-slate-900 text-white border-slate-900'
+                                : disabled
+                                ? 'bg-zinc-50 border-zinc-100 text-zinc-400'
+                                : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={disabled}
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setFilterAreas((p) => [...p, area.id])
+                                else setFilterAreas((p) => p.filter((x) => x !== area.id))
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                            />
+                            <span className="text-[12px] font-medium flex-1 truncate">{area.name}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                                isChecked ? 'bg-white/20' : 'bg-white border border-sky-100'
+                              }`}
+                            >
+                              {formatNumber(count)}
+                            </span>
+                          </label>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {/* 3. الأفرع (تتحدث لتظهر فقط أفرع تلك المناطق مع العدد) */}
+                <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                  <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1 h-4 rounded-full bg-slate-900"></span> الأفرع
+                    </span>
+                    <span className="text-[9px] bg-sky-50 border border-sky-100 rounded-full px-2 py-0.5 text-slate-700">
+                      الخطوة 3
+                    </span>
+                  </div>
+                  <div className="relative mb-2.5">
+                    <input
+                      value={filterBranchSearch}
+                      onChange={(e) => setFilterBranchSearch(e.target.value)}
+                      placeholder="بحث في الأفرع..."
+                      className="w-full h-8 pr-3 pl-8 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                    />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">⌕</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+                    {areas
+                      .filter((a) => filterAreas.length === 0 || filterAreas.includes(a.id))
+                      .flatMap((a) => a.branches.map((b) => ({ ...b, areaId: a.id, areaName: a.name })))
+                      .filter(
+                        (b) =>
+                          filterBranchSearch.trim() === '' ||
+                          b.name.includes(filterBranchSearch.trim()) ||
+                          b.areaName.includes(filterBranchSearch.trim())
+                      )
+                      .map((branch) => {
+                        const count = branchCounts.get(branch.id) || 0
+                        const isChecked = filterBranches.includes(branch.id)
+                        const disabled = count === 0 && !isChecked
+                        return (
+                          <label
+                            key={branch.id}
+                            className={`flex items-center gap-2.5 h-9 px-3 rounded-xl border cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-slate-900 text-white border-slate-900'
+                                : disabled
+                                ? 'bg-zinc-50 border-zinc-100 text-zinc-400'
+                                : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={disabled}
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterBranches((p) => [...p, branch.id])
+                                  // اختيار فرع يختار منطقته تلقائياً
+                                  if (!filterAreas.includes(branch.areaId)) {
+                                    setFilterAreas((p) => [...p, branch.areaId])
+                                  }
+                                } else {
+                                  setFilterBranches((p) => p.filter((x) => x !== branch.id))
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                            />
+                            <span className="text-[11px] font-medium flex-1 truncate">{branch.name}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                                isChecked ? 'bg-white/20' : 'bg-white border border-sky-100'
+                              }`}
+                            >
+                              {formatNumber(count)}
+                            </span>
+                          </label>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {/* 4. الحالات المتعددة */}
+                <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                  <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1 h-4 rounded-full bg-violet-500"></span> حالات المشترك
+                    </span>
+                    <span className="text-[9px] bg-violet-50 border border-violet-100 rounded-full px-2 py-0.5 text-violet-700">
+                      الخطوة 4
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+                    {STATUS_OPTIONS.map((st) => {
+                      const count = statusCounts.get(st) || 0
+                      const isChecked = filterStatuses.includes(st)
+                      const cfg = STATUS_CONFIG[st]
+                      return (
+                        <label
+                          key={st}
+                          className={`flex items-center gap-2.5 h-9 px-3 rounded-xl border cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white border-sky-100 text-slate-700 hover:bg-sky-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) setFilterStatuses((p) => [...p, st])
+                              else setFilterStatuses((p) => p.filter((x) => x !== st))
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                          />
+                          <span className={`w-2 h-2 rounded-full ${cfg.dot}`}></span>
+                          <span className="text-[11px] font-medium flex-1 truncate">{st}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                              isChecked ? 'bg-white/20' : 'bg-violet-50 border border-violet-100 text-violet-700'
+                            }`}
+                          >
+                            {formatNumber(count)}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* أسفل الدرج: يوجد X مشترك يطابق الفلتر */}
+              <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between bg-slate-900 rounded-2xl px-4 py-3 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[14px]">◉</div>
+                  <div>
+                    <div className="text-[12px] font-bold">يوجد {formatNumber(matchingFilterCount)} مشترك يطابق الفلتر</div>
+                    <div className="text-[10px] text-white/60 mt-0.5">
+                      {filterAreas.length > 0 && `${formatNumber(filterAreas.length)} مناطق • `}
+                      {filterBranches.length > 0 && `${formatNumber(filterBranches.length)} أفرع • `}
+                      {formatNumber(subscribersInRange.length)} الكل
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => setFilterDrawerOpen(false)}
+                    className="flex-1 sm:flex-none h-9 px-6 rounded-xl bg-white text-slate-900 text-[12px] font-bold hover:bg-sky-50"
+                  >
+                    تطبيق ({formatNumber(matchingFilterCount)})
+                  </button>
+                  <button
+                    onClick={clearAllFilters}
+                    className="h-9 px-4 rounded-xl bg-white/10 border border-white/10 text-[11px] font-bold hover:bg-white/15"
+                  >
+                    مسح
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* تبويبات المناطق الرئيسية */}
       <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4">
+        <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
+          <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
+            {/* زر الكل */}
+            <button
+              onClick={() => {
+                setSelectedAreaId(null)
+                setActiveBranchId(null)
+                setBranchDrawerAreaId(null)
+              }}
+              className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
+                !selectedAreaId ? 'bg-slate-900 text-white border-slate-900' : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-white'
+              }`}
+            >
+              الكل • {formatNumber(subscribersInRange.length)}
+            </button>
+
+            {/* المناطق */}
+            {areas.map((area) => {
+              const count = subscribersInRange.filter((s) => s.areaId === area.id).length
+              const isSelected = selectedAreaId === area.id
+              const isDrawerOpen = branchDrawerAreaId === area.id
+
+              return (
+                <div
+                  key={area.id}
+                  onClick={() => {
+                    if (selectedAreaId !== area.id) {
+                      setSelectedAreaId(area.id)
+                      setActiveBranchId(null)
+                      setBranchDrawerAreaId(area.id)
+                    } else if (branchDrawerAreaId !== area.id) {
+                      setBranchDrawerAreaId(area.id)
+                    } else {
+                      setSelectedAreaId(null)
+                      setActiveBranchId(null)
+                      setBranchDrawerAreaId(null)
+                    }
+                  }}
+                  className={`h-8 px-3 rounded-full border text-[12px] shrink-0 flex items-center gap-2 cursor-pointer select-none transition-all ${
+                    isSelected
+                      ? isDrawerOpen
+                        ? 'bg-slate-800 text-white border-slate-800'
+                        : 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-sky-50 border-sky-100 hover:bg-white text-slate-600'
+                  }`}
+                >
+                  <span className="font-medium">{area.name}</span>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-500'
+                    }`}
+                  >
+                    {formatNumber(count)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* الفروع: لا تظهر إلا بعد فتح المنطقة */}
+          {branchDrawerAreaId && (
+            <div className="px-3 pb-3 pt-0 border-t border-sky-50 bg-sky-50/30">
+              <div className="pt-3 pb-2 flex items-center justify-between">
+                <div className="text-[11px] font-bold text-slate-700">
+                  أفرع {areas.find((a) => a.id === branchDrawerAreaId)?.name}
+                </div>
+                <button
+                  onClick={() => {
+                    setBranchDrawerAreaId(null)
+                    setActiveBranchId(null)
+                  }}
+                  className="text-[10px] border border-sky-100 bg-white rounded-full px-3 py-1 hover:bg-sky-50"
+                >
+                  إغلاق
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
+                <button
+                  onClick={() => setActiveBranchId(null)}
+                  className={`h-7 px-3 rounded-full border text-[11px] shrink-0 ${
+                    !activeBranchId ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600'
+                  }`}
+                >
+                  كل الأفرع
+                </button>
+                {(areas.find((a) => a.id === branchDrawerAreaId)?.branches || []).map((branch) => {
+                  const bCount = subscribersInRange.filter(
+                    (s) => s.areaId === branchDrawerAreaId && s.branchId === branch.id
+                  ).length
+                  const isBranchActive = activeBranchId === branch.id
+                  return (
+                    <button
+                      key={branch.id}
+                      onClick={() => setActiveBranchId(isBranchActive ? null : branch.id)}
+                      className={`h-7 px-3 rounded-full border text-[11px] shrink-0 flex items-center gap-1.5 ${
+                        isBranchActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+                      }`}
+                    >
+                      <span>{branch.name}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${isBranchActive ? 'bg-white/20' : 'bg-sky-50'}`}>
+                        {formatNumber(bCount)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* قائمة المشتركين الرئيسية */}
         <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm overflow-hidden">
-          {/* رأس الجدول */}
           <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center gap-2 bg-sky-50/40">
             <div className="text-[11px] text-slate-600">
-              <span className="font-bold text-slate-900">{formatNumber(filteredSubscribers.length)}</span>
-              {' '}من {formatNumber(subscribers.length)}
+              <span className="font-bold text-slate-900">{formatNumber(displayedSubscribers.length)}</span> من{' '}
+              {formatNumber(subscribersInRange.length)} • {formatNumber(rangeFrom)} - {formatNumber(rangeTo)}
             </div>
           </div>
 
-          {/* صفوف المشتركين */}
           <div className="divide-y divide-sky-50">
-            {filteredSubscribers.length === 0 ? (
-              <div className="py-16 text-center text-[13px] text-slate-400">
-                <div className="text-4xl mb-3">💧</div>
-                <div>لا يوجد مشتركون</div>
-                <div className="text-[11px] mt-1">أضف مشتركين أو عدّل الفلاتر</div>
+            {displayedSubscribers.length === 0 ? (
+              <div className="py-16 text-center text-slate-400 text-[13px]">
+                لا يوجد مشتركون مطابقون للبحث أو الفلتر
               </div>
             ) : (
-              filteredSubscribers.map((sub) => {
-                const due = getDue(sub)
+              displayedSubscribers.map((sub) => {
+                const currentDue = getSubscriberCurrentDue(sub.id)
                 return (
                   <div
                     key={sub.id}
                     onClick={() => {
-                      setSelectedId(sub.id)
-                      const periods = sub.payments.map((p) => p.periodLabel)
-                      const currentPeriod = getPeriodLabel(CURRENT_PERIOD, CURRENT_YEAR)
-                      setSelectedPeriod(periods.includes(currentPeriod) ? currentPeriod : periods[periods.length - 1] || currentPeriod)
+                      setSelectedSubId(sub.id)
+                      setSelectedYear(2026) // افتراضي 2026
                     }}
+                    onTouchStart={(e) => handleTouchStart(e, sub.id)}
+                    onTouchEnd={(e) => handleTouchEnd(e, sub)}
+                    onMouseDown={(e) => handleMouseDown(e, sub.id)}
+                    onMouseUp={(e) => handleMouseUp(e, sub)}
                     className="w-full text-right px-4 py-3.5 hover:bg-sky-50/40 flex justify-between items-center gap-3 cursor-pointer transition-colors select-none group bg-white"
                   >
+                    {/* الاسم والرقم على اليمين */}
                     <div className="min-w-0 flex-1 text-right">
                       <div className="text-[13px] font-bold truncate text-slate-900 leading-tight">
                         {formatNumber(sub.id)} - {sub.name}
                       </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        {getAreaName(sub.areaId)}
-                        {sub.branchId && ` - ${getBranchName(sub.areaId, sub.branchId)}`}
-                        {' • '}{sub.propertyType}
+                      <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span>{areas.find((a) => a.id === sub.areaId)?.name}</span>
+                        <span>•</span>
+                        <span>{sub.propertyType}</span>
+                        {(sub.statuses || []).map((st) => (
+                          <span
+                            key={st}
+                            className={`px-1.5 py-0.2 text-[9px] rounded-full font-medium ${STATUS_CONFIG[st]?.bg || 'bg-zinc-100'} ${STATUS_CONFIG[st]?.text || 'text-zinc-700'}`}
+                          >
+                            {st}
+                          </span>
+                        ))}
                       </div>
                     </div>
+
+                    {/* الدين يظهر على اليسار بلون أسود واضح وكبير */}
                     <div className="flex items-center gap-3 shrink-0">
-                      <div className={`text-[15px] font-bold font-mono tracking-tight min-w-[70px] text-left ${
-                        due === 0 ? 'text-emerald-700' : due < 0 ? 'text-sky-700' : 'text-[#111827]'
-                      }`}>
-                        {formatNumber(due)}
+                      <div className="text-[15px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
+                        {formatNumber(currentDue)}
                       </div>
                       <div className="text-sky-200 group-hover:text-slate-400 transition-colors text-[14px]">‹</div>
                     </div>
@@ -825,8 +1438,11 @@ export default function MainApp() {
         </div>
       </main>
 
-      {/* ===== نافذة تفاصيل المشترك ===== */}
-      {selectedSubscriber && (
+      {/* ==========================
+          نافذة تفاصيل المشترك وبلوك الديون
+          القاعدة 9: بعرض 100%، 4 أعمدة: 20% | 27% | 26% | 27%، ارتفاع 36px، بدون سكرول جانبي
+      ========================== */}
+      {activeSubscriber && activeBilling && (
         <div className="fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-[1px] flex flex-col">
           <div className="bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
             {/* رأس النافذة */}
@@ -834,45 +1450,45 @@ export default function MainApp() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h2 className="text-[15px] font-bold text-slate-900">
-                    {formatNumber(selectedSubscriber.id)} - {selectedSubscriber.name}
+                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
                   </h2>
                   <button
                     onClick={() => {
-                      setEditSub({ ...selectedSubscriber })
+                      setEditSub({ ...activeSubscriber })
                       setShowEditModal(true)
                     }}
                     className="w-7 h-7 border border-sky-100 rounded-xl flex items-center justify-center hover:bg-sky-50 bg-white text-slate-500"
                   >
-                    ✎
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                      <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
                   </button>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1.5">
-                  {getAreaName(selectedSubscriber.areaId)}
-                  {selectedSubscriber.branchId && ` - ${getBranchName(selectedSubscriber.areaId, selectedSubscriber.branchId)}`}
+                  {areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                  {' - '}
+                  {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
                 </div>
                 <div className="mt-3 flex gap-2 items-center">
                   <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
-                    {selectedSubscriber.propertyType} - {selectedSubscriber.meterType}
+                    {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
-                  <div className={`text-[13px] font-bold font-mono ${
-                    getDue(selectedSubscriber) === 0 ? 'text-emerald-700' :
-                    getDue(selectedSubscriber) < 0 ? 'text-sky-700' : 'text-[#ef4444]'
-                  }`}>
-                    {formatNumber(getDue(selectedSubscriber))}
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    المستحق: {formatNumber(activeBilling.due)}
                   </div>
                 </div>
               </div>
               <button
-                onClick={() => setSelectedId(null)}
+                onClick={() => setSelectedSubId(null)}
                 className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50"
               >
                 ✕
               </button>
             </div>
 
-            {/* محتوى النافذة */}
+            {/* المحتوى */}
             <div className="flex-1 overflow-y-auto">
-              {/* زر التواصل */}
               <div className="px-4 py-3">
                 <button
                   onClick={() => setShowContactModal(true)}
@@ -882,17 +1498,18 @@ export default function MainApp() {
                 </button>
               </div>
 
-              {/* تبويبات الفترات */}
+              {/* السنوات: فقط 2026 و 2027 و 2028 (لا 2025 أبداً)
+                  والسنة الحالية 2026 تظهر بلون أحمر دائماً */}
               <div className="px-4 py-2 border-y border-sky-50 bg-white overflow-x-auto whitespace-nowrap flex gap-2 scrollbar-none items-center">
-                {selectedSubscriber.payments.map((row) => {
-                  const isCurrentPeriod = row.period === CURRENT_PERIOD && row.year === CURRENT_YEAR
-                  const isSelected = selectedPeriod === row.periodLabel
+                {YEARS.map((y) => {
+                  const is2026 = y === 2026
+                  const isSelected = selectedYear === y
                   return (
                     <button
-                      key={row.periodLabel}
-                      onClick={() => setSelectedPeriod(row.periodLabel)}
+                      key={y}
+                      onClick={() => setSelectedYear(y)}
                       className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
-                        isCurrentPeriod
+                        is2026
                           ? isSelected
                             ? 'bg-[#ef4444] text-white border-[#ef4444]'
                             : 'bg-red-50 border-red-200 text-red-600'
@@ -901,30 +1518,31 @@ export default function MainApp() {
                           : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
                       }`}
                     >
-                      {row.periodLabel}
+                      {y}
                     </button>
                   )
                 })}
               </div>
 
-              {/* معلومات بداية السنة */}
+              {/* بداية السنة بسيطة: القديم + الفائدة = الناتج */}
               <div className="w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
                 <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
                   <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
                   <span className="text-slate-600">
-                    القديم {formatNumber(selectedSubscriber.remainingPrev || 0)} + الفائدة {formatNumber(selectedSubscriber.fee || 0)} = {formatNumber((selectedSubscriber.remainingPrev || 0) + (selectedSubscriber.fee || 0))}
+                    القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
                   </span>
                 </div>
               </div>
 
-              {/* جدول الدفعات */}
-              <div className="w-full" style={{ width: '100%', margin: 0, padding: '8px', boxSizing: 'border-box' }}>
+              {/* بلوك الديون بعرض الشاشة 100%
+                  الأعمدة: الفترة 20% | الدين القديم 27% | المدفوع 26% | المتبقي 27%
+                  ارتفاع الخلية 36px وبدون سكرول جانبي */}
+              <div className="w-full" style={{ width: '100%', margin: 0, padding: '8px', boxSizing: 'border-box', maxWidth: '100%' }}>
                 <div className="bg-white rounded-2xl border border-sky-100 overflow-hidden shadow-sm w-full">
                   <div className="w-full">
-                    {/* رأس الجدول */}
                     <div
                       className="bg-slate-900 text-white text-[11px] font-bold grid w-full"
-                      style={{ gridTemplateColumns: '20% 27% 26% 27%' }}
+                      style={{ gridTemplateColumns: '20% 27% 26% 27%', width: '100%' }}
                     >
                       <div className="px-1 py-3 text-center">الفترة</div>
                       <div className="px-1 py-3 border-r border-white/10 text-center">الدين القديم</div>
@@ -932,11 +1550,10 @@ export default function MainApp() {
                       <div className="px-1 py-3 border-r border-white/10 text-center">المتبقي</div>
                     </div>
 
-                    {/* صفوف الدفعات */}
-                    {selectedSubscriber.payments.map((row, idx) => {
-                      const isCurrentPeriod = row.period === CURRENT_PERIOD && row.year === CURRENT_YEAR
-                      const isSelectedPeriod = selectedPeriod === row.periodLabel
-                      const editKey = (field: string) => `${idx}_${field}`
+                    {activeBilling.rows.map((row, idx) => {
+                      // الشهر الحالي يبين بحد أحمر فقط، لا تكتب كلمة "الحالي"
+                      const isCurrentPeriod = selectedYear === 2026 && idx === currentPeriodIndex
+                      const editKey = (f: string) => `${activeSubscriber.id}_${selectedYear}_${idx}_${f}`
 
                       return (
                         <div
@@ -948,7 +1565,7 @@ export default function MainApp() {
                               ? 'bg-white border-sky-50'
                               : 'bg-sky-50/30 border-sky-50'
                           }`}
-                          style={{ gridTemplateColumns: '20% 27% 26% 27%', minHeight: '44px' }}
+                          style={{ gridTemplateColumns: '20% 27% 26% 27%', width: '100%', minHeight: '44px' }}
                         >
                           {/* الفترة */}
                           <div
@@ -966,10 +1583,11 @@ export default function MainApp() {
                               value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : String(row.old)}
                               onChange={(e) => {
                                 const v = e.target.value
-                                if (v === '' || /^[0-9]*$/.test(v))
+                                if (v === '' || /^[0-9]*$/.test(v)) {
                                   setPendingEdits((p) => ({ ...p, [editKey('old')]: v }))
+                                }
                               }}
-                              onBlur={(e) => savePayment(selectedSubscriber.id, idx, 'old', e.target.value)}
+                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', e.target.value)}
                               onFocus={(e) => {
                                 setPendingEdits((p) => ({ ...p, [editKey('old')]: String(row.old) }))
                                 setTimeout(() => e.target.select(), 0)
@@ -988,15 +1606,25 @@ export default function MainApp() {
                           {/* المدفوع */}
                           <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
-                              value={pendingEdits[editKey('paid')] !== undefined ? pendingEdits[editKey('paid')] : (row.paid === 0 ? '' : String(row.paid))}
+                              value={
+                                pendingEdits[editKey('paid')] !== undefined
+                                  ? pendingEdits[editKey('paid')]
+                                  : row.paid === 0
+                                  ? ''
+                                  : String(row.paid)
+                              }
                               onChange={(e) => {
                                 const v = e.target.value
-                                if (v === '' || /^[0-9]*$/.test(v))
+                                if (v === '' || /^[0-9]*$/.test(v)) {
                                   setPendingEdits((p) => ({ ...p, [editKey('paid')]: v }))
+                                }
                               }}
-                              onBlur={(e) => savePayment(selectedSubscriber.id, idx, 'paid', e.target.value)}
+                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', e.target.value)}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('paid')]: row.paid === 0 ? '' : String(row.paid) }))
+                                setPendingEdits((p) => ({
+                                  ...p,
+                                  [editKey('paid')]: row.paid === 0 ? '' : String(row.paid)
+                                }))
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
@@ -1016,10 +1644,11 @@ export default function MainApp() {
                               value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : String(row.remaining)}
                               onChange={(e) => {
                                 const v = e.target.value
-                                if (v === '' || /^-?[0-9]*$/.test(v))
+                                if (v === '' || /^-?[0-9]*$/.test(v)) {
                                   setPendingEdits((p) => ({ ...p, [editKey('rem')]: v }))
+                                }
                               }}
-                              onBlur={(e) => savePayment(selectedSubscriber.id, idx, 'rem', e.target.value)}
+                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', e.target.value)}
                               onFocus={(e) => {
                                 setPendingEdits((p) => ({ ...p, [editKey('rem')]: String(row.remaining) }))
                                 setTimeout(() => e.target.select(), 0)
@@ -1053,7 +1682,7 @@ export default function MainApp() {
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#fef2f2] border border-red-200"></span>
-                    {getPeriodLabel(CURRENT_PERIOD, CURRENT_YEAR)}
+                    {PERIODS[currentPeriodIndex]}
                   </span>
                 </div>
               </div>
@@ -1062,100 +1691,24 @@ export default function MainApp() {
         </div>
       )}
 
-      {/* ===== نافذة التواصل والموقع ===== */}
-      {showContactModal && selectedSubscriber && (
-        <div className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col shadow-xl">
-            <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
-              <h3 className="font-bold text-[13px] text-slate-800">التواصل والموقع والصور</h3>
-              <button
-                onClick={() => setShowContactModal(false)}
-                className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-4 space-y-4 overflow-y-auto">
-              {/* الهاتف */}
-              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40">
-                <div className="text-[11px] text-slate-500">رقم الهاتف</div>
-                <div className="font-mono text-[13px] mt-1.5 font-bold" dir="ltr">
-                  {selectedSubscriber.phone || 'غير محدد'}
-                </div>
-                {selectedSubscriber.phone && (
-                  <div className="flex gap-2 mt-3">
-                    <a
-                      href={`tel:${selectedSubscriber.phone}`}
-                      className="h-9 px-4 border border-sky-100 rounded-full text-[12px] flex items-center bg-white text-slate-700 hover:bg-sky-50"
-                    >
-                      اتصال
-                    </a>
-                    <a
-                      href={`https://wa.me/${selectedSubscriber.phone.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noopener"
-                      className="h-9 px-4 border border-sky-100 rounded-full text-[12px] flex items-center bg-white text-slate-700 hover:bg-sky-50"
-                    >
-                      واتساب
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* الموقع */}
-              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40">
-                <div className="text-[11px] text-slate-500">العنوان التفصيلي</div>
-                <div className="text-[12px] mt-1.5 font-medium">
-                  {selectedSubscriber.detailedAddress || 'غير محدد'}
-                </div>
-                {selectedSubscriber.location?.link && (
-                  <a
-                    href={selectedSubscriber.location.link}
-                    target="_blank"
-                    rel="noopener"
-                    className="mt-3 inline-flex h-9 px-4 border border-sky-100 rounded-full text-[12px] items-center bg-white text-slate-700"
-                  >
-                    فتح الخريطة
-                  </a>
-                )}
-              </div>
-
-              {/* صورة الباب */}
-              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40">
-                <div className="text-[11px] text-slate-500">صورة الباب</div>
-                {selectedSubscriber.doorImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={selectedSubscriber.doorImage}
-                    className="mt-3 w-full h-48 object-cover rounded-2xl border border-sky-100"
-                    alt="صورة الباب"
-                  />
-                ) : (
-                  <div className="mt-3 h-32 bg-white border border-dashed border-sky-100 rounded-2xl flex items-center justify-center text-[11px] text-slate-400">
-                    لا توجد صورة
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== نافذة إضافة مشترك ===== */}
+      {/* ==========================
+          فورم إضافة مشترك (A)
+      ========================== */}
       {showAddModal && (
         <div className="fixed inset-0 z-[60] bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[420px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-2xl">
+          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[440px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-2xl">
             <div className="px-5 py-4 border-b border-sky-50 flex justify-between items-center bg-white">
-              <h3 className="font-bold text-[14px] text-slate-900">اضافة مشترك جديد</h3>
+              <h3 className="font-bold text-[14px] text-slate-900">إضافة مشترك جديد</h3>
               <button
-                onClick={() => { setShowAddModal(false); setAddError('') }}
+                onClick={() => setShowAddModal(false)}
                 className="w-8 h-8 border rounded-lg flex items-center justify-center bg-white border-slate-200 text-slate-600"
               >
                 ✕
               </button>
             </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* رقم المشترك */}
+
+            <form onSubmit={handleAddSubscriberSubmit} className="p-5 space-y-4 overflow-y-auto">
+              {/* رقم المشترك * إجباري */}
               <div>
                 <label className="text-[11px] font-bold text-slate-700">
                   رقم المشترك <span className="text-red-500">*</span>
@@ -1163,13 +1716,13 @@ export default function MainApp() {
                 <input
                   value={newSub.idStr}
                   onChange={(e) => setNewSub((p) => ({ ...p, idStr: e.target.value.replace(/[^0-9]/g, '') }))}
-                  placeholder="مثال 7000"
+                  placeholder="مثال: 5205"
                   className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
                   inputMode="numeric"
                 />
               </div>
 
-              {/* الاسم */}
+              {/* اسم المشترك * إجباري */}
               <div>
                 <label className="text-[11px] font-bold text-slate-700">
                   اسم المشترك <span className="text-red-500">*</span>
@@ -1177,12 +1730,12 @@ export default function MainApp() {
                 <input
                   value={newSub.name}
                   onChange={(e) => setNewSub((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="الاسم الثلاثي"
+                  placeholder="الاسم الثلاثي..."
                   className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:border-slate-900 bg-white"
                 />
               </div>
 
-              {/* المنطقة */}
+              {/* المنطقة * إجباري */}
               <div>
                 <label className="text-[11px] font-bold text-slate-700">
                   المنطقة <span className="text-red-500">*</span>
@@ -1190,17 +1743,68 @@ export default function MainApp() {
                 <select
                   value={newSub.areaId}
                   onChange={(e) => {
-                    const areaId = e.target.value
-                    const area = areas.find((a) => a.id === areaId)
-                    setNewSub((p) => ({ ...p, areaId, branchId: area?.branches[0]?.id || '' }))
+                    const aId = e.target.value
+                    const targetArea = areas.find((a) => a.id === aId)
+                    setNewSub((p) => ({
+                      ...p,
+                      areaId: aId,
+                      branchId: targetArea?.branches[0]?.id || ''
+                    }))
                   }}
                   className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900"
                 >
                   <option value="">اختر المنطقة</option>
                   {areas.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
                   ))}
                 </select>
+              </div>
+
+              {/* الفرع (تفاعلي يظهر أفرع المنطقة فقط) */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700">الفرع</label>
+                <select
+                  value={newSub.branchId}
+                  onChange={(e) => setNewSub((p) => ({ ...p, branchId: e.target.value }))}
+                  className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900"
+                >
+                  {(areas.find((a) => a.id === newSub.areaId)?.branches || []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* نوع العقار وحجم المتر */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700">نوع العقار</label>
+                  <select
+                    value={newSub.propertyType}
+                    onChange={(e) => setNewSub((p) => ({ ...p, propertyType: e.target.value as PropertyType }))}
+                    className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white"
+                  >
+                    <option value="سكني">سكني</option>
+                    <option value="تجاري">تجاري</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700">حجم المتر</label>
+                  <select
+                    value={newSub.meterType}
+                    onChange={(e) => setNewSub((p) => ({ ...p, meterType: e.target.value as MeterType }))}
+                    className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white"
+                  >
+                    {METERS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* الهاتف */}
@@ -1217,32 +1821,63 @@ export default function MainApp() {
                 />
               </div>
 
-              {addError && (
+              {/* حالات المشترك المتعددة */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-2">حالات المشترك</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {STATUS_OPTIONS.map((st) => {
+                    const checked = newSub.statuses.includes(st)
+                    return (
+                      <label
+                        key={st}
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-all ${
+                          checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-sky-50/50 border-sky-100 text-slate-700'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewSub((p) => ({ ...p, statuses: [...p.statuses, st] }))
+                            } else {
+                              setNewSub((p) => ({ ...p, statuses: p.statuses.filter((x) => x !== st) }))
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded border-slate-300 accent-slate-900"
+                        />
+                        <span className="truncate">{st}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {formError && (
                 <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl p-3">
-                  {addError}
+                  {formError}
                 </div>
               )}
 
               <button
-                onClick={handleAddSubscriber}
-                className="w-full h-11 bg-slate-900 text-white rounded-xl text-[13px] font-bold hover:bg-black transition-colors mt-1"
+                type="submit"
+                className="w-full h-11 bg-slate-900 text-white rounded-xl text-[13px] font-bold hover:bg-black transition-colors mt-2"
               >
                 حفظ المشترك
               </button>
-              <div className="text-[10px] text-slate-400 text-center">
-                الحقول المشار اليها بـ * اجبارية
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* ===== نافذة تعديل المشترك ===== */}
-      {showEditModal && selectedSubscriber && (
+      {/* ==========================
+          فورم تعديل مشترك (B)
+      ========================== */}
+      {showEditModal && editSub.id && (
         <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[520px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-xl">
+          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-xl">
             <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
-              <h3 className="font-bold text-[13px] text-slate-800">تعديل معلومات المشترك</h3>
+              <h3 className="font-bold text-[13px] text-slate-800">تعديل معلومات المشترك #{editSub.id}</h3>
               <button
                 onClick={() => setShowEditModal(false)}
                 className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
@@ -1250,8 +1885,8 @@ export default function MainApp() {
                 ✕
               </button>
             </div>
-            <div className="p-4 space-y-4 overflow-y-auto">
-              {/* الاسم */}
+
+            <form onSubmit={handleEditSubscriberSubmit} className="p-4 space-y-4 overflow-y-auto">
               <div>
                 <label className="text-[11px] text-slate-600 font-medium">الاسم</label>
                 <input
@@ -1261,7 +1896,6 @@ export default function MainApp() {
                 />
               </div>
 
-              {/* الهاتف */}
               <div>
                 <label className="text-[11px] text-slate-600 font-medium">الهاتف</label>
                 <input
@@ -1272,103 +1906,52 @@ export default function MainApp() {
                 />
               </div>
 
-              {/* المنطقة */}
-              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/30">
-                <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-bold text-slate-700">المنطقة</label>
-                  <button
-                    onClick={() => setShowAddAreaInEdit((p) => !p)}
-                    className="text-[11px] h-7 px-3 border border-sky-100 bg-white rounded-full text-slate-600"
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-600 font-medium">المنطقة</label>
+                  <select
+                    value={editSub.areaId || ''}
+                    onChange={(e) => {
+                      const aId = e.target.value
+                      const targetArea = areas.find((a) => a.id === aId)
+                      setEditSub((p) => ({
+                        ...p,
+                        areaId: aId,
+                        branchId: targetArea?.branches[0]?.id || ''
+                      }))
+                    }}
+                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
                   >
-                    اضافة منطقة
-                  </button>
+                    {areas.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                {showAddAreaInEdit && (
-                  <div className="mt-3 flex gap-2">
-                    <input
-                      value={newAreaName}
-                      onChange={(e) => setNewAreaName(e.target.value)}
-                      placeholder="اسم المنطقة الجديدة"
-                      className="flex-1 h-9 px-3 border border-sky-100 rounded-xl text-[12px] bg-white"
-                    />
-                    <button
-                      onClick={() => handleAddArea(true)}
-                      className="h-9 px-4 bg-slate-900 text-white rounded-xl text-[11px]"
-                    >
-                      حفظ
-                    </button>
-                  </div>
-                )}
-                <select
-                  value={editSub.areaId || ''}
-                  onChange={(e) => {
-                    const areaId = e.target.value
-                    const area = areas.find((a) => a.id === areaId)
-                    setEditSub((p) => ({ ...p, areaId, branchId: area?.branches[0]?.id || '' }))
-                  }}
-                  className="mt-3 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] bg-white"
-                >
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* الفرع */}
-              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/30">
-                <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-bold text-slate-700">الفرع</label>
-                  <button
-                    onClick={() => setShowAddBranchInEdit((p) => !p)}
-                    className="text-[11px] h-7 px-3 border border-sky-100 bg-white rounded-full text-slate-600"
+                <div>
+                  <label className="text-[11px] text-slate-600 font-medium">الفرع</label>
+                  <select
+                    value={editSub.branchId || ''}
+                    onChange={(e) => setEditSub((p) => ({ ...p, branchId: e.target.value }))}
+                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
                   >
-                    اضافة فرع
-                  </button>
-                </div>
-                {showAddBranchInEdit && (
-                  <div className="mt-3 flex gap-2">
-                    <input
-                      value={newBranchName}
-                      onChange={(e) => setNewBranchName(e.target.value)}
-                      placeholder="اسم الفرع الجديد"
-                      className="flex-1 h-9 px-3 border border-sky-100 rounded-xl text-[12px] bg-white"
-                    />
-                    <button
-                      onClick={() => {
-                        if (editSub.areaId) {
-                          handleAddBranch(editSub.areaId, newBranchName)
-                          setNewBranchName('')
-                          setShowAddBranchInEdit(false)
-                        }
-                      }}
-                      className="h-9 px-4 bg-slate-900 text-white rounded-xl text-[11px]"
-                    >
-                      حفظ
-                    </button>
-                  </div>
-                )}
-                <select
-                  value={editSub.branchId || ''}
-                  onChange={(e) => setEditSub((p) => ({ ...p, branchId: e.target.value }))}
-                  className="mt-3 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] bg-white"
-                >
-                  {(areas.find((a) => a.id === editSub.areaId)?.branches || []).map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-                <div className="text-[10px] text-slate-500 mt-2.5">
-                  الفروع المعروضة تابعة فقط لمنطقة {getAreaName(editSub.areaId || '')}
+                    {(areas.find((a) => a.id === editSub.areaId)?.branches || []).map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* نوع العقار ونوع المتر */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-slate-600 font-medium">نوع العقار</label>
                   <select
                     value={editSub.propertyType || 'سكني'}
-                    onChange={(e) => setEditSub((p) => ({ ...p, propertyType: e.target.value as 'سكني' | 'تجاري' }))}
-                    className="mt-1.5 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] bg-white"
+                    onChange={(e) => setEditSub((p) => ({ ...p, propertyType: e.target.value as PropertyType }))}
+                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
                   >
                     <option value="سكني">سكني</option>
                     <option value="تجاري">تجاري</option>
@@ -1378,191 +1961,136 @@ export default function MainApp() {
                   <label className="text-[11px] text-slate-600 font-medium">نوع المتر</label>
                   <select
                     value={editSub.meterType || '4 متر'}
-                    onChange={(e) => setEditSub((p) => ({ ...p, meterType: e.target.value }))}
-                    className="mt-1.5 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] bg-white"
+                    onChange={(e) => setEditSub((p) => ({ ...p, meterType: e.target.value as MeterType }))}
+                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
                   >
-                    {METER_TYPES.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                    {METERS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
 
+              <div>
+                <label className="text-[11px] text-slate-600 font-medium block mb-2">تعديل الحالات المتعددة</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {STATUS_OPTIONS.map((st) => {
+                    const checked = (editSub.statuses || []).includes(st)
+                    return (
+                      <label
+                        key={st}
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-all ${
+                          checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-sky-50/50 border-sky-100 text-slate-700'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const cur = editSub.statuses || []
+                            if (e.target.checked) {
+                              setEditSub((p) => ({ ...p, statuses: [...cur, st] }))
+                            } else {
+                              setEditSub((p) => ({ ...p, statuses: cur.filter((x) => x !== st) }))
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded border-slate-300 accent-slate-900"
+                        />
+                        <span className="truncate">{st}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
               <button
-                onClick={handleSaveEdit}
+                type="submit"
                 className="w-full h-11 bg-slate-900 text-white rounded-2xl text-[13px] font-bold"
               >
                 حفظ التعديلات
               </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* ===== لوحة الفلتر ===== */}
-      {showFilterPanel && (
-        <div className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-[1px] flex">
-          <div className="bg-white w-full sm:w-[520px] h-full border-l border-sky-100 flex flex-col mr-auto sm:mr-0 ml-auto shadow-[-8px_0_30px_rgba(0,0,0,0.1)]">
-            <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center bg-slate-900 text-white">
-              <h3 className="font-bold text-[13px]">الفلتر المتقدم</h3>
+      {/* نافذة التواصل والموقع والصور */}
+      {showContactModal && activeSubscriber && (
+        <div className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-0 sm:p-4">
+          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col shadow-xl">
+            <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
+              <h3 className="font-bold text-[13px] text-slate-800">التواصل والموقع والصور</h3>
               <button
-                onClick={() => setShowFilterPanel(false)}
-                className="w-7 h-7 border border-white/20 rounded-lg flex items-center justify-center bg-white/10"
+                onClick={() => setShowContactModal(false)}
+                className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
               >
                 ✕
               </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* نوع العقار */}
-              <div className="border border-sky-100 rounded-2xl p-3 bg-white">
-                <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
-                  <span className="w-1 h-4 rounded-full bg-sky-500"></span>
-                  نوع العقار
+            <div className="p-4 space-y-4 overflow-y-auto">
+              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40">
+                <div className="text-[11px] text-slate-500">رقم الهاتف</div>
+                <div className="font-mono text-[13px] mt-1.5 font-bold" dir="ltr">
+                  {activeSubscriber.phone || 'غير مسجل'}
                 </div>
-                <div className="flex gap-2">
-                  {(['سكني', 'تجاري'] as const).map((type) => (
-                    <label
-                      key={type}
-                      className={`flex-1 h-9 px-3 rounded-xl border cursor-pointer flex items-center gap-2 ${
-                        filterTypes[type]
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-sky-50/60 border-sky-100 text-slate-700'
-                      }`}
+                {activeSubscriber.phone && (
+                  <div className="flex gap-2 mt-3">
+                    <a
+                      href={`tel:${activeSubscriber.phone}`}
+                      className="h-9 px-4 border border-sky-100 rounded-full text-[12px] flex items-center bg-white text-slate-700 hover:bg-sky-50"
                     >
-                      <input
-                        type="checkbox"
-                        checked={filterTypes[type]}
-                        onChange={(e) => setFilterTypes((p) => ({ ...p, [type]: e.target.checked }))}
-                        className="w-4 h-4 rounded border-slate-300 accent-slate-900"
-                      />
-                      <span className="text-[11px] font-medium">{type}</span>
-                    </label>
-                  ))}
-                </div>
+                      اتصال
+                    </a>
+                    <a
+                      href={`https://wa.me/${activeSubscriber.phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="h-9 px-4 border border-sky-100 rounded-full text-[12px] flex items-center bg-white text-slate-700 hover:bg-sky-50"
+                    >
+                      واتساب
+                    </a>
+                  </div>
+                )}
               </div>
 
-              {/* المناطق */}
-              <div className="border border-sky-100 rounded-2xl p-3 bg-white">
-                <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
-                  <span className="w-1 h-4 rounded-full bg-sky-500"></span>
-                  المناطق
-                </div>
-                <div className="space-y-1.5">
-                  {areas.map((area) => {
-                    const count = subscribers.filter((s) => s.areaId === area.id).length
-                    const isChecked = filterAreas.includes(area.id)
-                    return (
-                      <label
-                        key={area.id}
-                        className={`flex items-center gap-2.5 h-9 px-3 rounded-xl border cursor-pointer transition-all ${
-                          isChecked
-                            ? 'bg-slate-900 text-white border-slate-900'
-                            : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) setFilterAreas((p) => [...p, area.id])
-                            else setFilterAreas((p) => p.filter((x) => x !== area.id))
-                          }}
-                          className="w-4 h-4 rounded border-slate-300 accent-slate-900"
-                        />
-                        <span className="text-[11px] font-medium flex-1 truncate">{area.name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                          isChecked ? 'bg-white/20' : 'bg-white border border-sky-100'
-                        }`}>
-                          {formatNumber(count)}
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
+              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40">
+                <div className="text-[11px] text-slate-500">العنوان التفصيلي</div>
+                <div className="text-[12px] mt-1.5 font-medium">{activeSubscriber.detailedAddress || 'غير محدد'}</div>
               </div>
-
-              {/* الحالات */}
-              <div className="border border-sky-100 rounded-2xl p-3 bg-white">
-                <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
-                  <span className="w-1 h-4 rounded-full bg-violet-500"></span>
-                  حالة المشترك
-                </div>
-                <div className="space-y-1.5">
-                  {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-                    const isChecked = filterStatuses.includes(status)
-                    return (
-                      <label
-                        key={status}
-                        className={`flex items-center gap-2.5 h-9 px-3 rounded-xl border cursor-pointer transition-all ${
-                          isChecked
-                            ? 'bg-slate-900 text-white border-slate-900'
-                            : 'bg-white border-sky-100 text-slate-700 hover:bg-sky-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) setFilterStatuses((p) => [...p, status])
-                            else setFilterStatuses((p) => p.filter((x) => x !== status))
-                          }}
-                          className="w-4 h-4 rounded border-slate-300 accent-slate-900"
-                        />
-                        <span className={`w-2 h-2 rounded-full ${config.dot}`}></span>
-                        <span className="text-[11px] font-medium flex-1">{status}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* أزرار أسفل لوحة الفلتر */}
-            <div className="mt-auto pt-2 border-t border-sky-50 p-4 flex items-center justify-between gap-3 bg-white">
-              <button
-                onClick={clearFilters}
-                className="h-9 px-4 rounded-xl bg-white border border-sky-100 text-[12px] font-bold text-slate-700"
-              >
-                مسح
-              </button>
-              <button
-                onClick={() => setShowFilterPanel(false)}
-                className="flex-1 h-9 px-6 rounded-xl bg-white text-slate-900 text-[12px] font-bold hover:bg-sky-50 border border-sky-100"
-              >
-                تطبيق ({formatNumber(filteredSubscribers.length)})
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ===== لوحة الإعدادات ===== */}
-      {showSettings && (
+      {/* ==========================
+          درج الإعدادات الكامل
+          الأسعار: مكتوب "لكل شهرين"
+          الاستيراد (C) مع البارسر الذكي
+      ========================== */}
+      {showSettingsModal && (
         <div className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-[1px] flex">
           <div className="bg-white w-full sm:w-[520px] h-full border-l border-sky-100 flex flex-col mr-auto sm:mr-0 ml-auto shadow-[-8px_0_30px_rgba(0,0,0,0.1)]">
             <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center bg-slate-900 text-white">
-              <h3 className="font-bold text-[13px]">الاعدادات</h3>
+              <h3 className="font-bold text-[13px]">الإعدادات</h3>
               <button
-                onClick={() => setShowSettings(false)}
+                onClick={() => setShowSettingsModal(false)}
                 className="w-7 h-7 border border-white/20 rounded-lg flex items-center justify-center bg-white/10"
               >
                 ✕
               </button>
             </div>
 
-            {/* تبويبات الإعدادات */}
             <div className="px-3 py-3 border-b border-sky-50 flex gap-2 overflow-x-auto scrollbar-none bg-sky-50/30">
-              {(['collector', 'pricing', 'areas'] as const).map((tab) => {
-                const labels = { collector: 'المحصل', pricing: 'التسعير', areas: 'المناطق والافرع' }
+              {(['collector', 'pricing', 'areas', 'import'] as const).map((tab) => {
+                const labels = { collector: 'المحصل', pricing: 'التسعير', areas: 'المناطق والافرع', import: 'الاستيراد' }
                 return (
                   <button
                     key={tab}
                     onClick={() => setSettingsTab(tab)}
                     className={`h-8 px-4 rounded-full border text-[11px] whitespace-nowrap font-bold ${
-                      settingsTab === tab
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white border-sky-100 text-slate-600'
+                      settingsTab === tab ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600'
                     }`}
                   >
                     {labels[tab]}
@@ -1572,14 +2100,14 @@ export default function MainApp() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 bg-[#f0f9ff]/50">
-              {/* إعدادات المحصل */}
+              {/* تبويب المحصل */}
               {settingsTab === 'collector' && (
                 <div className="space-y-4">
                   <div className="border border-sky-100 rounded-2xl overflow-hidden bg-white shadow-sm">
                     <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                       <div className="text-[12px] font-bold">تفاصيل المحصل</div>
                       <div className="text-[10px] bg-white/15 px-3 py-1 rounded-full font-mono">
-                        {formatNumber(subscribers.length)} اشتراك
+                        {formatNumber(subscribersInRange.length)} اشتراك
                       </div>
                     </div>
                     <div className="p-4 space-y-4">
@@ -1589,7 +2117,6 @@ export default function MainApp() {
                           <input
                             value={collectorName}
                             onChange={(e) => setCollectorName(e.target.value)}
-                            onBlur={handleSaveCollector}
                             className="mt-1.5 w-full h-9 px-3 border border-sky-100 rounded-xl text-[12px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
                           />
                         </div>
@@ -1598,7 +2125,6 @@ export default function MainApp() {
                           <input
                             value={collectorPhone}
                             onChange={(e) => setCollectorPhone(e.target.value)}
-                            onBlur={handleSaveCollector}
                             className="mt-1.5 w-full h-9 px-3 border border-sky-100 rounded-xl text-[12px] bg-sky-50/40 font-mono focus:bg-white focus:outline-none focus:border-slate-900"
                             dir="ltr"
                           />
@@ -1607,22 +2133,20 @@ export default function MainApp() {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
-                          <div className="text-[10px] text-slate-500">من</div>
+                          <div className="text-[10px] text-slate-500">من رقم</div>
                           <input
                             type="number"
                             value={rangeFrom}
                             onChange={(e) => setRangeFrom(Number(e.target.value) || 1)}
-                            onBlur={handleSaveCollector}
                             className="mt-1.5 w-full h-8 px-3 border border-sky-100 rounded-xl font-mono text-[13px] font-bold bg-white focus:outline-none focus:border-slate-900"
                           />
                         </div>
                         <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
-                          <div className="text-[10px] text-slate-500">الى</div>
+                          <div className="text-[10px] text-slate-500">إلى رقم</div>
                           <input
                             type="number"
                             value={rangeTo}
                             onChange={(e) => setRangeTo(Number(e.target.value) || 9999)}
-                            onBlur={handleSaveCollector}
                             className="mt-1.5 w-full h-8 px-3 border border-sky-100 rounded-xl font-mono text-[13px] font-bold bg-white focus:outline-none focus:border-slate-900"
                           />
                         </div>
@@ -1632,52 +2156,64 @@ export default function MainApp() {
                 </div>
               )}
 
-              {/* إعدادات التسعير */}
+              {/* تبويب التسعير: مكتوب "لكل شهرين" */}
               {settingsTab === 'pricing' && (
                 <div className="space-y-4">
-                  {(['سكني', 'تجاري'] as const).map((propertyType) => (
-                    <div key={propertyType} className="border border-sky-100 rounded-2xl bg-white overflow-hidden shadow-sm">
+                  {(['سكني', 'تجاري'] as const).map((prop) => (
+                    <div key={prop} className="border border-sky-100 rounded-2xl bg-white overflow-hidden shadow-sm">
                       <div className="px-4 py-3 bg-sky-50/40 border-b border-sky-50 flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                          <div className={`w-1 h-5 rounded-full ${propertyType === 'سكني' ? 'bg-slate-900' : 'bg-slate-400'}`}></div>
-                          <div className="text-[13px] font-bold text-slate-800">{propertyType}</div>
+                          <div className={`w-1 h-5 rounded-full ${prop === 'سكني' ? 'bg-slate-900' : 'bg-slate-400'}`}></div>
+                          <div className="text-[13px] font-bold text-slate-800">{prop}</div>
                         </div>
+                        {/* مكتوب "لكل شهرين" بحسب القاعدة 11 */}
                         <div className="text-[10px] font-bold bg-white border border-sky-100 rounded-full px-3 py-1 text-slate-600">
                           لكل شهرين
                         </div>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
-                        {METER_TYPES.map((meterType) => {
-                          const key = `${propertyType}_${meterType}`
-                          const amount = pricing[propertyType]?.[meterType] || 0
+                        {METERS.map((m) => {
+                          const key = `${prop}_${m}`
+                          const amount = pricing[prop]?.[m] || 0
                           const isEditing = editingPricingKey === key
-
                           return (
-                            <div key={meterType} className="border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
+                            <div key={m} className="border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
                               <div className="flex justify-between items-center">
-                                <div className="text-[12px] font-bold text-slate-800">{meterType}</div>
+                                <div className="text-[12px] font-bold text-slate-800">{m}</div>
                                 <div className="text-[9px] bg-white border border-sky-100 rounded-full px-2 py-0.5 text-slate-500">
-                                  {propertyType}
+                                  {prop}
                                 </div>
                               </div>
                               {isEditing ? (
                                 <input
                                   autoFocus
-                                  value={editingPricingValue}
-                                  onChange={(e) => setEditingPricingValue(e.target.value.replace(/[^0-9]/g, ''))}
-                                  onBlur={() => handleSavePricing(propertyType, meterType)}
+                                  value={editingPricingVal}
+                                  onChange={(e) => setEditingPricingVal(e.target.value.replace(/[^0-9]/g, ''))}
+                                  onBlur={() => {
+                                    const val = Number(editingPricingVal) || amount
+                                    setPricing((prev) => ({
+                                      ...prev,
+                                      [prop]: { ...prev[prop], [m]: val }
+                                    }))
+                                    setEditingPricingKey(null)
+                                  }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSavePricing(propertyType, meterType)
-                                    if (e.key === 'Escape') setEditingPricingKey(null)
+                                    if (e.key === 'Enter') {
+                                      const val = Number(editingPricingVal) || amount
+                                      setPricing((prev) => ({
+                                        ...prev,
+                                        [prop]: { ...prev[prop], [m]: val }
+                                      }))
+                                      setEditingPricingKey(null)
+                                    }
                                   }}
                                   className="mt-2 w-full h-9 px-3 border border-slate-900 rounded-xl text-[13px] font-mono font-bold bg-white focus:outline-none"
-                                  inputMode="numeric"
                                 />
                               ) : (
                                 <button
                                   onClick={() => {
                                     setEditingPricingKey(key)
-                                    setEditingPricingValue(String(amount))
+                                    setEditingPricingVal(String(amount))
                                   }}
                                   className="mt-2 w-full h-9 px-3 border border-sky-100 rounded-xl text-[13px] font-mono font-bold bg-white text-slate-800 hover:border-slate-900 hover:bg-sky-50 text-right flex justify-between items-center"
                                 >
@@ -1694,155 +2230,259 @@ export default function MainApp() {
                 </div>
               )}
 
-              {/* إعدادات المناطق */}
+              {/* تبويب المناطق والأفرع */}
               {settingsTab === 'areas' && (
                 <div className="space-y-3">
-                  {/* إضافة منطقة جديدة */}
                   <div className="border border-sky-100 rounded-2xl p-4 bg-white shadow-sm">
-                    <div className="text-[12px] font-bold text-slate-800">اضافة منطقة جديدة</div>
+                    <div className="text-[12px] font-bold text-slate-800">إضافة منطقة جديدة</div>
                     <div className="flex gap-2 mt-3">
                       <input
                         value={newAreaName}
                         onChange={(e) => setNewAreaName(e.target.value)}
-                        placeholder="اسم المنطقة"
+                        placeholder="اسم المنطقة..."
                         className="flex-1 h-10 px-4 border border-sky-100 rounded-2xl text-[12px] bg-sky-50/30 focus:bg-white focus:outline-none focus:border-slate-900"
                       />
                       <button
-                        onClick={() => handleAddArea(false)}
+                        onClick={() => {
+                          if (!newAreaName.trim()) return
+                          const newArea: Area = {
+                            id: `area_${Date.now()}`,
+                            name: newAreaName.trim(),
+                            branches: [{ id: `b_${Date.now()}`, name: 'الرئيسي' }]
+                          }
+                          setAreas((prev) => [...prev, newArea])
+                          setNewAreaName('')
+                        }}
                         className="h-10 px-5 bg-slate-900 text-white rounded-2xl text-[11px] font-bold"
                       >
-                        اضافة
+                        إضافة
                       </button>
                     </div>
                   </div>
 
-                  {/* قائمة المناطق */}
-                  {areas.map((area) => {
-                    const count = subscribers.filter((s) => s.areaId === area.id).length
-                    return (
-                      <div key={area.id} className="border border-sky-100 rounded-2xl bg-white overflow-hidden shadow-sm">
-                        <div className="p-4 flex justify-between items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            {editingAreaId === area.id ? (
-                              <div className="flex gap-2">
-                                <input
-                                  value={editingAreaName}
-                                  onChange={(e) => setEditingAreaName(e.target.value)}
-                                  className="flex-1 h-8 px-3 border border-sky-100 rounded-xl text-[12px] bg-white"
-                                />
-                                <button
-                                  onClick={() => handleRenameArea(area.id, editingAreaName)}
-                                  className="h-8 px-4 bg-slate-900 text-white rounded-xl text-[11px] font-bold"
-                                >
-                                  حفظ
-                                </button>
-                                <button
-                                  onClick={() => setEditingAreaId(null)}
-                                  className="h-8 px-3 border border-sky-100 rounded-xl text-[11px]"
-                                >
-                                  الغاء
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <div className="font-bold text-[13px] text-slate-800">{area.name}</div>
-                                <span className="text-[10px] bg-sky-50 border border-sky-100 rounded-full px-2.5 py-0.5 font-mono text-slate-600">
-                                  {formatNumber(count)} مشترك
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => { setEditingAreaId(area.id); setEditingAreaName(area.name) }}
-                            className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-500"
-                          >
-                            ✎
-                          </button>
-                        </div>
-
-                        {/* الأفرع */}
-                        <div className="border-t border-sky-50 bg-sky-50/30 p-4 space-y-3">
-                          <div className="space-y-2">
-                            {area.branches.map((branch) => {
-                              const bCount = subscribers.filter((s) => s.areaId === area.id && s.branchId === branch.id).length
-                              const isEditingBranch = editingBranchId === branch.id
-                              return (
-                                <div
-                                  key={branch.id}
-                                  className="flex justify-between items-center bg-white border border-sky-100 rounded-xl px-4 py-3"
-                                >
-                                  {isEditingBranch ? (
-                                    <div className="flex gap-2 flex-1">
-                                      <input
-                                        value={editingBranchName}
-                                        onChange={(e) => setEditingBranchName(e.target.value)}
-                                        className="flex-1 h-8 px-3 border border-sky-100 rounded-xl text-[11px]"
-                                      />
-                                      <button
-                                        onClick={() => handleRenameBranch(branch.id, editingBranchName)}
-                                        className="h-8 px-3 bg-slate-900 text-white rounded-xl text-[10px] font-bold"
-                                      >
-                                        حفظ
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingBranchId(null)}
-                                        className="h-8 px-3 border border-sky-100 rounded-xl text-[10px]"
-                                      >
-                                        الغاء
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <div>
-                                        <div className="text-[12px] font-medium text-slate-800">{branch.name}</div>
-                                        <div className="text-[10px] text-slate-500 font-mono">{formatNumber(bCount)} مشترك</div>
-                                      </div>
-                                      <div className="flex gap-1.5">
-                                        <button
-                                          onClick={() => { setEditingBranchId(branch.id); setEditingBranchName(branch.name) }}
-                                          className="w-7 h-7 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-[10px]"
-                                        >
-                                          ✎
-                                        </button>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-
-                          {/* إضافة فرع جديد */}
-                          <div className="flex gap-2 pt-1">
+                  {areas.map((area) => (
+                    <div key={area.id} className="border border-sky-100 rounded-2xl bg-white overflow-hidden shadow-sm">
+                      <div className="p-4 flex justify-between items-center">
+                        {editingAreaId === area.id ? (
+                          <div className="flex gap-2 flex-1">
                             <input
-                              id={`branch_add_${area.id}`}
-                              placeholder={`فرع جديد في ${area.name}`}
-                              className="flex-1 h-10 px-4 border border-sky-100 rounded-2xl text-[11px] bg-white focus:outline-none focus:border-slate-900"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const input = e.target as HTMLInputElement
-                                  if (!input.value.trim()) return
-                                  handleAddBranch(area.id, input.value)
-                                  input.value = ''
-                                }
-                              }}
+                              value={editingAreaName}
+                              onChange={(e) => setEditingAreaName(e.target.value)}
+                              className="flex-1 h-8 px-3 border border-sky-100 rounded-xl text-[12px]"
                             />
                             <button
                               onClick={() => {
-                                const input = document.getElementById(`branch_add_${area.id}`) as HTMLInputElement
-                                if (!input || !input.value.trim()) return
-                                handleAddBranch(area.id, input.value)
-                                input.value = ''
+                                if (editingAreaName.trim()) {
+                                  setAreas((prev) => prev.map((a) => (a.id === area.id ? { ...a, name: editingAreaName.trim() } : a)))
+                                }
+                                setEditingAreaId(null)
                               }}
-                              className="h-10 px-4 bg-slate-900 text-white rounded-2xl text-[11px] font-bold"
+                              className="h-8 px-4 bg-slate-900 text-white rounded-xl text-[11px] font-bold"
                             >
-                              اضافة فرع
+                              حفظ
                             </button>
                           </div>
+                        ) : (
+                          <div className="font-bold text-[13px] text-slate-800">{area.name}</div>
+                        )}
+                        <button
+                          onClick={() => {
+                            setEditingAreaId(area.id)
+                            setEditingAreaName(area.name)
+                          }}
+                          className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-500"
+                        >
+                          ✎
+                        </button>
+                      </div>
+
+                      {/* أفرع المنطقة */}
+                      <div className="border-t border-sky-50 bg-sky-50/30 p-4 space-y-2">
+                        {area.branches.map((br) => (
+                          <div key={br.id} className="flex justify-between items-center bg-white border border-sky-100 rounded-xl px-4 py-2.5">
+                            {editingBranchId === br.id ? (
+                              <div className="flex gap-2 flex-1">
+                                <input
+                                  value={editingBranchName}
+                                  onChange={(e) => setEditingBranchName(e.target.value)}
+                                  className="flex-1 h-7 px-2 border rounded text-[11px]"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (editingBranchName.trim()) {
+                                      setAreas((prev) =>
+                                        prev.map((a) =>
+                                          a.id === area.id
+                                            ? { ...a, branches: a.branches.map((b) => (b.id === br.id ? { ...b, name: editingBranchName.trim() } : b)) }
+                                            : a
+                                        )
+                                      )
+                                    }
+                                    setEditingBranchId(null)
+                                  }}
+                                  className="h-7 px-3 bg-slate-900 text-white rounded text-[10px]"
+                                >
+                                  حفظ
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[12px]">{br.name}</span>
+                            )}
+                            <button
+                              onClick={() => {
+                                setEditingBranchId(br.id)
+                                setEditingBranchName(br.name)
+                              }}
+                              className="w-6 h-6 border rounded flex items-center justify-center text-[10px] text-slate-500"
+                            >
+                              ✎
+                            </button>
+                          </div>
+                        ))}
+
+                        <div className="flex gap-2 pt-2">
+                          <input
+                            id={`add_br_${area.id}`}
+                            placeholder={`فرع جديد في ${area.name}...`}
+                            className="flex-1 h-9 px-3 border border-sky-100 rounded-xl text-[11px] bg-white focus:outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const input = e.target as HTMLInputElement
+                                if (!input.value.trim()) return
+                                setAreas((prev) =>
+                                  prev.map((a) =>
+                                    a.id === area.id
+                                      ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
+                                      : a
+                                  )
+                                )
+                                input.value = ''
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              const input = document.getElementById(`add_br_${area.id}`) as HTMLInputElement
+                              if (!input || !input.value.trim()) return
+                              setAreas((prev) =>
+                                prev.map((a) =>
+                                  a.id === area.id
+                                    ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
+                                    : a
+                                )
+                              )
+                              input.value = ''
+                            }}
+                            className="h-9 px-4 bg-slate-900 text-white rounded-xl text-[11px] font-bold"
+                          >
+                            + إضافة فرع
+                          </button>
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ==========================
+                  تبويب الاستيراد الذكي (C)
+              ========================== */}
+              {settingsTab === 'import' && (
+                <div className="space-y-4">
+                  <div className="border border-sky-100 rounded-2xl p-4 bg-white shadow-sm">
+                    <div className="text-[12px] font-bold text-slate-800 mb-1">الاستيراد الذكي للنصوص والقوائم</div>
+                    <div className="text-[10px] text-slate-500 leading-relaxed mb-3">
+                      يدعم نسخ ولصق قائمة المشتركين مباشرة، مثال:
+                      <br />
+                      <span className="font-mono bg-sky-50 px-1.5 py-0.5 rounded text-slate-700">5 احمد عيسى / مفلش</span>
+                      <br />
+                      <span className="font-mono bg-sky-50 px-1.5 py-0.5 rounded text-slate-700">7 مالك سويد محمود</span>
+                    </div>
+
+                    <textarea
+                      rows={6}
+                      value={importText}
+                      onChange={(e) => {
+                        setImportText(e.target.value)
+                        handleParseImport(e.target.value)
+                      }}
+                      placeholder={`الصق هنا النص، مثلاً:
+5 احمد عيسى / مفلش
+7 مالك سويد محمود
+10 ناجي احمد صالح`}
+                      className="w-full p-3 border border-sky-100 rounded-xl text-[12px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/20"
+                    />
+
+                    {importError && (
+                      <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl p-2.5 mt-2">
+                        {importError}
+                      </div>
+                    )}
+
+                    {/* خيارات الاستيراد */}
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700">المنطقة الافتراضية للمستوردين:</label>
+                        <select
+                          value={importDefaultArea}
+                          onChange={(e) => setImportDefaultArea(e.target.value)}
+                          className="mt-1 w-full h-9 px-3 border border-sky-100 rounded-xl text-[11px] bg-white"
+                        >
+                          {areas.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <label className="flex items-center gap-2 text-[11px] text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={importOverwrite}
+                          onChange={(e) => setImportOverwrite(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                        />
+                        <span>تحديث الأسماء والحالات إذا كان رقم المشترك موجوداً مسبقاً</span>
+                      </label>
+                    </div>
+
+                    {/* معاينة قبل التأكيد */}
+                    {parsedImport.length > 0 && (
+                      <div className="mt-4 border-t border-sky-50 pt-3">
+                        <div className="text-[11px] font-bold text-slate-800 mb-2 flex justify-between">
+                          <span>معاينة ({formatNumber(parsedImport.length)} مشترك جاهز)</span>
+                          {importDuplicates > 0 && (
+                            <span className="text-red-500 font-normal">تم كشف {importDuplicates} مكرر</span>
+                          )}
+                        </div>
+                        <div className="max-h-[140px] overflow-y-auto space-y-1 bg-sky-50/30 p-2 rounded-xl text-[11px] font-mono">
+                          {parsedImport.slice(0, 50).map((it) => (
+                            <div key={it.id} className="flex justify-between border-b border-sky-50 pb-1">
+                              <span>
+                                {it.id} - {it.name}
+                              </span>
+                              {it.statuses.length > 0 && (
+                                <span className="text-emerald-700 font-sans">[{it.statuses.join(', ')}]</span>
+                              )}
+                            </div>
+                          ))}
+                          {parsedImport.length > 50 && (
+                            <div className="text-slate-400 text-center pt-1 font-sans">
+                              ... وباقي {parsedImport.length - 50} مشترك آخرين
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={handleConfirmImport}
+                          className="mt-3 w-full h-10 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-black transition-colors"
+                        >
+                          تأكيد وحفظ الاستيراد ({formatNumber(parsedImport.length)})
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
