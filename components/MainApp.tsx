@@ -791,47 +791,176 @@ export default function MainApp() {
   }, [selectedSubId, selectedYear, billing, subscribers, pricing])
 
   // ==========================
-  // شاشة تسجيل الدخول بالرمز
+  // شاشة تسجيل الدخول التفاعلية الفخمة
   // ==========================
   if (!isAuthenticated) {
     return (
       <div
         dir="rtl"
-        className="min-h-screen flex items-center justify-center bg-[#f0f9ff] px-4"
+        className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#0c4a6e] via-[#0369a1] to-[#082f49] px-4 py-8 select-none"
         style={{ fontFamily: 'Tajawal, Inter, system-ui, sans-serif' }}
       >
-        <div className="bg-white border border-sky-100 rounded-3xl p-8 max-w-[400px] w-full shadow-[0_12px_24px_rgba(0,0,0,0.06)] text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mx-auto mb-4 text-white">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3L4 9v6l8 6 8-6V9l-8-6z" fill="white" opacity="0.9" />
-            </svg>
+        {/* خلفية حركية غنية: قطرات ماء وأمواج مضيئة */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* دوائر ضوئية عملاقة في الخلفية */}
+          <div className="absolute -top-32 -left-32 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+
+          {/* قطرات ماء متحركة تطفو في الخلفية */}
+          {[
+            { left: '10%', size: 'w-8 h-8', dur: '12s', delay: '0s' },
+            { left: '22%', size: 'w-12 h-12', dur: '16s', delay: '2s' },
+            { left: '35%', size: 'w-6 h-6', dur: '10s', delay: '4s' },
+            { left: '48%', size: 'w-14 h-14', dur: '18s', delay: '1s' },
+            { left: '65%', size: 'w-9 h-9', dur: '14s', delay: '3s' },
+            { left: '78%', size: 'w-7 h-7', dur: '11s', delay: '5s' },
+            { left: '90%', size: 'w-11 h-11', dur: '15s', delay: '2.5s' }
+          ].map((drop, idx) => (
+            <div
+              key={idx}
+              className={`absolute bottom-0 ${drop.size} rounded-full bg-white/10 border border-white/20 backdrop-blur-[2px] animate-float-up flex items-center justify-center text-white/40 text-[12px]`}
+              style={{
+                left: drop.left,
+                animationDuration: drop.dur,
+                animationDelay: drop.delay
+              }}
+            >
+              💧
+            </div>
+          ))}
+
+          {/* وصولات اشتراك ماء متحركة وطافية في الخلفية */}
+          {/* وصل عائم على اليمين */}
+          <div className="hidden md:block absolute top-16 right-12 z-0 animate-receipt opacity-80 pointer-events-none">
+            <div className="w-56 bg-white/95 rounded-2xl p-4 shadow-2xl border border-sky-100 backdrop-blur-md transform rotate-3">
+              <div className="flex items-center justify-between border-b border-sky-100 pb-2 mb-2">
+                <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                  <span>💧</span> وصل ماء رسمي
+                </span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  مسدد ✓
+                </span>
+              </div>
+              <div className="space-y-1.5 text-[10px] text-slate-600 font-mono">
+                <div className="flex justify-between">
+                  <span>المشترك:</span>
+                  <span className="font-bold text-slate-800">5203 - محمد عبد الله</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>الفترة:</span>
+                  <span>1 و 2 / 2026</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>المبلغ المدفوع:</span>
+                  <span className="text-emerald-700 font-bold">24,600 د.ع</span>
+                </div>
+                <div className="flex justify-between text-slate-400 pt-1 border-t border-dashed border-sky-100">
+                  <span>الختم:</span>
+                  <span className="text-[9px]">جباية معتمدة ✍️</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <h2 className="text-[18px] font-bold text-slate-900 mb-1">تسجيل الدخول للنظام</h2>
-          <p className="text-[12px] text-slate-500 mb-6">يرجى إدخال رمز الدخول السري للمتابعة</p>
+
+          {/* وصل عائم على اليسار مع رجل المحصل الكرتوني */}
+          <div className="hidden md:block absolute bottom-20 left-12 z-0 animate-collector opacity-85 pointer-events-none">
+            <div className="flex flex-col items-center">
+              {/* رسم المحصل وهو يكتب في دفتر الوصولات */}
+              <div className="w-24 h-24 rounded-full bg-sky-900/40 border border-white/20 backdrop-blur flex items-center justify-center text-4xl shadow-lg mb-2">
+                👨‍💼📝
+              </div>
+              <div className="w-60 bg-white/95 rounded-2xl p-3.5 shadow-2xl border border-sky-100 backdrop-blur-md transform -rotate-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 border-b border-sky-100 pb-1.5 mb-2">
+                  <span>دفتر جباية المحصل</span>
+                  <span className="text-[10px] text-sky-700">جاري التدوين ✍️</span>
+                </div>
+                <div className="text-[10px] text-slate-600 space-y-1 font-mono">
+                  <div className="flex justify-between">
+                    <span>المنطقة:</span>
+                    <span className="font-bold text-slate-800">شارع الكهرباء</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>عدد الوصولات المقطوعة:</span>
+                    <span className="text-sky-700 font-bold">142 وصل</span>
+                  </div>
+                  <div className="text-[9px] text-slate-400 text-center pt-1 border-t border-sky-50">
+                    نظام الجباية الميداني الإلكتروني
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* بطاقة تسجيل الدخول الزجاجية الفخمة */}
+        <div className="relative z-10 bg-white/95 backdrop-blur-2xl border border-white/40 rounded-3xl p-6 sm:p-9 max-w-[420px] w-full shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-all">
+          {/* الشعار المائي المتحرك */}
+          <div className="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] animate-water-pulse opacity-30"></div>
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-slate-900 to-[#0369a1] text-white flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"
+                  fill="currentColor"
+                  className="text-sky-300"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div className="text-center mb-6">
+            <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">نظام اشتراكات وجباية الماء</h2>
+            <p className="text-[12px] text-slate-500 mt-1">بوابة الدخول المعتمدة للمحصلين والمشرفين</p>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <input
-              type="password"
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
-              placeholder="رمز الدخول السري..."
-              className="w-full h-12 px-4 border border-slate-200 rounded-2xl text-[14px] text-center font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white transition-colors"
-              autoFocus
-            />
+            <div>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1.5 text-right">
+                رمز الدخول السري
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value)
+                    if (pinError) setPinError('')
+                  }}
+                  placeholder="أدخل رمز الدخول هنا..."
+                  className={`w-full h-12 px-4 border rounded-2xl text-[14px] text-center font-mono tracking-wider focus:outline-none transition-all ${
+                    pinError
+                      ? 'border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-100 text-red-700 animate-shake'
+                      : 'border-slate-200 bg-sky-50/30 focus:bg-white focus:border-slate-900 focus:ring-2 focus:ring-slate-900/5 text-slate-900'
+                  }`}
+                  autoFocus
+                />
+              </div>
+            </div>
 
             {pinError && (
-              <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl p-2.5">
-                {pinError}
+              <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl p-2.5 text-center flex items-center justify-center gap-1.5 animate-shake">
+                <span>⚠️</span>
+                <span>{pinError}</span>
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full h-12 bg-slate-900 text-white rounded-2xl text-[13px] font-bold hover:bg-black transition-colors"
+              className="w-full h-12 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-black hover:to-slate-900 text-white rounded-2xl text-[13px] font-bold transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-2"
             >
-              دخول
+              <span>تسجيل الدخول</span>
+              <span className="text-[14px]">🔐</span>
             </button>
           </form>
+
+          {/* شريط معلومات أسفل البطاقة */}
+          <div className="mt-6 pt-4 border-t border-sky-100/60 flex items-center justify-between text-[10px] text-slate-400">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              سيرفر الجباية متصل
+            </span>
+            <span>مشفر وآمن 100%</span>
+          </div>
         </div>
       </div>
     )
