@@ -749,6 +749,8 @@ export default function MainApp() {
     setSubscribers((prev) => [...prev, created])
 
     // إرسال المشترك الجديد إلى قاعدة البيانات مباشرة للتزامن
+    const createdArea = areas.find((a) => a.id === created.areaId)
+    const createdBranch = createdArea?.branches.find((b) => b.id === created.branchId)
     fetch('/api/subscribers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -760,9 +762,19 @@ export default function MainApp() {
         phone: created.phone,
         propertyType: created.propertyType,
         meterType: created.meterType,
-        detailedAddress: created.detailedAddress
+        detailedAddress: created.detailedAddress,
+        areaName: createdArea?.name,
+        branchName: createdBranch?.name
       })
-    }).catch(console.error)
+    }).then(async (response) => {
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error || 'تعذر حفظ المشترك في قاعدة البيانات')
+      }
+    }).catch((error) => {
+      console.error('Failed to save subscriber:', error)
+      setFormError(`تمت الإضافة محلياً لكن تعذر الحفظ على الخادم: ${error.message}`)
+    })
 
     // إنشاء سجلات الديون للسنوات 2026، 2027، 2028
     setBilling((prev) => {
@@ -948,6 +960,8 @@ export default function MainApp() {
 
       // مزامنة كافة المشتركين الجدد مع قاعدة البيانات
       toAdd.forEach((s) => {
+        const area = areas.find((a) => a.id === s.areaId)
+        const branch = area?.branches.find((b) => b.id === s.branchId)
         fetch('/api/subscribers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -959,9 +973,16 @@ export default function MainApp() {
             phone: s.phone,
             propertyType: s.propertyType,
             meterType: s.meterType,
-            detailedAddress: s.detailedAddress
+            detailedAddress: s.detailedAddress,
+            areaName: area?.name,
+            branchName: branch?.name
           })
-        }).catch(console.error)
+        }).then(async (response) => {
+          if (!response.ok) {
+            const result = await response.json().catch(() => null)
+            throw new Error(result?.error || 'تعذر حفظ المشترك في قاعدة البيانات')
+          }
+        }).catch((error) => console.error('Failed to import subscriber:', error))
       })
 
       setBilling((prev) => {

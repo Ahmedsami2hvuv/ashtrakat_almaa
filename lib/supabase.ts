@@ -1,14 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) 
-  ? rawUrl 
-  : 'https://placeholder.supabase.co'
+const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const configuredAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-// دعم كلا الاسمين (ANON_KEY أو PUBLISHABLE_KEY) لضمان العمل تحت أي مسمى
-const supabaseAnonKey = 
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
-  'placeholder-anon-key'
+export const supabaseConfigurationError =
+  !configuredUrl || !/^https?:\/\//.test(configuredUrl)
+    ? 'NEXT_PUBLIC_SUPABASE_URL is not configured correctly'
+    : !configuredAnonKey
+      ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not configured'
+      : null
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Keep the module buildable so the API can return a useful runtime error when
+// Vercel environment variables are missing instead of failing page generation.
+export const supabase = createClient(
+  configuredUrl && /^https?:\/\//.test(configuredUrl)
+    ? configuredUrl
+    : 'https://placeholder.supabase.co',
+  configuredAnonKey || 'placeholder-anon-key'
+)
