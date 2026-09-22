@@ -412,7 +412,13 @@ export default function MainApp() {
   const matchingFilterCount = useMemo(() => {
     let list = branchFiltered
     if (filterStatuses.length > 0) {
-      list = list.filter((s) => (s.statuses || []).some((st) => filterStatuses.includes(st)))
+      const showVacant = filterStatuses.includes('__vacant__')
+      const realStatuses = filterStatuses.filter((s) => s !== '__vacant__')
+      list = list.filter((s) => {
+        if (showVacant && s.name === 'رقم شاغر') return true
+        if (realStatuses.length > 0 && (s.statuses || []).some((st) => realStatuses.includes(st))) return true
+        return false
+      })
     }
     return list.length
   }, [branchFiltered, filterStatuses])
@@ -467,9 +473,15 @@ export default function MainApp() {
       if (filterBranches.length > 0) list = list.filter((s) => filterBranches.includes(s.branchId))
     }
 
-    // فلتر الحالات
+    // فلتر الحالات (يدعم __vacant__ للأرقام الشاغرة)
     if (filterStatuses.length > 0) {
-      list = list.filter((s) => (s.statuses || []).some((st) => filterStatuses.includes(st)))
+      const showVacant = filterStatuses.includes('__vacant__')
+      const realStatuses = filterStatuses.filter((s) => s !== '__vacant__')
+      list = list.filter((s) => {
+        if (showVacant && s.name === 'رقم شاغر') return true
+        if (realStatuses.length > 0 && (s.statuses || []).some((st) => realStatuses.includes(st))) return true
+        return false
+      })
     }
 
     return list
@@ -632,11 +644,27 @@ export default function MainApp() {
     let dupCount = 0
     const items: ParsedImportItem[] = []
 
+    // حالات مقبولة شاملة
+    const ACCEPTED_STATUSES = [...STATUS_OPTIONS, 'متوقف', 'ملغي'] as string[]
+
     for (const rawLine of lines) {
       const line = rawLine.trim().replace(/^[-•*]\s*/, '')
       if (!line) continue
 
       const match = line.match(/^(\d{1,7})\s*[\t\s]+(.+)$/) || line.match(/^(\d{1,7})\s*[,\-–]\s*(.+)$/) || line.match(/^(\d{1,7})\s+(.+)$/)
+
+      // رقم فقط بدون اسم
+      const soloMatch = !match && line.match(/^(\d{1,7})\s*$/)
+
+      if (soloMatch) {
+        const id = Number(soloMatch[1])
+        if (!id) continue
+        if (seen.has(id)) { dupCount++; continue }
+        seen.add(id)
+        items.push({ id, name: 'رقم شاغر', raw: line, statuses: [] })
+        continue
+      }
+
       if (!match) continue
 
       const id = Number(match[1])
@@ -658,7 +686,7 @@ export default function MainApp() {
         name = parts[0].trim()
         note = parts.slice(1).join(' / ').trim()
         if (note) {
-          const matchedStatus = STATUS_OPTIONS.find((st) => note?.includes(st))
+          const matchedStatus = ACCEPTED_STATUSES.find((st) => note?.includes(st))
           if (matchedStatus) {
             statuses.push(matchedStatus)
           } else {
@@ -667,9 +695,12 @@ export default function MainApp() {
         }
       }
 
-      if (name.length >= 2) {
-        items.push({ id, name, raw: line, statuses, note })
+      // رقم شاغر إذا كان الاسم فارغ أو رقم فقط
+      if (!name.trim() || name.trim().length < 1) {
+        name = 'رقم شاغر'
       }
+
+      items.push({ id, name, raw: line, statuses, note })
     }
 
     setImportDuplicates(dupCount)
@@ -681,8 +712,9 @@ export default function MainApp() {
 
   const handleConfirmImport = () => {
     if (parsedImport.length === 0) return
-    const defaultAreaId = importDefaultArea || areas[0]?.id || 'area_1'
-    const defaultBranchId = areas.find((a) => a.id === defaultAreaId)?.branches[0]?.id || 'b_1'
+    // المنطقة اختيارية - إذا لم تُختر تُترك فارغة
+    const defaultAreaId = importDefaultArea || ''
+    const defaultBranchId = defaultAreaId ? (areas.find((a) => a.id === defaultAreaId)?.branches[0]?.id || '') : ''
 
     const existingIds = new Set(subscribers.map((s) => s.id))
     let added = 0
@@ -954,29 +986,6 @@ export default function MainApp() {
                 <circle cx="12" cy="12" r="3" />
                 <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
               </svg>
-            </button>
-
-            {/* زر إضافة مشترك - بجانب الإعدادات مباشرة وبنفس المقاس والستايل */}
-            <button
-              type="button"
-              aria-label="اضافة مشترك"
-              onClick={() => {
-                setFormError('')
-                setShowAddModal(true)
-              }}
-              className="w-8 h-8 border rounded-lg flex items-center justify-center transition-colors bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            >
-              <span className="text-[18px] font-bold leading-none">+</span>
-            </button>
-
-            {/* زر تسجيل الخروج */}
-            <button
-              type="button"
-              title="تسجيل الخروج"
-              onClick={handleLogout}
-              className="w-8 h-8 border rounded-lg flex items-center justify-center transition-colors bg-white border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 text-[11px]"
-            >
-              ✕
             </button>
           </div>
         </div>
@@ -1259,6 +1268,40 @@ export default function MainApp() {
                         </label>
                       )
                     })}
+
+                    {/* خيار الأرقام الشاغرة */}
+                    {(() => {
+                      const vacantCount = branchFiltered.filter((s) => s.name === 'رقم شاغر').length
+                      const isChecked = filterStatuses.includes('__vacant__')
+                      return (
+                        <label
+                          className={`flex items-center gap-2.5 h-9 px-3 rounded-xl border cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white border-sky-100 text-slate-700 hover:bg-sky-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) setFilterStatuses((p) => [...p, '__vacant__'])
+                              else setFilterStatuses((p) => p.filter((x) => x !== '__vacant__'))
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                          />
+                          <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
+                          <span className="text-[11px] font-medium flex-1 truncate">أرقام شاغرة</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                              isChecked ? 'bg-white/20' : 'bg-zinc-50 border border-zinc-200 text-zinc-600'
+                            }`}
+                          >
+                            {formatNumber(vacantCount)}
+                          </span>
+                        </label>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1722,6 +1765,37 @@ export default function MainApp() {
                 </div>
               </div>
             </div>
+
+            {/* أزرار التالي والسابق للتنقل بين المشتركين */}
+            {(() => {
+              const currentIndex = displayedSubscribers.findIndex((s) => s.id === activeSubscriber.id)
+              const prevSub = currentIndex > 0 ? displayedSubscribers[currentIndex - 1] : null
+              const nextSub = currentIndex < displayedSubscribers.length - 1 ? displayedSubscribers[currentIndex + 1] : null
+              return (
+                <div className="border-t border-sky-100 bg-white px-3 py-2 flex gap-2 shrink-0">
+                  <button
+                    onClick={() => { if (prevSub) { setSelectedSubId(prevSub.id); setSelectedYear(2026) } }}
+                    disabled={!prevSub}
+                    className={`flex-1 h-12 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                  >
+                    <span className="text-[18px] leading-none font-normal">›</span>
+                    <div className="text-right overflow-hidden">
+                      {prevSub ? <><div className="text-[9px] text-slate-400 leading-tight">السابق</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(prevSub.id)} - {prevSub.name}</div></> : <span>لا يوجد سابق</span>}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { if (nextSub) { setSelectedSubId(nextSub.id); setSelectedYear(2026) } }}
+                    disabled={!nextSub}
+                    className={`flex-1 h-12 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                  >
+                    <div className="text-left overflow-hidden">
+                      {nextSub ? <><div className="text-[9px] text-slate-400 leading-tight">التالي</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(nextSub.id)} - {nextSub.name}</div></> : <span>لا يوجد تالي</span>}
+                    </div>
+                    <span className="text-[18px] leading-none font-normal">‹</span>
+                  </button>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -2138,6 +2212,35 @@ export default function MainApp() {
               {/* تبويب المحصل */}
               {settingsTab === 'collector' && (
                 <div className="space-y-4">
+                  {/* زر إضافة مشترك وزر تسجيل الخروج */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(false)
+                        setFormError('')
+                        setShowAddModal(true)
+                      }}
+                      className="h-12 bg-slate-900 text-white rounded-2xl text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-black transition-colors"
+                    >
+                      <span className="text-[18px] leading-none">+</span>
+                      <span>إضافة مشترك</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(false)
+                        handleLogout()
+                      }}
+                      className="h-12 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      <span>تسجيل الخروج</span>
+                    </button>
+                  </div>
+
                   <div className="border border-sky-100 rounded-2xl overflow-hidden bg-white shadow-sm">
                     <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                       <div className="text-[12px] font-bold">تفاصيل المحصل</div>
@@ -2457,12 +2560,13 @@ export default function MainApp() {
                     {/* خيارات الاستيراد */}
                     <div className="mt-3 space-y-3">
                       <div>
-                        <label className="text-[11px] font-bold text-slate-700">المنطقة الافتراضية للمستوردين:</label>
+                        <label className="text-[11px] font-bold text-slate-700">المنطقة الافتراضية للمستوردين <span className="text-[10px] font-normal text-slate-400">(اختياري)</span>:</label>
                         <select
                           value={importDefaultArea}
                           onChange={(e) => setImportDefaultArea(e.target.value)}
                           className="mt-1 w-full h-9 px-3 border border-sky-100 rounded-xl text-[11px] bg-white"
                         >
+                          <option value="">-- بدون منطقة افتراضية --</option>
                           {areas.map((a) => (
                             <option key={a.id} value={a.id}>
                               {a.name}
