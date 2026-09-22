@@ -1,0 +1,3 @@
+# public folder
+User-agent: *
+Allow: /
