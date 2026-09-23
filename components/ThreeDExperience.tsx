@@ -71,7 +71,7 @@ export default function ThreeDExperience({
     <section className="three-d-shell" dir="rtl">
       <div className="three-d-header">
         <div>
-          <div className="three-d-kicker">لوحة ثلاثية الأبعاد</div>
+          <div className="three-d-kicker">● 3D ACTIVE · لوحة ثلاثية الأبعاد</div>
           <h2>مركز المناطق والتحصيل</h2>
           <p>خريطة المناطق، حالة العدادات، ومؤشرات المحصل في مساحة واحدة.</p>
         </div>
@@ -93,6 +93,14 @@ export default function ThreeDExperience({
         <div className="three-d-map-card">
           <div className="three-d-card-heading"><span>خريطة المناطق</span><small>اضغط على المنطقة</small></div>
           <div className="three-d-map">
+            <div className="three-d-cube" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
             {mapItems.map((area, index) => {
               const count = inRange.filter((subscriber) => subscriber.areaId === area.id).length
               const active = area.id === selectedAreaId
