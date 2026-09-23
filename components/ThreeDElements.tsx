@@ -222,3 +222,98 @@ export function ThreeDStatusBadge({ status }: { status: string }) {
     </ThreeDBox>
   )
 }
+
+// 11. بطاقة العميل 3D التفاعلية الدوارة بحركة الماوس واللمس
+export function ThreeDCustomerInteractiveCard({
+  id,
+  name,
+  areaName,
+  branchName,
+  propertyType,
+  meterType,
+  dueAmount,
+  statuses = []
+}: {
+  id: number
+  name: string
+  areaName?: string
+  branchName?: string
+  propertyType: string
+  meterType: string
+  dueAmount: number
+  statuses?: string[]
+}) {
+  const [rotate, setRotate] = React.useState({ x: 0, y: 0 })
+  const cardRef = React.useRef<HTMLDivElement>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return
+    const rect = cardRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left - rect.width / 2
+    const y = e.clientY - rect.top - rect.height / 2
+    setRotate({ x: -(y / rect.height) * 28, y: (x / rect.width) * 28 })
+  }
+
+  const handleMouseLeave = () => {
+    setRotate({ x: 0, y: 0 })
+  }
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative w-full rounded-3xl p-5 bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-white shadow-[0_20px_50px_rgba(14,165,233,0.35)] border border-sky-400/40 preserve-3d transition-transform duration-200 ease-out cursor-grab active:cursor-grabbing my-3 overflow-hidden"
+      style={{
+        transform: `perspective(1000px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg) translateZ(20px)`
+      }}
+    >
+      {/* خلفية الإضاءة الكريستالية 3D */}
+      <div className="absolute -top-20 -left-20 w-48 h-48 rounded-full bg-cyan-500/30 blur-2xl pointer-events-none animate-pulse" />
+      <div className="absolute -bottom-20 -right-20 w-48 h-48 rounded-full bg-blue-600/30 blur-2xl pointer-events-none animate-pulse" />
+      
+      {/* وسم VIP والعميل الـ 3D */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3 preserve-3d">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-cyan-400 to-sky-600 text-white flex items-center justify-center font-bold text-sm shadow-[0_4px_12px_rgba(14,165,233,0.5)]">
+            3D
+          </div>
+          <div>
+            <div className="text-[10px] text-sky-300 font-mono tracking-widest uppercase">بطاقة المشترك الذكية</div>
+            <div className="text-[15px] font-extrabold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              #{id} - {name}
+            </div>
+          </div>
+        </div>
+        <div className="text-left">
+          <div className="text-[10px] text-sky-300">المبلغ المستحق</div>
+          <div className="text-[18px] font-black font-mono text-emerald-400 drop-shadow-[0_2px_6px_rgba(16,185,129,0.5)]">
+            {Number(dueAmount).toLocaleString('en-US')}
+          </div>
+        </div>
+      </div>
+
+      {/* التفاصيل الجغرافية والمتر */}
+      <div className="grid grid-cols-2 gap-2 text-[11px] mb-3">
+        <div className="bg-white/10 rounded-xl p-2 backdrop-blur-sm border border-white/10">
+          <span className="text-sky-300 block text-[9px]">المنطقة / الفرع:</span>
+          <span className="font-bold">{areaName || 'الرئيسية'} {branchName ? ` - ${branchName}` : ''}</span>
+        </div>
+        <div className="bg-white/10 rounded-xl p-2 backdrop-blur-sm border border-white/10">
+          <span className="text-sky-300 block text-[9px]">نوع العقار والعداد:</span>
+          <span className="font-bold">{propertyType} ({meterType})</span>
+        </div>
+      </div>
+
+      {/* الحالات ثلاثية الأبعاد */}
+      <div className="flex gap-1.5 flex-wrap items-center pt-1">
+        {statuses.length > 0 ? (
+          statuses.map((st) => <ThreeDStatusBadge key={st} status={st} />)
+        ) : (
+          <span className="text-[10px] text-sky-200/70 italic">حساب منتظم</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
