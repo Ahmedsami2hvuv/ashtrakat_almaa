@@ -1131,7 +1131,7 @@ export default function MainApp() {
 
         {/* شريط البحث المنسدل */}
         {searchOpen && (
-          <div className="border-t border-sky-100 bg-white/90 backdrop-blur">
+          <div className="depth-panel border-t border-sky-100 bg-white/90 backdrop-blur">
             <div className="max-w-[1100px] mx-auto px-4 py-3">
               <div className="relative">
                 <input
@@ -1154,7 +1154,7 @@ export default function MainApp() {
 
         {/* درج الفلتر التفاعلي المتسلسل */}
         {filterDrawerOpen && (
-          <div className="border-t border-sky-100 bg-white/95 backdrop-blur-xl shadow-[0_12px_24px_rgba(0,0,0,0.06)]">
+          <div className="depth-panel border-t border-sky-100 bg-white/95 backdrop-blur-xl shadow-[0_12px_24px_rgba(0,0,0,0.06)]">
             <div className="max-w-[1100px] mx-auto px-4 py-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -2359,7 +2359,7 @@ export default function MainApp() {
       ========================== */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-[1px] flex">
-          <div className="bg-white w-full sm:w-[520px] h-full border-l border-sky-100 flex flex-col mr-auto sm:mr-0 ml-auto shadow-[-8px_0_30px_rgba(0,0,0,0.1)]">
+          <div className="depth-panel bg-white w-full sm:w-[520px] h-full border-l border-sky-100 flex flex-col mr-auto sm:mr-0 ml-auto shadow-[-8px_0_30px_rgba(0,0,0,0.1)]">
             <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center bg-slate-900 text-white">
               <h3 className="font-bold text-[13px]">الإعدادات</h3>
               <button

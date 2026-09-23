@@ -81,7 +81,7 @@ body {
   min-height: 100%;
 }
 
-/* عمق خفيف داخل التفاعلات اليومية، بدون لوحة 3D منفصلة */
+/* عمق خفيف داخل التفاعلات اليومية */
 .depth-button,
 .depth-chip,
 .depth-card {
@@ -92,13 +92,14 @@ body {
 .depth-button:hover,
 .depth-chip:hover,
 .depth-card:hover {
-  transform: translateY(-2px) perspective(500px) rotateX(1deg);
+  transform: perspective(700px) translateY(-4px) rotateX(5deg) rotateY(-2deg) scale(1.01);
+  box-shadow: 0 12px 22px rgba(14, 116, 144, .16);
 }
 
 .depth-button:active,
 .depth-chip:active,
 .depth-card:active {
-  transform: translateY(1px) perspective(500px) rotateX(-2deg) scale(.99);
+  transform: perspective(700px) translateY(3px) rotateX(-8deg) scale(.97);
   transition-duration: 80ms;
 }
 
@@ -113,6 +114,21 @@ body {
 .depth-button,
 .depth-chip {
   transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.depth-panel {
+  transform-origin: top center;
+  animation: depthPanelEnter 420ms cubic-bezier(.2,.8,.2,1) both;
+  backface-visibility: hidden;
+}
+
+@keyframes depthPanelEnter {
+  from { opacity: 0; transform: perspective(900px) rotateX(-12deg) translateY(-14px); }
+  to { opacity: 1; transform: perspective(900px) rotateX(0) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .depth-button, .depth-chip, .depth-card, .depth-panel { animation: none; transition: none; }
 }
 
 /* حركة التموج والاهتزاز النظيفة بدون إيموجيز */
