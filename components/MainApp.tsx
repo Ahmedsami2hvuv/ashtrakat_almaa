@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { RealThreeDCanvas } from './RealThreeDCanvas'
 import {
   ThreeDBox,
   ThreeDSearchIcon,
@@ -13,8 +14,7 @@ import {
   ThreeDEditIcon,
   ThreeDSettingsIcon,
   ThreeDPriceIcon,
-  ThreeDStatusBadge,
-  ThreeDCustomerInteractiveCard
+  ThreeDStatusBadge
 } from './ThreeDElements'
 
 // أنواع البيانات
@@ -1704,66 +1704,68 @@ export default function MainApp() {
       </main>
 
       {/* ==========================
-          نافذة تفاصيل المشترك وبلوك الديون بالحركة الـ 3D الانبثاقية
+          نافذة تفاصيل المشترك وبلوك الديون
+          القاعدة 9: بعرض 100%، 4 أعمدة: 20% | 27% | 26% | 27%، ارتفاع 36px، بدون سكرول جانبي
       ========================== */}
       {activeSubscriber && activeBilling && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
-          {/* الكرات ثلاثية الأبعاد الطافية والإضاءة الضبابية */}
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-cyan-500/20 blur-3xl animate-spin-orb-3d pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-blue-600/20 blur-3xl animate-spin-orb-3d pointer-events-none" />
-
-          <div className="bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-3xl sm:border sm:border-sky-300/40 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.35)] animate-flip-in-3d preserve-3d">
-            {/* بطاقة العميل الـ 3D التفاعلية الدوارة بحركة الماوس واللمس */}
-            <div className="px-4 pt-4 pb-1 bg-gradient-to-b from-white via-sky-50/50 to-[#f0f9ff] border-b border-sky-100">
-              <div className="flex justify-between items-center mb-1">
-                <div className="text-[11px] font-bold text-sky-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  حساب المشترك النشط 3D
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditSub({ ...activeSubscriber })
-                      setShowEditModal(true)
-                    }}
-                    className="transition-transform active:scale-95 cursor-pointer"
-                    title="تعديل الحساب"
-                  >
-                    <ThreeDEditIcon size="sm" />
-                  </button>
-                  <button
-                    onClick={() => setSelectedSubId(null)}
-                    className="w-8 h-8 border border-sky-200 rounded-xl flex items-center justify-center bg-white text-slate-600 hover:bg-sky-50 shadow-sm"
-                  >
-                    ✕
-                  </button>
+        <div className="subscriber-scene fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-[1px] flex flex-col">
+          <div className="subscriber-orbit subscriber-orbit-one" />
+          <div className="subscriber-orbit subscriber-orbit-two" />
+          <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
+            {/* رأس النافذة */}
+            <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-gradient-to-r from-sky-50/60 via-white to-blue-50/40 relative overflow-hidden">
+              <div className="flex items-center gap-3 min-w-0">
+                <RealThreeDCanvas type="crystal" color="#0ea5e9" size={54} animated={true} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[16px] font-bold text-slate-900 drop-shadow-sm">
+                      {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setEditSub({ ...activeSubscriber })
+                        setShowEditModal(true)
+                      }}
+                      className="transition-transform active:scale-95 cursor-pointer"
+                      title="تعديل حساب العميل"
+                    >
+                      <ThreeDEditIcon size="sm" />
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    {areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                    {' - '}
+                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
+                  </div>
+                  <div className="mt-2.5 flex gap-2 items-center flex-wrap">
+                    <div className="inline-flex border border-sky-200/80 rounded-xl bg-white/80 backdrop-blur-sm px-3 py-1 text-[11px] font-bold text-slate-800 shadow-sm">
+                      {activeSubscriber.propertyType} - {activeSubscriber.meterType}
+                    </div>
+                    {(activeSubscriber.statuses || []).map((st) => (
+                      <ThreeDStatusBadge key={st} status={st} />
+                    ))}
+                    <div className="text-[10px] text-slate-600 font-mono font-bold mr-auto">
+                      المستحق: {formatNumber(activeBilling.due)}
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* بطاقة VIP 3D المجسمة بالكامل والدوارة */}
-              <ThreeDCustomerInteractiveCard
-                id={activeSubscriber.id}
-                name={activeSubscriber.name}
-                areaName={areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                branchName={areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
-                propertyType={activeSubscriber.propertyType}
-                meterType={activeSubscriber.meterType}
-                dueAmount={activeBilling.totalRemaining}
-                statuses={activeSubscriber.statuses}
-              />
+              <button
+                onClick={() => setSelectedSubId(null)}
+                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 transition-colors shrink-0"
+              >
+                ✕
+              </button>
             </div>
 
             {/* المحتوى */}
             <div className="flex-1 overflow-y-auto">
-              <div className="px-4 py-3">
+              <div className="subscriber-content subscriber-content-1 px-4 py-3">
                 <button
                   onClick={() => setShowContactModal(true)}
-                  className="w-full h-12 border border-sky-300 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white text-[13px] font-extrabold shadow-[0_10px_25px_rgba(14,165,233,0.35)] hover:shadow-[0_15px_30px_rgba(14,165,233,0.5)] transition-all transform active:scale-98 flex items-center justify-center gap-3"
+                  className="w-full h-10 border border-sky-100 rounded-2xl bg-white text-[12px] font-medium hover:bg-sky-50 text-slate-700"
                 >
-                  <ThreeDPhoneIcon size="sm" />
-                  <ThreeDLocationIcon size="sm" />
-                  <ThreeDImageIcon size="sm" />
-                  <span>التواصل والموقع والصور 3D</span>
+                  التواصل والموقع والصور
                 </button>
               </div>
 
@@ -2852,107 +2854,6 @@ export default function MainApp() {
           </div>
         </div>
       )}
-
-      {/* ==========================
-          شريط القائمة السفلي الشامل (Bottom Navigation Bar)
-      ========================== */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-xl border-t border-sky-100 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-2 py-2">
-        <div className="max-w-[600px] mx-auto flex items-center justify-around">
-          {/* 1. المشتركين */}
-          <button
-            onClick={() => {
-              setSelectedAreaId(null)
-              setActiveBranchId(null)
-              setSearchOpen(false)
-              setFilterDrawerOpen(false)
-              setShowSettingsModal(false)
-            }}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all ${
-              !selectedAreaId && !searchOpen && !filterDrawerOpen && !showSettingsModal
-                ? 'text-sky-600 bg-sky-50 font-bold scale-105'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className="text-[10px]">المشتركين</span>
-          </button>
-
-          {/* 2. المناطق */}
-          <button
-            onClick={() => {
-              if (areas.length > 0) {
-                const nextArea = selectedAreaId ? null : areas[0].id
-                setSelectedAreaId(nextArea)
-                setBranchDrawerAreaId(nextArea)
-              }
-              setSearchOpen(false)
-              setFilterDrawerOpen(false)
-              setShowSettingsModal(false)
-            }}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all ${
-              selectedAreaId && !showSettingsModal ? 'text-sky-600 bg-sky-50 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h5m-5 0V11m0 0h5M10 11H5" />
-            </svg>
-            <span className="text-[10px]">المناطق</span>
-          </button>
-
-          {/* 3. البحث 3D */}
-          <button
-            onClick={() => {
-              setSearchOpen((p) => !p)
-              if (!searchOpen) setFilterDrawerOpen(false)
-              setShowSettingsModal(false)
-            }}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all ${
-              searchOpen ? 'text-sky-600 bg-sky-50 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <ThreeDSearchIcon size="sm" className="mb-0.5" />
-            <span className="text-[10px]">البحث 3D</span>
-          </button>
-
-          {/* 4. الفلتر 3D */}
-          <button
-            onClick={() => {
-              setFilterDrawerOpen((p) => !p)
-              if (!filterDrawerOpen) setSearchOpen(false)
-              setShowSettingsModal(false)
-            }}
-            className={`relative flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all ${
-              filterDrawerOpen ? 'text-indigo-600 bg-indigo-50 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <ThreeDFilterIcon size="sm" className="mb-0.5" />
-            <span className="text-[10px]">الفلتر 3D</span>
-            {activeFiltersBadge > 0 && (
-              <span className="absolute top-1 right-2 min-w-[15px] h-[15px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                {activeFiltersBadge}
-              </span>
-            )}
-          </button>
-
-          {/* 5. الإعدادات */}
-          <button
-            onClick={() => {
-              setShowSettingsModal((p) => !p)
-              setSettingsTab('collector')
-              setSearchOpen(false)
-              setFilterDrawerOpen(false)
-            }}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all ${
-              showSettingsModal ? 'text-slate-900 bg-slate-100 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <ThreeDSettingsIcon size="sm" className="mb-0.5" />
-            <span className="text-[10px]">الإعدادات</span>
-          </button>
-        </div>
-      </nav>
     </div>
   )
 }

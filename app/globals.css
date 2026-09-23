@@ -316,37 +316,6 @@ body {
   50% { transform: translateY(-5px) rotateX(-4deg) rotateY(6deg); }
 }
 
-@keyframes flipIn3D {
-  0% {
-    opacity: 0;
-    transform: perspective(1200px) rotateY(-70deg) rotateX(25deg) scale(0.6) translateZ(-200px);
-  }
-  60% {
-    opacity: 0.9;
-    transform: perspective(1200px) rotateY(15deg) rotateX(-8deg) scale(1.03) translateZ(50px);
-  }
-  100% {
-    opacity: 1;
-    transform: perspective(1200px) rotateY(0deg) rotateX(0deg) scale(1) translateZ(0);
-  }
-}
-
-@keyframes spinOrb3D {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.15); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-
-.animate-flip-in-3d {
-  animation: flipIn3D 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-}
-
-.animate-spin-orb-3d {
-  animation: spinOrb3D 12s linear infinite;
-}
-
 @keyframes glow3DPulse {
   0%, 100% { box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.6); }
   50% { box-shadow: 0 15px 35px 0px rgba(14, 165, 233, 0.7), inset 0 3px 6px rgba(255, 255, 255, 0.9); }
