@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import ThreeDExperience from './ThreeDExperience'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -265,6 +266,7 @@ export default function MainApp() {
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
   const [showContactModal, setShowContactModal] = useState<boolean>(false)
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
+  const [show3DExperience, setShow3DExperience] = useState<boolean>(false)
   const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import'>('collector')
 
   // فورم المشترك
@@ -1110,6 +1112,22 @@ export default function MainApp() {
             {/* زر الإعدادات - يبقى 100% بنفس شكله ومقاسه */}
             <button
               type="button"
+              aria-label="لوحة ثلاثية الأبعاد"
+              onClick={() => {
+                setShow3DExperience((current) => !current)
+                setSearchOpen(false)
+                setFilterDrawerOpen(false)
+              }}
+              className={`w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
+                show3DExperience ? 'bg-violet-600 text-white border-violet-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-violet-50'
+              }`}
+            >
+              <span className="text-[10px] font-black">3D</span>
+            </button>
+
+            {/* زر الإعدادات - يبقى 100% بنفس شكله ومقاسه */}
+            <button
+              type="button"
               aria-label="الاعدادات"
               onClick={() => {
                 setShowSettingsModal((p) => !p)
@@ -1688,6 +1706,20 @@ export default function MainApp() {
           </div>
         </div>
       </main>
+
+      {show3DExperience && (
+        <div className="max-w-[1100px] mx-auto px-3 sm:px-4 pb-6">
+          <ThreeDExperience
+            areas={areas}
+            subscribers={subscribers}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            collectorName={collectorName}
+            currentDue={getSubscriberCurrentDue}
+            selectedSubscriber={activeSubscriber}
+          />
+        </div>
+      )}
 
       {/* ==========================
           نافذة تفاصيل المشترك وبلوك الديون
