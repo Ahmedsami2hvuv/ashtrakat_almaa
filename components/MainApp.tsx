@@ -2,20 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { RealThreeDCanvas } from './RealThreeDCanvas'
-import {
-  ThreeDBox,
-  ThreeDSearchIcon,
-  ThreeDFilterIcon,
-  ThreeDPhoneIcon,
-  ThreeDWhatsAppIcon,
-  ThreeDLocationIcon,
-  ThreeDImageIcon,
-  ThreeDEditIcon,
-  ThreeDSettingsIcon,
-  ThreeDPriceIcon,
-  ThreeDStatusBadge
-} from './ThreeDElements'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -1713,46 +1699,42 @@ export default function MainApp() {
           <div className="subscriber-orbit subscriber-orbit-two" />
           <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
             {/* رأس النافذة */}
-            <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-gradient-to-r from-sky-50/60 via-white to-blue-50/40 relative overflow-hidden">
-              <div className="flex items-center gap-3 min-w-0">
-                <RealThreeDCanvas type="crystal" color="#0ea5e9" size={54} animated={true} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-[16px] font-bold text-slate-900 drop-shadow-sm">
-                      {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
-                    </h2>
-                    <button
-                      onClick={() => {
-                        setEditSub({ ...activeSubscriber })
-                        setShowEditModal(true)
-                      }}
-                      className="transition-transform active:scale-95 cursor-pointer"
-                      title="تعديل حساب العميل"
-                    >
-                      <ThreeDEditIcon size="sm" />
-                    </button>
+            <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-white">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[15px] font-bold text-slate-900">
+                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setEditSub({ ...activeSubscriber })
+                      setShowEditModal(true)
+                    }}
+                    className="w-7 h-7 border border-sky-100 rounded-xl flex items-center justify-center hover:bg-sky-50 bg-white text-slate-500"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                      <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1.5">
+                  {areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                  {' - '}
+                  {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
+                </div>
+                <div className="mt-3 flex gap-2 items-center">
+                  <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
+                    {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                    {areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                    {' - '}
-                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
-                  </div>
-                  <div className="mt-2.5 flex gap-2 items-center flex-wrap">
-                    <div className="inline-flex border border-sky-200/80 rounded-xl bg-white/80 backdrop-blur-sm px-3 py-1 text-[11px] font-bold text-slate-800 shadow-sm">
-                      {activeSubscriber.propertyType} - {activeSubscriber.meterType}
-                    </div>
-                    {(activeSubscriber.statuses || []).map((st) => (
-                      <ThreeDStatusBadge key={st} status={st} />
-                    ))}
-                    <div className="text-[10px] text-slate-600 font-mono font-bold mr-auto">
-                      المستحق: {formatNumber(activeBilling.due)}
-                    </div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    المستحق: {formatNumber(activeBilling.due)}
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedSubId(null)}
-                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 transition-colors shrink-0"
+                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50"
               >
                 ✕
               </button>
