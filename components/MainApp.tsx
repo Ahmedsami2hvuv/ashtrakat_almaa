@@ -350,52 +350,79 @@ export default function MainApp() {
     init()
   }, [])
 
-  // المزامنة اللحظية الحية (Realtime Stream) دون استهلاك الموارد بالـ Polling
+  // المزامنة اللحظية الحية الفورية (Realtime Broadcast + Database Changes)
+  const isIncomingSyncRef = useRef<boolean>(false)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+
   useEffect(() => {
     if (!dataLoaded) return
 
-    const channel = supabase
-      .channel('app_sync_realtime')
+    const applyIncomingData = (data: Record<string, unknown>) => {
+      isIncomingSyncRef.current = true
+      if (data.areas) setAreas(data.areas as Area[])
+      if (data.pricing) setPricing(data.pricing as Pricing)
+      if (data.subscribers) setSubscribers(data.subscribers as Subscriber[])
+      if (data.billing) setBilling(data.billing as BillingRecords)
+      if (data.collectorName) setCollectorName(data.collectorName as string)
+      if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
+      if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
+      if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
+      setTimeout(() => { isIncomingSyncRef.current = false }, 100)
+    }
+
+    const channel = supabase.channel('app_sync_realtime_broadcast', {
+      config: { broadcast: { self: false } }
+    })
+
+    channel
+      .on('broadcast', { event: 'instant_sync' }, ({ payload }) => {
+        if (payload) applyIncomingData(payload as Record<string, unknown>)
+      })
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_sync', filter: `key=eq.${SYNC_ROW_KEY}` },
         (payload) => {
           if (payload.new && (payload.new as { value?: Record<string, unknown> }).value) {
-            const data = (payload.new as { value: Record<string, unknown> }).value
-            if (data.areas) setAreas(data.areas as Area[])
-            if (data.pricing) setPricing(data.pricing as Pricing)
-            if (data.subscribers) setSubscribers(data.subscribers as Subscriber[])
-            if (data.billing) setBilling(data.billing as BillingRecords)
-            if (data.collectorName) setCollectorName(data.collectorName as string)
-            if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
-            if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
-            if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
+            applyIncomingData((payload.new as { value: Record<string, unknown> }).value)
           }
         }
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
       supabase.removeChannel(channel)
+      channelRef.current = null
     }
   }, [dataLoaded])
 
-  // الحفظ التلقائي: localStorage فوري + سوبابيس مع debounce 2 ثانية
+  // الحفظ التلقائي المحلي + البث اللحظي السريع + الحفظ السحابي
   useEffect(() => {
     if (!dataLoaded) return
+    if (isIncomingSyncRef.current) return
 
     const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo }
 
-    // حفظ محلي فوري
+    // 1. حفظ محلي فوري
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
 
-    // حفظ سحابي مع تأخير
+    // 2. بث مباشر فوري لحظي للأجهزة الأخرى كدام العين (أقل من 50 ميلي ثانية)
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'instant_sync',
+        payload: data
+      })
+    }
+
+    // 3. حفظ سحابي دائم بدليل سوبابيس (خلال 500 ميلي ثانية)
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     setIsSyncing(true)
     saveTimerRef.current = setTimeout(async () => {
       await saveToCloud(data as Record<string, unknown>)
       setIsSyncing(false)
-    }, 2500)
+    }, 500)
   }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, dataLoaded])
 
   // تسجيل الدخول
