@@ -114,7 +114,7 @@ const DEFAULT_AREAS: Area[] = [
 ]
 
 const DEFAULT_PRICING: Pricing = {
-  سكني: { '3 متر': 15000, '4 متر': 24600 },
+  سكني: { '3 متر': 16200, '4 متر': 24600 },
   تجاري: {}
 }
 
@@ -251,6 +251,7 @@ export default function MainApp() {
   const [filterAreaSearch, setFilterAreaSearch] = useState<string>('')
   const [filterBranchSearch, setFilterBranchSearch] = useState<string>('')
   const [openFilterAreaId, setOpenFilterAreaId] = useState<string | null>(null)
+  const [filterPanel, setFilterPanel] = useState<'type' | 'areas' | 'statuses' | null>(null)
 
   // الاختيار الحالي
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
@@ -622,6 +623,7 @@ export default function MainApp() {
     setFilterBranches([])
     setFilterStatuses([])
     setOpenFilterAreaId(null)
+    setFilterPanel(null)
     setFilterAreaSearch('')
     setFilterBranchSearch('')
   }
@@ -1179,10 +1181,31 @@ export default function MainApp() {
                 </div>
               </div>
 
-              {/* شبكة الفلاتر الأربعة التفاعلية */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {([
+                  ['type', 'نوع العقار'],
+                  ['areas', 'المناطق والأفرع'],
+                  ['statuses', 'حالات المشترك']
+                ] as const).map(([panel, label]) => (
+                  <button
+                    key={panel}
+                    type="button"
+                    onClick={() => setFilterPanel((current) => (current === panel ? null : panel))}
+                    className={`h-10 rounded-xl border text-[11px] font-bold transition-colors ${
+                      filterPanel === panel
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* محتوى الفلتر يظهر بعد اختيار الزر */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1. النوع */}
-                <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/40">
+                {filterPanel === 'type' && <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/40">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1 h-4 rounded-full bg-slate-900"></span> النوع
@@ -1222,10 +1245,10 @@ export default function MainApp() {
                       )
                     })}
                   </div>
-                </div>
+                </div>}
 
                 {/* 2. المناطق */}
-                <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                {filterPanel === 'areas' && <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1 h-4 rounded-full bg-sky-500"></span> المناطق
@@ -1287,10 +1310,10 @@ export default function MainApp() {
                         )
                       })}
                   </div>
-                </div>
+                </div>}
 
                 {/* 3. الأفرع: تظهر بعد النقر على منطقة */}
-                <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                {filterPanel === 'areas' && <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1 h-4 rounded-full bg-slate-900"></span> الأفرع
@@ -1371,10 +1394,10 @@ export default function MainApp() {
                         )
                       })}
                   </div>
-                </div>
+                </div>}
 
                 {/* 4. الحالات المتعددة */}
-                <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                {filterPanel === 'statuses' && <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1 h-4 rounded-full bg-violet-500"></span> حالات المشترك
@@ -1452,7 +1475,7 @@ export default function MainApp() {
                         </label>
                       )
                     })()}
-                  </div>
+                  </div>}
                 </div>
               </div>
 
@@ -2348,7 +2371,7 @@ export default function MainApp() {
             </div>
 
             <div className="px-3 py-3 border-b border-sky-50 flex gap-2 overflow-x-auto scrollbar-none bg-sky-50/30">
-              {(['collector', 'pricing', 'areas', 'import'] as const).map((tab) => {
+              {(['collector', 'areas', 'import'] as const).map((tab) => {
                 const labels = { collector: 'المحصل', pricing: 'التسعير', areas: 'المناطق والافرع', import: 'الاستيراد' }
                 return (
                   <button

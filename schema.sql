@@ -78,7 +78,7 @@ ALTER TABLE public.collector DISABLE ROW LEVEL SECURITY;
 
 -- إضافة تسعيرات افتراضية إذا لم تكن موجودة
 INSERT INTO public.pricing (property_type, meter_type, amount) VALUES
-('سكني', '3 متر', 15000),
+('سكني', '3 متر', 16200),
 ('سكني', '4 متر', 24600)
 ON CONFLICT (property_type, meter_type) DO NOTHING;
 
