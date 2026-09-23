@@ -40,6 +40,40 @@ export type ParsedImportItem = { id: number; name: string; raw: string; statuses
 const STORAGE_KEY = 'ashtrakat_almaa_v1_data'
 const AUTH_STORAGE_KEY = 'ashtrakat_almaa_auth_token'
 
+// ===== مزامنة سوبابيس السحابية =====
+const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const SYNC_ROW_KEY = 'main_data'
+
+async function loadFromCloud(): Promise<Record<string, unknown> | null> {
+  if (!SB_URL || !SB_KEY || SB_URL.includes('placeholder')) return null
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/app_sync?key=eq.${SYNC_ROW_KEY}&select=value`,
+      { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } }
+    )
+    if (!res.ok) return null
+    const rows = await res.json()
+    return rows[0]?.value || null
+  } catch { return null }
+}
+
+async function saveToCloud(data: Record<string, unknown>): Promise<void> {
+  if (!SB_URL || !SB_KEY || SB_URL.includes('placeholder')) return
+  try {
+    await fetch(`${SB_URL}/rest/v1/app_sync`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({ key: SYNC_ROW_KEY, value: data, updated_at: new Date().toISOString() })
+    })
+  } catch {}
+}
+
 // السنوات المطلوبة حصراً
 const YEARS = [2026, 2027, 2028]
 const PERIODS = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
@@ -261,6 +295,12 @@ export default function MainApp() {
   const swipeStartY = useRef<number>(0)
   const swipeSubId = useRef<number | null>(null)
 
+  // حالة المزامنة السحابية
+  const [isSyncing, setIsSyncing] = useState<boolean>(false)
+  const [isLoadingCloud, setIsLoadingCloud] = useState<boolean>(true)
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // الشهر الحالي 0-5
   const currentPeriodIndex = useMemo(() => {
     const month = new Date().getMonth() // 0-11
@@ -275,166 +315,58 @@ export default function MainApp() {
     }
   }, [])
 
-  // تحميل البيانات من localStorage كنسخة احتياطية سريعة عند البدء
+  // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        const data = JSON.parse(saved)
-        if (data.areas) setAreas(data.areas)
-        if (data.pricing) setPricing(data.pricing)
-        if (data.subscribers) setSubscribers(data.subscribers)
-        if (data.billing) setBilling(data.billing)
-        if (data.collectorName) setCollectorName(data.collectorName)
-        if (data.collectorPhone) setCollectorPhone(data.collectorPhone)
-        if (data.rangeFrom) setRangeFrom(data.rangeFrom)
-        if (data.rangeTo) setRangeTo(data.rangeTo)
-      }
-    } catch {
-      // استخدام الافتراضي
+    const applyData = (data: Record<string, unknown>) => {
+      if (data.areas) setAreas(data.areas as Area[])
+      if (data.pricing) setPricing(data.pricing as Pricing)
+      if (data.subscribers) setSubscribers(data.subscribers as Subscriber[])
+      if (data.billing) setBilling(data.billing as BillingRecords)
+      if (data.collectorName) setCollectorName(data.collectorName as string)
+      if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
+      if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
+      if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
     }
+
+    const init = async () => {
+      setIsLoadingCloud(true)
+      // محاولة الجلب من السحابة
+      const cloudData = await loadFromCloud()
+      if (cloudData) {
+        applyData(cloudData)
+        // حفظ نسخة محلية كاحتياط
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData)) } catch {}
+      } else {
+        // الاحتياط: من localStorage
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY)
+          if (saved) applyData(JSON.parse(saved))
+        } catch {}
+      }
+      setIsLoadingCloud(false)
+      setDataLoaded(true)
+    }
+    init()
   }, [])
 
-  // تحميل البيانات من السيرفر (سوبابيس) لضمان التزامن الكامل بين الهاتف والحاسوب
+  // الحفظ التلقائي: localStorage فوري + سوبابيس مع debounce 2 ثانية
   useEffect(() => {
-    async function loadServerData() {
-      try {
-        // جلب المناطق والأفرع
-        const resAreas = await fetch('/api/areas')
-        if (resAreas.ok) {
-          const areasData = await resAreas.json()
-          if (Array.isArray(areasData) && areasData.length > 0) setAreas(areasData)
-        }
-
-        // جلب الأسعار
-        const resPricing = await fetch('/api/pricing')
-        if (resPricing.ok) {
-          const pricingData = await resPricing.json()
-          if (pricingData && (pricingData.سكني || pricingData.تجاري)) setPricing(pricingData)
-        }
-
-        // جلب بيانات المحصل
-        const resCollector = await fetch('/api/collector')
-        if (resCollector.ok) {
-          const collectorData = await resCollector.json()
-          if (collectorData) {
-            if (collectorData.name) setCollectorName(collectorData.name)
-            if (collectorData.phone) setCollectorPhone(collectorData.phone)
-            if (collectorData.range_from) setRangeFrom(collectorData.range_from)
-            if (collectorData.range_to) setRangeTo(collectorData.range_to)
-          }
-        }
-
-        // جلب المشتركين
-        const resSubscribers = await fetch('/api/subscribers')
-        if (resSubscribers.ok) {
-          const subsData = await resSubscribers.json()
-          if (Array.isArray(subsData)) {
-            const mappedSubs: Subscriber[] = subsData.map((s: any) => ({
-              id: Number(s.id),
-              name: s.name || '',
-              phone: s.phone || '',
-              areaId: s.area_id || '',
-              branchId: s.branch_id || '',
-              propertyType: s.property_type || 'سكني',
-              meterType: s.meter_type || '4 متر',
-              detailedAddress: s.detailed_address || '',
-              doorImage: s.door_image || undefined,
-              location: (s.location_lat && s.location_lng) ? { lat: s.location_lat, lng: s.location_lng, link: s.location_link || '' } : undefined,
-              order: Number(s.id),
-              statuses: []
-            }))
-            setSubscribers(mappedSubs)
-          }
-        }
-
-        // جلب الدفعات والفترات
-        const resPayments = await fetch('/api/payments')
-        if (resPayments.ok) {
-          const paymentsData = await resPayments.json()
-          if (Array.isArray(paymentsData)) {
-            const mappedBilling: BillingRecords = {}
-            paymentsData.forEach((p: any) => {
-              const subId = Number(p.subscriber_id)
-              const year = Number(p.year)
-              const period = Number(p.period)
-              if (!mappedBilling[subId]) mappedBilling[subId] = {}
-              if (!mappedBilling[subId][year]) {
-                mappedBilling[subId][year] = Array.from({ length: 6 }, () => ({ oldDebtManual: null, paid: 0 }))
-              }
-              mappedBilling[subId][year][period] = {
-                oldDebtManual: p.is_manual ? Number(p.old_debt) : null,
-                paid: Number(p.paid) || 0
-              }
-            })
-            setBilling(mappedBilling)
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching data from server:', err)
-      }
-    }
-    loadServerData()
-  }, [])
-
-  // الحفظ التلقائي في localStorage
-  useEffect(() => {
+    if (!dataLoaded) return
     if (subscribers.length === 0 && areas.length === DEFAULT_AREAS.length) return
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          areas,
-          pricing,
-          subscribers,
-          billing,
-          collectorName,
-          collectorPhone,
-          rangeFrom,
-          rangeTo
-        })
-      )
-    } catch {}
-  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo])
 
-  // المزامنة التلقائية لبيانات المحصل إلى السيرفر عند تغييرها (مع debounce لمنع كثرة الطلبات)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetch('/api/collector', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: collectorName,
-          phone: collectorPhone,
-          rangeFrom,
-          rangeTo
-        })
-      }).catch(console.error)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [collectorName, collectorPhone, rangeFrom, rangeTo])
+    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo }
 
-  // المزامنة التلقائية للتسعير إلى السيرفر عند تغييره
-  useEffect(() => {
-    if (!pricing || subscribers.length === 0) return
-    Object.keys(pricing).forEach((propType) => {
-      const subPricing = pricing[propType as PropertyType]
-      if (subPricing) {
-        Object.keys(subPricing).forEach((meterType) => {
-          const amount = subPricing[meterType as MeterType]
-          fetch('/api/pricing', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              propertyType: propType,
-              meterType,
-              amount
-            })
-          }).catch(console.error)
-        })
-      }
-    })
-  }, [pricing])
+    // حفظ محلي فوري
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
+
+    // حفظ سحابي مع تأخير
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    setIsSyncing(true)
+    saveTimerRef.current = setTimeout(async () => {
+      await saveToCloud(data as Record<string, unknown>)
+      setIsSyncing(false)
+    }, 2500)
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, dataLoaded])
 
   // تسجيل الدخول
   const handleLogin = (e: React.FormEvent) => {
@@ -631,11 +563,6 @@ export default function MainApp() {
     const cleanVal = value.replace(/[^0-9\-]/g, '')
     const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
 
-    let targetOldDebt = 0
-    let targetPaid = 0
-    let targetRemaining = 0
-    let targetIsManual = false
-
     setBilling((prev) => {
       const copy = { ...prev }
       if (!copy[subId]) copy[subId] = {}
@@ -668,35 +595,8 @@ export default function MainApp() {
       }
 
       copy[subId][year] = yearRecords
-
-      // جلب الحساب النهائي لإرساله للسيرفر
-      const finalBilling = calculateBilling(subId, year, copy, subscribers, pricing)
-      const finalRow = finalBilling.rows[periodIdx]
-      if (finalRow) {
-        targetOldDebt = finalRow.old
-        targetPaid = finalRow.paid
-        targetRemaining = finalRow.remaining
-        targetIsManual = finalRow.isManual
-      }
-
       return copy
     })
-
-    // إرسال البيانات المحدثة إلى قاعدة البيانات مباشرة
-    fetch('/api/payments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscriberId: subId,
-        period: periodIdx,
-        year,
-        periodLabel: PERIODS[periodIdx],
-        oldDebt: targetOldDebt,
-        paid: targetPaid,
-        remaining: targetRemaining,
-        isManual: targetIsManual
-      })
-    }).catch(console.error)
 
     const key = `${subId}_${year}_${periodIdx}_${field}`
     setPendingEdits((prev) => {
@@ -748,22 +648,6 @@ export default function MainApp() {
 
     setSubscribers((prev) => [...prev, created])
 
-    // إرسال المشترك الجديد إلى قاعدة البيانات مباشرة للتزامن
-    fetch('/api/subscribers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: created.id,
-        name: created.name,
-        areaId: created.areaId,
-        branchId: created.branchId,
-        phone: created.phone,
-        propertyType: created.propertyType,
-        meterType: created.meterType,
-        detailedAddress: created.detailedAddress
-      })
-    }).catch(console.error)
-
     // إنشاء سجلات الديون للسنوات 2026، 2027، 2028
     setBilling((prev) => {
       const copy = { ...prev }
@@ -795,22 +679,6 @@ export default function MainApp() {
     setSubscribers((prev) =>
       prev.map((s) => (s.id === editSub.id ? { ...s, ...editSub } as Subscriber : s))
     )
-
-    // إرسال التحديث إلى قاعدة البيانات للتزامن
-    fetch(`/api/subscribers/${editSub.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: editSub.name,
-        areaId: editSub.areaId,
-        branchId: editSub.branchId,
-        phone: editSub.phone,
-        propertyType: editSub.propertyType,
-        meterType: editSub.meterType,
-        detailedAddress: editSub.detailedAddress
-      })
-    }).catch(console.error)
-
     setShowEditModal(false)
   }
 
@@ -945,25 +813,6 @@ export default function MainApp() {
 
     if (toAdd.length > 0) {
       setSubscribers((prev) => [...prev, ...toAdd])
-
-      // مزامنة كافة المشتركين الجدد مع قاعدة البيانات
-      toAdd.forEach((s) => {
-        fetch('/api/subscribers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: s.id,
-            name: s.name,
-            areaId: s.areaId,
-            branchId: s.branchId,
-            phone: s.phone,
-            propertyType: s.propertyType,
-            meterType: s.meterType,
-            detailedAddress: s.detailedAddress
-          })
-        }).catch(console.error)
-      })
-
       setBilling((prev) => {
         const copy = { ...prev }
         toAdd.forEach((s) => {
@@ -1128,6 +977,23 @@ export default function MainApp() {
               </svg>
             </div>
             <h1 className="text-[15px] font-bold tracking-tight text-slate-900">نظام الاشتراكات</h1>
+            {/* مؤشر المزامنة السحابية */}
+            {isSyncing ? (
+              <span className="flex items-center gap-1 text-[10px] text-sky-500 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                حفظ...
+              </span>
+            ) : isLoadingCloud ? (
+              <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-pulse"></span>
+                تحميل...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                متزامن
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -2592,20 +2458,6 @@ export default function MainApp() {
                             branches: [{ id: `b_${Date.now()}`, name: 'الرئيسي' }]
                           }
                           setAreas((prev) => [...prev, newArea])
-
-                          // مزامنة مع السيرفر
-                          fetch('/api/areas', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ type: 'area', id: newArea.id, name: newArea.name })
-                          }).catch(console.error)
-
-                          fetch('/api/areas', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ type: 'branch', id: newArea.branches[0].id, areaId: newArea.id, name: newArea.branches[0].name })
-                          }).catch(console.error)
-
                           setNewAreaName('')
                         }}
                         className="h-10 px-5 bg-slate-900 text-white rounded-2xl text-[11px] font-bold"
@@ -2629,12 +2481,6 @@ export default function MainApp() {
                               onClick={() => {
                                 if (editingAreaName.trim()) {
                                   setAreas((prev) => prev.map((a) => (a.id === area.id ? { ...a, name: editingAreaName.trim() } : a)))
-                                  // مزامنة مع السيرفر
-                                  fetch('/api/areas', {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ type: 'area', id: area.id, name: editingAreaName.trim() })
-                                  }).catch(console.error)
                                 }
                                 setEditingAreaId(null)
                               }}
@@ -2678,12 +2524,6 @@ export default function MainApp() {
                                             : a
                                         )
                                       )
-                                      // مزامنة مع السيرفر
-                                      fetch('/api/areas', {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ type: 'branch', id: br.id, name: editingBranchName.trim() })
-                                      }).catch(console.error)
                                     }
                                     setEditingBranchId(null)
                                   }}
@@ -2716,21 +2556,13 @@ export default function MainApp() {
                               if (e.key === 'Enter') {
                                 const input = e.target as HTMLInputElement
                                 if (!input.value.trim()) return
-                                const brId = `b_${Date.now()}`
-                                const brName = input.value.trim()
                                 setAreas((prev) =>
                                   prev.map((a) =>
                                     a.id === area.id
-                                      ? { ...a, branches: [...a.branches, { id: brId, name: brName }] }
+                                      ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
                                       : a
                                   )
                                 )
-                                // مزامنة مع السيرفر
-                                fetch('/api/areas', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ type: 'branch', id: brId, areaId: area.id, name: brName })
-                                }).catch(console.error)
                                 input.value = ''
                               }
                             }}
@@ -2739,21 +2571,13 @@ export default function MainApp() {
                             onClick={() => {
                               const input = document.getElementById(`add_br_${area.id}`) as HTMLInputElement
                               if (!input || !input.value.trim()) return
-                              const brId = `b_${Date.now()}`
-                              const brName = input.value.trim()
                               setAreas((prev) =>
                                 prev.map((a) =>
                                   a.id === area.id
-                                    ? { ...a, branches: [...a.branches, { id: brId, name: brName }] }
+                                    ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
                                     : a
                                 )
                               )
-                              // مزامنة مع السيرفر
-                              fetch('/api/areas', {
-                                method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ type: 'branch', id: brId, areaId: area.id, name: brName })
-                                }).catch(console.error)
                               input.value = ''
                             }}
                             className="h-9 px-4 bg-slate-900 text-white rounded-xl text-[11px] font-bold"
@@ -2858,30 +2682,12 @@ export default function MainApp() {
                           )}
                         </div>
 
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={handleConfirmImport}
-                            className="flex-1 h-10 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-black transition-colors"
-                          >
-                            تأكيد وحفظ الاستيراد ({formatNumber(parsedImport.length)})
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('هل أنت متأكد من مسح قائمة المشتركين الحالية بالكامل؟ لا يمكن التراجع عن هذه الخطوة.')) {
-                                setSubscribers([])
-                                setBilling({})
-                                // مسح من السيرفر أيضاً
-                                subscribers.forEach(s => {
-                                  fetch(`/api/subscribers/${s.id}`, { method: 'DELETE' }).catch(console.error)
-                                })
-                                localStorage.removeItem(STORAGE_KEY)
-                              }
-                            }}
-                            className="h-10 px-4 border border-red-200 text-red-600 rounded-xl text-[11px] font-bold hover:bg-red-50"
-                          >
-                            تفريغ الكل
-                          </button>
-                        </div>
+                        <button
+                          onClick={handleConfirmImport}
+                          className="mt-3 w-full h-10 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-black transition-colors"
+                        >
+                          تأكيد وحفظ الاستيراد ({formatNumber(parsedImport.length)})
+                        </button>
                       </div>
                     )}
                   </div>
