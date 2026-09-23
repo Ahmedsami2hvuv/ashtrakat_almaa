@@ -81,6 +81,40 @@ body {
   min-height: 100%;
 }
 
+/* عمق خفيف داخل التفاعلات اليومية، بدون لوحة 3D منفصلة */
+.depth-button,
+.depth-chip,
+.depth-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.depth-button:hover,
+.depth-chip:hover,
+.depth-card:hover {
+  transform: translateY(-2px) perspective(500px) rotateX(1deg);
+}
+
+.depth-button:active,
+.depth-chip:active,
+.depth-card:active {
+  transform: translateY(1px) perspective(500px) rotateX(-2deg) scale(.99);
+  transition-duration: 80ms;
+}
+
+.depth-card {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.depth-card:hover {
+  box-shadow: 0 10px 18px rgba(14, 116, 144, .1);
+}
+
+.depth-button,
+.depth-chip {
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
 /* حركة التموج والاهتزاز النظيفة بدون إيموجيز */
 @keyframes shakeError {
   0%, 100% { transform: translateX(0); }

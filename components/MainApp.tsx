@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import ThreeDExperience from './ThreeDExperience'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -266,7 +265,6 @@ export default function MainApp() {
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
   const [showContactModal, setShowContactModal] = useState<boolean>(false)
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
-  const [show3DExperience, setShow3DExperience] = useState<boolean>(true)
   const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import'>('collector')
 
   // فورم المشترك
@@ -1077,7 +1075,7 @@ export default function MainApp() {
                 setSearchOpen((p) => !p)
                 if (!searchOpen) setFilterDrawerOpen(false)
               }}
-              className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+              className={`depth-button w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
                 searchOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
               }`}
             >
@@ -1095,7 +1093,7 @@ export default function MainApp() {
                 setFilterDrawerOpen((p) => !p)
                 if (!filterDrawerOpen) setSearchOpen(false)
               }}
-              className={`relative w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+              className={`depth-button relative w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
                 filterDrawerOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -1109,22 +1107,6 @@ export default function MainApp() {
               )}
             </button>
 
-            {/* لوحة 3D */}
-            <button
-              type="button"
-              aria-label="لوحة ثلاثية الأبعاد"
-              onClick={() => {
-                setShow3DExperience((current) => !current)
-                setSearchOpen(false)
-                setFilterDrawerOpen(false)
-              }}
-              className={`w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
-                show3DExperience ? 'bg-violet-600 text-white border-violet-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-violet-50'
-              }`}
-            >
-              <span className="text-[10px] font-black">3D</span>
-            </button>
-
             {/* زر الإعدادات - يبقى 100% بنفس شكله ومقاسه */}
             <button
               type="button"
@@ -1135,7 +1117,7 @@ export default function MainApp() {
                 setSearchOpen(false)
                 setFilterDrawerOpen(false)
               }}
-              className={`w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
+              className={`depth-button w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
                 showSettingsModal ? 'bg-[#0e7490] text-white border-[#0e7490]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -1531,20 +1513,6 @@ export default function MainApp() {
       </header>
 
       {/* تبويبات المناطق الرئيسية */}
-      {show3DExperience && (
-        <div className="max-w-[1100px] mx-auto px-3 sm:px-4 pt-4">
-          <ThreeDExperience
-            areas={areas}
-            subscribers={subscribers}
-            rangeFrom={rangeFrom}
-            rangeTo={rangeTo}
-            collectorName={collectorName}
-            currentDue={getSubscriberCurrentDue}
-            selectedSubscriber={activeSubscriber}
-          />
-        </div>
-      )}
-
       <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4">
         <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
           <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
@@ -1584,7 +1552,7 @@ export default function MainApp() {
                       setBranchDrawerAreaId(null)
                     }
                   }}
-                  className={`h-8 px-3 rounded-full border text-[12px] shrink-0 flex items-center gap-2 cursor-pointer select-none transition-all ${
+                  className={`depth-chip h-8 px-3 rounded-full border text-[12px] shrink-0 flex items-center gap-2 cursor-pointer select-none transition-all ${
                     isSelected
                       ? isDrawerOpen
                         ? 'bg-slate-800 text-white border-slate-800'
@@ -1684,7 +1652,7 @@ export default function MainApp() {
                     onTouchEnd={(e) => handleTouchEnd(e, sub)}
                     onMouseDown={(e) => handleMouseDown(e, sub.id)}
                     onMouseUp={(e) => handleMouseUp(e, sub)}
-                    className="w-full text-right px-4 py-3.5 hover:bg-sky-50/40 flex justify-between items-center gap-3 cursor-pointer transition-colors select-none group bg-white"
+                    className="depth-card w-full text-right px-4 py-3.5 hover:bg-sky-50/40 flex justify-between items-center gap-3 cursor-pointer transition-colors select-none group bg-white"
                   >
                     {/* الاسم والرقم على اليمين */}
                     <div className="min-w-0 flex-1 text-right">
@@ -2548,7 +2516,7 @@ export default function MainApp() {
                           const amount = prop === 'تجاري' ? Number.parseInt(m, 10) * 60 * 200 : pricing[prop]?.[m] || 0
                           const isEditing = editingPricingKey === key
                           return (
-                            <div key={m} className="border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
+                            <div key={m} className="depth-card border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
                               <div className="flex justify-between items-center">
                                 <div className="text-[12px] font-bold text-slate-800">{m}</div>
                                 <div className="text-[9px] bg-white border border-sky-100 rounded-full px-2 py-0.5 text-slate-500">
