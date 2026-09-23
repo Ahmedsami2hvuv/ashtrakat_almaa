@@ -2310,6 +2310,25 @@ export default function MainApp() {
                     </button>
                   </div>
 
+                  {/* زر تفريغ الكل - لاختبار المزامنة */}
+                  <button
+                    onClick={() => {
+                      if (!window.confirm('سيتم حذف جميع البيانات المحفوظة محلياً على هذا الجهاز. هل تريد المتابعة؟')) return
+                      localStorage.removeItem(STORAGE_KEY)
+                      localStorage.removeItem(AUTH_STORAGE_KEY)
+                      window.location.reload()
+                    }}
+                    className="w-full h-11 border border-dashed border-red-300 text-red-500 rounded-2xl text-[12px] font-bold flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                    <span>تفريغ البيانات المحلية (لاختبار المزامنة)</span>
+                  </button>
+
                   <div className="border border-sky-100 rounded-2xl overflow-hidden bg-white shadow-sm">
                     <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                       <div className="text-[12px] font-bold">تفاصيل المحصل</div>
