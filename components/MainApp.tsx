@@ -1475,8 +1475,8 @@ export default function MainApp() {
                         </label>
                       )
                     })()}
-                  </div>}
-                </div>
+                  </div>
+                </div>}
               </div>
 
               {/* أسفل الدرج: يوجد X مشترك يطابق الفلتر */}
