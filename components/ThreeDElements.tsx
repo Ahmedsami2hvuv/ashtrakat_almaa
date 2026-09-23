@@ -204,7 +204,7 @@ export function ThreeDPriceIcon({ className = '', size = 'md' }: { className?: s
 
 // 10. شارة أو كارت الحالة 3D مجسم لبطاقات العميل
 export function ThreeDStatusBadge({ status }: { status: string }) {
-  const configs: Record<string, { variant: 'rose' | 'emerald' | 'amber' | 'cyan' | 'purple' | 'slate'; label: string }> = {
+  const configs: Record<string, { variant: 'rose' | 'emerald' | 'amber' | 'cyan' | 'indigo' | 'purple' | 'slate'; label: string }> = {
     'ممتنع': { variant: 'rose', label: 'ممتنع' },
     'مؤجر': { variant: 'cyan', label: 'مؤجر' },
     'مؤجر لا يعلم بالتفاصيل': { variant: 'amber', label: 'مؤجر لا يعلم' },
