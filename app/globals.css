@@ -311,12 +311,70 @@ body {
   50% { opacity: 0.25; transform: scale(1.08); }
 }
 
+@keyframes float3D {
+  0%, 100% { transform: translateY(0px) rotateX(6deg) rotateY(-4deg); }
+  50% { transform: translateY(-5px) rotateX(-4deg) rotateY(6deg); }
+}
+
+@keyframes glow3DPulse {
+  0%, 100% { box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.6); }
+  50% { box-shadow: 0 15px 35px 0px rgba(14, 165, 233, 0.7), inset 0 3px 6px rgba(255, 255, 255, 0.9); }
+}
+
 .animate-shake {
   animation: shakeError 0.35s ease-in-out;
 }
 
 .animate-gentle-pulse {
   animation: gentlePulse 6s ease-in-out infinite;
+}
+
+.animate-float-3d {
+  animation: float3D 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* فصول التجسيم والعمق ثلاثي الأبعاد 3D */
+.perspective-800 {
+  perspective: 800px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.box-shadow-3d-cyan {
+  box-shadow: 0 12px 28px -6px rgba(14, 116, 144, 0.35), 0 4px 10px -2px rgba(14, 116, 144, 0.2), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.box-shadow-3d-emerald {
+  box-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.35), 0 4px 10px -2px rgba(16, 185, 129, 0.2), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.box-shadow-3d-amber {
+  box-shadow: 0 12px 28px -6px rgba(245, 158, 11, 0.35), 0 4px 10px -2px rgba(245, 158, 11, 0.2), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.box-shadow-3d-rose {
+  box-shadow: 0 12px 28px -6px rgba(239, 68, 68, 0.35), 0 4px 10px -2px rgba(239, 68, 68, 0.2), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.box-shadow-3d-indigo {
+  box-shadow: 0 12px 28px -6px rgba(99, 102, 241, 0.35), 0 4px 10px -2px rgba(99, 102, 241, 0.2), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.box-shadow-3d-card {
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15), 0 8px 16px -8px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+.card-3d-tilt {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+  transform: perspective(1000px) rotateX(1.5deg) rotateY(-1.5deg) translateZ(0);
+}
+
+.card-3d-tilt:hover {
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-4deg) scale(1.008);
+  box-shadow: 0 25px 50px -12px rgba(14, 165, 233, 0.22), 0 10px 20px -5px rgba(0, 0, 0, 0.08);
 }
 
 /* أنماط تيل ويند */
