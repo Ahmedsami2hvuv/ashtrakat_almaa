@@ -41,8 +41,8 @@ const STORAGE_KEY = 'ashtrakat_almaa_v1_data'
 const AUTH_STORAGE_KEY = 'ashtrakat_almaa_auth_token'
 
 // ===== مزامنة سوبابيس السحابية =====
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const SB_URL = 'https://amqyttpcezmbsylsdgzd.supabase.co'
+const SB_KEY = 'sb_publishable_Gn4ywDpWxxEtLPdtQVxxBA_yPNoEVgx'
 const SYNC_ROW_KEY = 'main_data'
 
 async function loadFromCloud(): Promise<Record<string, unknown> | null> {
@@ -352,7 +352,6 @@ export default function MainApp() {
   // الحفظ التلقائي: localStorage فوري + سوبابيس مع debounce 2 ثانية
   useEffect(() => {
     if (!dataLoaded) return
-    if (subscribers.length === 0 && areas.length === DEFAULT_AREAS.length) return
 
     const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo }
 
