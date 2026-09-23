@@ -1695,6 +1695,8 @@ export default function MainApp() {
       ========================== */}
       {activeSubscriber && activeBilling && (
         <div className="subscriber-scene fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-[1px] flex flex-col">
+          <div className="subscriber-orbit subscriber-orbit-one" />
+          <div className="subscriber-orbit subscriber-orbit-two" />
           <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
             {/* رأس النافذة */}
             <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-white">
@@ -1740,7 +1742,7 @@ export default function MainApp() {
 
             {/* المحتوى */}
             <div className="flex-1 overflow-y-auto">
-              <div className="px-4 py-3">
+              <div className="subscriber-content subscriber-content-1 px-4 py-3">
                 <button
                   onClick={() => setShowContactModal(true)}
                   className="w-full h-10 border border-sky-100 rounded-2xl bg-white text-[12px] font-medium hover:bg-sky-50 text-slate-700"
@@ -1751,7 +1753,7 @@ export default function MainApp() {
 
               {/* السنوات: فقط 2026 و 2027 و 2028 (لا 2025 أبداً)
                   والسنة الحالية 2026 تظهر بلون أحمر دائماً */}
-              <div className="px-4 py-2 border-y border-sky-50 bg-white overflow-x-auto whitespace-nowrap flex gap-2 scrollbar-none items-center">
+              <div className="subscriber-content subscriber-content-2 px-4 py-2 border-y border-sky-50 bg-white overflow-x-auto whitespace-nowrap flex gap-2 scrollbar-none items-center">
                 {YEARS.map((y) => {
                   const is2026 = y === 2026
                   const isSelected = selectedYear === y
@@ -1776,7 +1778,7 @@ export default function MainApp() {
               </div>
 
               {/* بداية السنة بسيطة: القديم + الفائدة = الناتج */}
-              <div className="w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
+              <div className="subscriber-content subscriber-content-3 w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
                 <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
                   <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
                   <span className="text-slate-600">
@@ -1788,7 +1790,7 @@ export default function MainApp() {
               {/* بلوك الديون بعرض الشاشة 100%
                   الأعمدة: الفترة 20% | الدين القديم 27% | المدفوع 26% | المتبقي 27%
                   ارتفاع الخلية 36px وبدون سكرول جانبي */}
-              <div className="w-full" style={{ width: '100%', margin: 0, padding: '8px', boxSizing: 'border-box', maxWidth: '100%' }}>
+              <div className="subscriber-content subscriber-content-4 w-full" style={{ width: '100%', margin: 0, padding: '8px', boxSizing: 'border-box', maxWidth: '100%' }}>
                 <div className="bg-white rounded-2xl border border-sky-100 overflow-hidden shadow-sm w-full">
                   <div className="w-full">
                     <div
@@ -1945,7 +1947,7 @@ export default function MainApp() {
               const prevSub = currentIndex > 0 ? displayedSubscribers[currentIndex - 1] : null
               const nextSub = currentIndex < displayedSubscribers.length - 1 ? displayedSubscribers[currentIndex + 1] : null
               return (
-                <div className="border-t border-sky-100 bg-white px-3 py-2 flex gap-2 shrink-0">
+                <div className="subscriber-footer border-t border-sky-100 bg-white px-3 py-2 flex gap-2 shrink-0">
                   <button
                     onClick={() => { if (prevSub) { setSelectedSubId(prevSub.id); setSelectedYear(2026) } }}
                     disabled={!prevSub}
