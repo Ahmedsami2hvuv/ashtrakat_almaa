@@ -266,7 +266,7 @@ export default function MainApp() {
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
   const [showContactModal, setShowContactModal] = useState<boolean>(false)
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
-  const [show3DExperience, setShow3DExperience] = useState<boolean>(false)
+  const [show3DExperience, setShow3DExperience] = useState<boolean>(true)
   const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import'>('collector')
 
   // فورم المشترك
@@ -1109,7 +1109,7 @@ export default function MainApp() {
               )}
             </button>
 
-            {/* زر الإعدادات - يبقى 100% بنفس شكله ومقاسه */}
+            {/* لوحة 3D */}
             <button
               type="button"
               aria-label="لوحة ثلاثية الأبعاد"
@@ -1531,6 +1531,20 @@ export default function MainApp() {
       </header>
 
       {/* تبويبات المناطق الرئيسية */}
+      {show3DExperience && (
+        <div className="max-w-[1100px] mx-auto px-3 sm:px-4 pt-4">
+          <ThreeDExperience
+            areas={areas}
+            subscribers={subscribers}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            collectorName={collectorName}
+            currentDue={getSubscriberCurrentDue}
+            selectedSubscriber={activeSubscriber}
+          />
+        </div>
+      )}
+
       <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4">
         <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
           <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
@@ -1706,20 +1720,6 @@ export default function MainApp() {
           </div>
         </div>
       </main>
-
-      {show3DExperience && (
-        <div className="max-w-[1100px] mx-auto px-3 sm:px-4 pb-6">
-          <ThreeDExperience
-            areas={areas}
-            subscribers={subscribers}
-            rangeFrom={rangeFrom}
-            rangeTo={rangeTo}
-            collectorName={collectorName}
-            currentDue={getSubscriberCurrentDue}
-            selectedSubscriber={activeSubscriber}
-          />
-        </div>
-      )}
 
       {/* ==========================
           نافذة تفاصيل المشترك وبلوك الديون
