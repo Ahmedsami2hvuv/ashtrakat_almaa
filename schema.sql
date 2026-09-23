@@ -79,14 +79,10 @@ ALTER TABLE public.collector DISABLE ROW LEVEL SECURITY;
 -- إضافة تسعيرات افتراضية إذا لم تكن موجودة
 INSERT INTO public.pricing (property_type, meter_type, amount) VALUES
 ('سكني', '3 متر', 15000),
-('سكني', '4 متر', 20000),
-('سكني', '5 متر', 25000),
-('سكني', '6 متر', 30000),
-('تجاري', '3 متر', 20000),
-('تجاري', '4 متر', 25000),
-('تجاري', '5 متر', 30000),
-('تجاري', '6 متر', 35000)
+('سكني', '4 متر', 24600)
 ON CONFLICT (property_type, meter_type) DO NOTHING;
+
+-- التجاري يحسب داخل التطبيق: مقدار الاستهلاك × 60 × 200 لكل شهرين.
 
 -- إضافة بيانات افتراضية للمحصل
 INSERT INTO public.collector (name, phone, range_from, range_to)

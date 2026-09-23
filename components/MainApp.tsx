@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
-export type MeterType = '3 متر' | '4 متر' | '5 متر' | '6 متر'
+export type MeterType = string
 
 export interface Branch {
   id: string
@@ -78,7 +78,12 @@ async function saveToCloud(data: Record<string, unknown>): Promise<void> {
 // السنوات المطلوبة حصراً
 const YEARS = [2026, 2027, 2028]
 const PERIODS = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
-const METERS: MeterType[] = ['3 متر', '4 متر', '5 متر', '6 متر']
+const RESIDENTIAL_METERS: MeterType[] = ['3 متر', '4 متر']
+const COMMERCIAL_METERS: MeterType[] = Array.from({ length: 70 }, (_, index) => `${index + 1} متر`)
+
+function metersForProperty(propertyType: PropertyType): MeterType[] {
+  return propertyType === 'تجاري' ? COMMERCIAL_METERS : RESIDENTIAL_METERS
+}
 
 // حالات المشترك
 const STATUS_OPTIONS = [
@@ -109,8 +114,8 @@ const DEFAULT_AREAS: Area[] = [
 ]
 
 const DEFAULT_PRICING: Pricing = {
-  سكني: { '3 متر': 15000, '4 متر': 24600, '5 متر': 28000, '6 متر': 36000 },
-  تجاري: { '3 متر': 20000, '4 متر': 30000, '5 متر': 40000, '6 متر': 50000 }
+  سكني: { '3 متر': 15000, '4 متر': 24600 },
+  تجاري: {}
 }
 
 function formatNumber(n: number | string | null | undefined): string {
@@ -144,7 +149,11 @@ function calculateBilling(
   }
   if (!sub) return emptyRes
 
-  const due = pricing[sub.propertyType]?.[sub.meterType] ?? 24600
+  const meterAmount = Number.parseInt(sub.meterType, 10)
+  const due =
+    sub.propertyType === 'تجاري'
+      ? (Number.isFinite(meterAmount) && meterAmount > 0 ? meterAmount * 60 * 200 : 0)
+      : pricing[sub.propertyType]?.[sub.meterType] ?? 24600
 
   // الدين السابق من السنة السابقة (فقط لـ 2027 و 2028)
   let prevRemaining = 0
@@ -156,7 +165,7 @@ function calculateBilling(
   }
 
   // بداية السنة بسيطة: القديم + الفائدة = الناتج
-  const fee = prevRemaining > 0 ? Math.round(prevRemaining * 0.1) : 0
+  const fee = prevRemaining >= due * 4 && due > 0 ? Math.round(prevRemaining * 0.1) : 0
   const totalCarried = prevRemaining + fee
 
   const rows: Array<{
@@ -241,6 +250,7 @@ export default function MainApp() {
   const [filterStatuses, setFilterStatuses] = useState<string[]>([])
   const [filterAreaSearch, setFilterAreaSearch] = useState<string>('')
   const [filterBranchSearch, setFilterBranchSearch] = useState<string>('')
+  const [openFilterAreaId, setOpenFilterAreaId] = useState<string | null>(null)
 
   // الاختيار الحالي
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
@@ -611,6 +621,7 @@ export default function MainApp() {
     setFilterAreas([])
     setFilterBranches([])
     setFilterStatuses([])
+    setOpenFilterAreaId(null)
     setFilterAreaSearch('')
     setFilterBranchSearch('')
   }
@@ -1169,7 +1180,7 @@ export default function MainApp() {
               </div>
 
               {/* شبكة الفلاتر الأربعة التفاعلية */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1. النوع */}
                 <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/40">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
@@ -1180,7 +1191,7 @@ export default function MainApp() {
                       الخطوة 1
                     </span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {(['سكني', 'تجاري'] as const).map((type) => {
                       const count = subscribersInRange.filter((s) => s.propertyType === type).length
                       const isChecked = filterTypes[type]
@@ -1213,7 +1224,7 @@ export default function MainApp() {
                   </div>
                 </div>
 
-                {/* 2. المناطق المتحدثة فوراً */}
+                {/* 2. المناطق */}
                 <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
@@ -1256,7 +1267,11 @@ export default function MainApp() {
                               checked={isChecked}
                               onChange={(e) => {
                                 if (e.target.checked) setFilterAreas((p) => [...p, area.id])
-                                else setFilterAreas((p) => p.filter((x) => x !== area.id))
+                                else {
+                                  setFilterAreas((p) => p.filter((x) => x !== area.id))
+                                  setFilterBranches((p) => p.filter((branchId) => !area.branches.some((b) => b.id === branchId)))
+                                }
+                                setOpenFilterAreaId(e.target.checked ? area.id : null)
                               }}
                               className="w-4 h-4 rounded border-slate-300 accent-slate-900"
                             />
@@ -1274,7 +1289,7 @@ export default function MainApp() {
                   </div>
                 </div>
 
-                {/* 3. الأفرع (تتحدث لتظهر فقط أفرع تلك المناطق مع العدد) */}
+                {/* 3. الأفرع: تظهر بعد النقر على منطقة */}
                 <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
@@ -1284,18 +1299,28 @@ export default function MainApp() {
                       الخطوة 3
                     </span>
                   </div>
-                  <div className="relative mb-2.5">
-                    <input
-                      value={filterBranchSearch}
-                      onChange={(e) => setFilterBranchSearch(e.target.value)}
-                      placeholder="بحث في الأفرع..."
-                      className="w-full h-8 pr-3 pl-8 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
-                    />
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">⌕</span>
-                  </div>
+                  {openFilterAreaId ? (
+                    <>
+                      <div className="text-[10px] text-slate-500 mb-2">
+                        أفرع {areas.find((a) => a.id === openFilterAreaId)?.name}
+                      </div>
+                      <div className="relative mb-2.5">
+                        <input
+                          value={filterBranchSearch}
+                          onChange={(e) => setFilterBranchSearch(e.target.value)}
+                          placeholder="بحث في الأفرع..."
+                          className="w-full h-8 pr-3 pl-8 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                        />
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">⌕</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl bg-sky-50/60 border border-dashed border-sky-100 p-4 text-center text-[11px] text-slate-500">
+                      انقر على منطقة لإظهار أفرعها
+                    </div>
+                  )}
                   <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
-                    {areas
-                      .filter((a) => filterAreas.length === 0 || filterAreas.includes(a.id))
+                    {(openFilterAreaId ? areas.filter((a) => a.id === openFilterAreaId) : [])
                       .flatMap((a) => a.branches.map((b) => ({ ...b, areaId: a.id, areaName: a.name })))
                       .filter(
                         (b) =>
@@ -1325,7 +1350,6 @@ export default function MainApp() {
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setFilterBranches((p) => [...p, branch.id])
-                                  // اختيار فرع يختار منطقته تلقائياً
                                   if (!filterAreas.includes(branch.areaId)) {
                                     setFilterAreas((p) => [...p, branch.areaId])
                                   }
@@ -2019,7 +2043,10 @@ export default function MainApp() {
                   <label className="text-[11px] font-bold text-slate-700">نوع العقار</label>
                   <select
                     value={newSub.propertyType}
-                    onChange={(e) => setNewSub((p) => ({ ...p, propertyType: e.target.value as PropertyType }))}
+                    onChange={(e) => {
+                      const propertyType = e.target.value as PropertyType
+                      setNewSub((p) => ({ ...p, propertyType, meterType: metersForProperty(propertyType)[0] }))
+                    }}
                     className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white"
                   >
                     <option value="سكني">سكني</option>
@@ -2033,7 +2060,7 @@ export default function MainApp() {
                     onChange={(e) => setNewSub((p) => ({ ...p, meterType: e.target.value as MeterType }))}
                     className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white"
                   >
-                    {METERS.map((m) => (
+                    {metersForProperty(newSub.propertyType).map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
@@ -2185,7 +2212,10 @@ export default function MainApp() {
                   <label className="text-[11px] text-slate-600 font-medium">نوع العقار</label>
                   <select
                     value={editSub.propertyType || 'سكني'}
-                    onChange={(e) => setEditSub((p) => ({ ...p, propertyType: e.target.value as PropertyType }))}
+                    onChange={(e) => {
+                      const propertyType = e.target.value as PropertyType
+                      setEditSub((p) => ({ ...p, propertyType, meterType: metersForProperty(propertyType)[0] }))
+                    }}
                     className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
                   >
                     <option value="سكني">سكني</option>
@@ -2199,7 +2229,7 @@ export default function MainApp() {
                     onChange={(e) => setEditSub((p) => ({ ...p, meterType: e.target.value as MeterType }))}
                     className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
                   >
-                    {METERS.map((m) => (
+                    {metersForProperty(editSub.propertyType || 'سكني').map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
@@ -2434,6 +2464,9 @@ export default function MainApp() {
                           />
                         </div>
                       </div>
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[10px] text-emerald-700">
+                        يتم حفظ اسم المحصل ورقمه وحدود البلوك تلقائياً بعد التعديل.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2451,13 +2484,13 @@ export default function MainApp() {
                         </div>
                         {/* مكتوب "لكل شهرين" بحسب القاعدة 11 */}
                         <div className="text-[10px] font-bold bg-white border border-sky-100 rounded-full px-3 py-1 text-slate-600">
-                          لكل شهرين
+                          {prop === 'تجاري' ? '60 × 200 لكل متر / شهرين' : 'لكل شهرين'}
                         </div>
                       </div>
                       <div className="p-4 grid grid-cols-2 gap-3">
-                        {METERS.map((m) => {
+                        {(prop === 'تجاري' ? ['1 متر', '2 متر', '3 متر', '9 متر', '70 متر'] : RESIDENTIAL_METERS).map((m) => {
                           const key = `${prop}_${m}`
-                          const amount = pricing[prop]?.[m] || 0
+                          const amount = prop === 'تجاري' ? Number.parseInt(m, 10) * 60 * 200 : pricing[prop]?.[m] || 0
                           const isEditing = editingPricingKey === key
                           return (
                             <div key={m} className="border border-sky-100 rounded-2xl p-3 bg-sky-50/30">
@@ -2467,7 +2500,12 @@ export default function MainApp() {
                                   {prop}
                                 </div>
                               </div>
-                              {isEditing ? (
+                              {prop === 'تجاري' ? (
+                                <div className="mt-2 w-full h-9 px-3 rounded-xl text-[12px] font-bold bg-white text-slate-700 flex items-center justify-between">
+                                  <span>{formatNumber(amount)}</span>
+                                  <span className="text-[9px] text-slate-400">معادلة ثابتة</span>
+                                </div>
+                              ) : isEditing ? (
                                 <input
                                   autoFocus
                                   value={editingPricingVal}
