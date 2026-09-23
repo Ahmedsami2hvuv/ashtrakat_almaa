@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -348,6 +349,36 @@ export default function MainApp() {
     }
     init()
   }, [])
+
+  // المزامنة اللحظية الحية (Realtime Stream) دون استهلاك الموارد بالـ Polling
+  useEffect(() => {
+    if (!dataLoaded) return
+
+    const channel = supabase
+      .channel('app_sync_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'app_sync', filter: `key=eq.${SYNC_ROW_KEY}` },
+        (payload) => {
+          if (payload.new && (payload.new as { value?: Record<string, unknown> }).value) {
+            const data = (payload.new as { value: Record<string, unknown> }).value
+            if (data.areas) setAreas(data.areas as Area[])
+            if (data.pricing) setPricing(data.pricing as Pricing)
+            if (data.subscribers) setSubscribers(data.subscribers as Subscriber[])
+            if (data.billing) setBilling(data.billing as BillingRecords)
+            if (data.collectorName) setCollectorName(data.collectorName as string)
+            if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
+            if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
+            if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [dataLoaded])
 
   // الحفظ التلقائي: localStorage فوري + سوبابيس مع debounce 2 ثانية
   useEffect(() => {
