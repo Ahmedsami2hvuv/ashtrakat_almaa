@@ -308,6 +308,27 @@ export default function MainApp() {
   const swipeStartY = useRef<number>(0)
   const swipeSubId = useRef<number | null>(null)
 
+  // مرجع التركيز التلقائي على الديون السابقة
+  const shouldFocusOldDebtRef = useRef<boolean>(false)
+
+  const focusOldDebtInput = useCallback(() => {
+    const tryFocus = () => {
+      const el = document.getElementById('first-old-debt-input') as HTMLInputElement | null
+      if (el) {
+        el.focus()
+        el.select()
+        return true
+      }
+      return false
+    }
+
+    if (!tryFocus()) {
+      setTimeout(tryFocus, 60)
+      setTimeout(tryFocus, 180)
+      setTimeout(tryFocus, 350)
+    }
+  }, [])
+
   // حالة المزامنة السحابية
   const [isSyncing, setIsSyncing] = useState<boolean>(false)
   const [isLoadingCloud, setIsLoadingCloud] = useState<boolean>(true)
@@ -327,6 +348,17 @@ export default function MainApp() {
       setIsAuthenticated(true)
     }
   }, [])
+
+  // مراقبة الانتقال بين المشتركين للتركيز التلقائي
+  useEffect(() => {
+    if (shouldFocusOldDebtRef.current && selectedSubId) {
+      shouldFocusOldDebtRef.current = false
+      const timer = setTimeout(() => {
+        focusOldDebtInput()
+      }, 70)
+      return () => clearTimeout(timer)
+    }
+  }, [selectedSubId, focusOldDebtInput])
 
   // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط
   useEffect(() => {
@@ -1820,7 +1852,14 @@ export default function MainApp() {
                 return (
                   <div className="subscriber-content px-3 pt-3 flex gap-2">
                     <button
-                      onClick={() => { if (prevSub) { setSelectedSubId(prevSub.id); setSelectedYear(2026) } }}
+                      onClick={() => {
+                        if (prevSub) {
+                          shouldFocusOldDebtRef.current = true
+                          setSelectedSubId(prevSub.id)
+                          setSelectedYear(2026)
+                          focusOldDebtInput()
+                        }
+                      }}
                       disabled={!prevSub}
                       className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
@@ -1830,7 +1869,14 @@ export default function MainApp() {
                       </div>
                     </button>
                     <button
-                      onClick={() => { if (nextSub) { setSelectedSubId(nextSub.id); setSelectedYear(2026) } }}
+                      onClick={() => {
+                        if (nextSub) {
+                          shouldFocusOldDebtRef.current = true
+                          setSelectedSubId(nextSub.id)
+                          setSelectedYear(2026)
+                          focusOldDebtInput()
+                        }
+                      }}
                       disabled={!nextSub}
                       className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
@@ -1899,6 +1945,7 @@ export default function MainApp() {
                           {/* الدين القديم */}
                           <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
+                              id={idx === 0 ? 'first-old-debt-input' : undefined}
                               value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : String(row.old)}
                               onChange={(e) => {
                                 const v = e.target.value
@@ -1918,6 +1965,8 @@ export default function MainApp() {
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5'
                               } ${row.isManual ? 'border-sky-200 bg-sky-50' : ''}`}
                               inputMode="numeric"
+                              pattern="[0-9]*"
+                              type="text"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </div>
