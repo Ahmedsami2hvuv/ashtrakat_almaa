@@ -1954,12 +1954,12 @@ export default function MainApp() {
                   <div className="w-full">
                     <div
                       className="bg-slate-900 text-white text-[11px] font-bold grid w-full"
-                      style={{ gridTemplateColumns: '20% 27% 26% 27%', width: '100%' }}
+                      style={{ gridTemplateColumns: '25% 25% 25% 25%', width: '100%' }}
                     >
-                      <div className="px-1 py-3 text-center">الفترة</div>
-                      <div className="px-1 py-3 border-r border-white/10 text-center">الدين القديم</div>
+                      <div className="px-1 py-3 text-center">الديون السابقة</div>
+                      <div className="px-1 py-3 border-r border-white/10 text-center">المجموع</div>
                       <div className="px-1 py-3 border-r border-white/10 text-center">المدفوع</div>
-                      <div className="px-1 py-3 border-r border-white/10 text-center">المتبقي</div>
+                      <div className="px-1 py-3 border-r border-white/10 text-center">المجموع الحالي</div>
                     </div>
 
                     {activeBilling.rows.map((row, idx) => {
@@ -1977,20 +1977,10 @@ export default function MainApp() {
                               ? 'bg-white border-sky-50'
                               : 'bg-sky-50/30 border-sky-50'
                           }`}
-                          style={{ gridTemplateColumns: '20% 27% 26% 27%', width: '100%', minHeight: '44px' }}
+                          style={{ gridTemplateColumns: '25% 25% 25% 25%', width: '100%', minHeight: '44px' }}
                         >
-                          {/* الفترة */}
-                          <div
-                            className={`px-1 flex items-center justify-center font-bold ${
-                              isCurrentPeriod ? 'text-[#ef4444]' : 'text-slate-700'
-                            }`}
-                            style={{ minHeight: '44px' }}
-                          >
-                            <span className="font-mono text-[13px]">{row.periodLabel}</span>
-                          </div>
-
-                          {/* الدين القديم */}
-                          <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          {/* 1. الديون السابقة */}
+                          <div className="px-1 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
                               value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : String(row.old)}
@@ -2016,6 +2006,13 @@ export default function MainApp() {
                               type="text"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
+                          </div>
+
+                          {/* 2. المجموع (الديون السابقة + المستحق) */}
+                          <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                            <div className="w-full h-[36px] rounded-lg bg-sky-50/70 border border-sky-100/90 flex items-center justify-center font-mono font-bold text-slate-800 text-[12px] px-1 truncate select-none">
+                              {formatNumber(row.old + row.due)}
+                            </div>
                           </div>
 
                           {/* المدفوع */}
