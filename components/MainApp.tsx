@@ -1891,13 +1891,23 @@ export default function MainApp() {
                 })}
               </div>
 
-              {/* أزرار التالي والسابق للتنقل بين المشتركين (فوق الجدول) */}
+              {/* بداية السنة بسيطة: القديم + الفائدة = الناتج */}
+              <div className="subscriber-content subscriber-content-3 w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
+                <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
+                  <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
+                  <span className="text-slate-600">
+                    القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
+                  </span>
+                </div>
+              </div>
+
+              {/* أزرار التالي والسابق للتنقل بين المشتركين (تحت بداية السنة وفوق الجدول) */}
               {(() => {
                 const currentIndex = displayedSubscribers.findIndex((s) => s.id === activeSubscriber.id)
                 const prevSub = currentIndex > 0 ? displayedSubscribers[currentIndex - 1] : null
                 const nextSub = currentIndex < displayedSubscribers.length - 1 ? displayedSubscribers[currentIndex + 1] : null
                 return (
-                  <div className="subscriber-content px-3 pt-3 flex gap-2">
+                  <div className="subscriber-content px-2 pt-2.5 flex gap-2">
                     <button
                       onClick={() => {
                         if (prevSub) {
@@ -1935,16 +1945,6 @@ export default function MainApp() {
                   </div>
                 )
               })()}
-
-              {/* بداية السنة بسيطة: القديم + الفائدة = الناتج */}
-              <div className="subscriber-content subscriber-content-3 w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
-                <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
-                  <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
-                  <span className="text-slate-600">
-                    القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
-                  </span>
-                </div>
-              </div>
 
               {/* بلوك الديون بعرض الشاشة 100%
                   الأعمدة: الفترة 20% | الدين القديم 27% | المدفوع 26% | المتبقي 27%
