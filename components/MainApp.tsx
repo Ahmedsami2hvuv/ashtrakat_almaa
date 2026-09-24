@@ -1741,7 +1741,7 @@ export default function MainApp() {
             </div>
 
             {/* المحتوى */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pb-4">
               <div className="subscriber-content subscriber-content-1 px-4 py-3">
                 <button
                   onClick={() => setShowContactModal(true)}
@@ -1776,6 +1776,37 @@ export default function MainApp() {
                   )
                 })}
               </div>
+
+              {/* أزرار التالي والسابق للتنقل بين المشتركين (فوق الجدول) */}
+              {(() => {
+                const currentIndex = displayedSubscribers.findIndex((s) => s.id === activeSubscriber.id)
+                const prevSub = currentIndex > 0 ? displayedSubscribers[currentIndex - 1] : null
+                const nextSub = currentIndex < displayedSubscribers.length - 1 ? displayedSubscribers[currentIndex + 1] : null
+                return (
+                  <div className="subscriber-content px-3 pt-3 flex gap-2">
+                    <button
+                      onClick={() => { if (prevSub) { setSelectedSubId(prevSub.id); setSelectedYear(2026) } }}
+                      disabled={!prevSub}
+                      className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                    >
+                      <span className="text-[18px] leading-none font-normal">›</span>
+                      <div className="text-right overflow-hidden">
+                        {prevSub ? <><div className="text-[9px] text-slate-400 leading-tight">السابق</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(prevSub.id)} - {prevSub.name}</div></> : <span>لا يوجد سابق</span>}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { if (nextSub) { setSelectedSubId(nextSub.id); setSelectedYear(2026) } }}
+                      disabled={!nextSub}
+                      className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                    >
+                      <div className="text-left overflow-hidden">
+                        {nextSub ? <><div className="text-[9px] text-slate-400 leading-tight">التالي</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(nextSub.id)} - {nextSub.name}</div></> : <span>لا يوجد تالي</span>}
+                      </div>
+                      <span className="text-[18px] leading-none font-normal">‹</span>
+                    </button>
+                  </div>
+                )
+              })()}
 
               {/* بداية السنة بسيطة: القديم + الفائدة = الناتج */}
               <div className="subscriber-content subscriber-content-3 w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
@@ -1940,37 +1971,6 @@ export default function MainApp() {
                 </div>
               </div>
             </div>
-
-            {/* أزرار التالي والسابق للتنقل بين المشتركين */}
-            {(() => {
-              const currentIndex = displayedSubscribers.findIndex((s) => s.id === activeSubscriber.id)
-              const prevSub = currentIndex > 0 ? displayedSubscribers[currentIndex - 1] : null
-              const nextSub = currentIndex < displayedSubscribers.length - 1 ? displayedSubscribers[currentIndex + 1] : null
-              return (
-                <div className="subscriber-footer border-t border-sky-100 bg-white px-3 py-2 flex gap-2 shrink-0">
-                  <button
-                    onClick={() => { if (prevSub) { setSelectedSubId(prevSub.id); setSelectedYear(2026) } }}
-                    disabled={!prevSub}
-                    className={`flex-1 h-12 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
-                  >
-                    <span className="text-[18px] leading-none font-normal">›</span>
-                    <div className="text-right overflow-hidden">
-                      {prevSub ? <><div className="text-[9px] text-slate-400 leading-tight">السابق</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(prevSub.id)} - {prevSub.name}</div></> : <span>لا يوجد سابق</span>}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => { if (nextSub) { setSelectedSubId(nextSub.id); setSelectedYear(2026) } }}
-                    disabled={!nextSub}
-                    className={`flex-1 h-12 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
-                  >
-                    <div className="text-left overflow-hidden">
-                      {nextSub ? <><div className="text-[9px] text-slate-400 leading-tight">التالي</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(nextSub.id)} - {nextSub.name}</div></> : <span>لا يوجد تالي</span>}
-                    </div>
-                    <span className="text-[18px] leading-none font-normal">‹</span>
-                  </button>
-                </div>
-              )
-            })()}
           </div>
         </div>
       )}
