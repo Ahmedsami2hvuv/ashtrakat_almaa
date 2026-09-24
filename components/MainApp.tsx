@@ -40,6 +40,18 @@ export type BillingPeriodRecord = { oldDebtManual: number | null; paid: number }
 export type BillingRecords = Record<number, Record<number, BillingPeriodRecord[]>>
 export type ParsedImportItem = { id: number; name: string; raw: string; statuses: string[]; note?: string }
 
+// نوع بيانات المشتركين الذين يحتاجون مراجعة في الدائرة
+export interface ReviewItem {
+  id: string
+  subscriberId?: number
+  name: string
+  phone?: string
+  reason: string
+  createdAt: string
+  status: 'pending' | 'resolved'
+  notes?: string
+}
+
 const STORAGE_KEY = 'ashtrakat_almaa_v1_data'
 const AUTH_STORAGE_KEY = 'ashtrakat_almaa_auth_token'
 
@@ -270,6 +282,16 @@ export default function MainApp() {
   const [selectedSubId, setSelectedSubId] = useState<number | null>(null)
   const [selectedYear, setSelectedYear] = useState<number>(2026) // السنة الحالية 2026 افتراضياً
 
+  // القائمة السفلية وقسم يحتاج مراجعة
+  const [bottomNavTab, setBottomNavTab] = useState<'subscribers' | 'areas' | 'review' | 'stats'>('subscribers')
+  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([])
+  const [reviewSearchQuery, setReviewSearchQuery] = useState<string>('')
+  const [reviewReason, setReviewReason] = useState<string>('مراجعة حساب بالدائرة')
+  const [reviewPhone, setReviewPhone] = useState<string>('')
+  const [reviewNotes, setReviewNotes] = useState<string>('')
+  const [reviewFilter, setReviewFilter] = useState<'pending' | 'resolved' | 'all'>('pending')
+  const [reviewSelectedArea, setReviewSelectedArea] = useState<string>('all')
+
   // النوافذ المنبثقة
   const [showAddModal, setShowAddModal] = useState<boolean>(false)
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
@@ -381,6 +403,7 @@ export default function MainApp() {
       if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
       if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
       if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
+      if (data.reviewItems) setReviewItems(data.reviewItems as ReviewItem[])
     }
 
     const init = async () => {
@@ -421,6 +444,7 @@ export default function MainApp() {
       if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
       if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
       if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
+      if (data.reviewItems) setReviewItems(data.reviewItems as ReviewItem[])
       setTimeout(() => { isIncomingSyncRef.current = false }, 100)
     }
 
@@ -456,7 +480,7 @@ export default function MainApp() {
     if (!dataLoaded) return
     if (isIncomingSyncRef.current) return
 
-    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo }
+    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems }
 
     // 1. حفظ محلي فوري
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
@@ -477,7 +501,7 @@ export default function MainApp() {
       await saveToCloud(data as Record<string, unknown>)
       setIsSyncing(false)
     }, 500)
-  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, dataLoaded])
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, dataLoaded])
 
   // تسجيل الدخول
   const handleLogin = (e: React.FormEvent) => {
@@ -1065,6 +1089,127 @@ export default function MainApp() {
     return calculateBilling(selectedSubId, selectedYear, billing, subscribers, pricing)
   }, [selectedSubId, selectedYear, billing, subscribers, pricing])
 
+  // المشتركون المقترحون عند البحث في قسم المراجعة
+  const reviewSuggestions = useMemo(() => {
+    const q = reviewSearchQuery.trim()
+    if (!q) return []
+    return subscribers
+      .filter((s) => s.name.includes(q) || String(s.id).includes(q) || s.phone?.includes(q))
+      .slice(0, 6)
+  }, [subscribers, reviewSearchQuery])
+
+  // إضافة منطقة جديدة
+  const handleAddArea = () => {
+    if (!newAreaName.trim()) return
+    const newArea: Area = {
+      id: `area_${Date.now()}`,
+      name: newAreaName.trim(),
+      branches: [{ id: `b_${Date.now()}`, name: 'الرئيسي' }]
+    }
+    setAreas((prev) => [...prev, newArea])
+    setNewAreaName('')
+  }
+
+  // إضافة شخص إلى قائمة المراجعة
+  const handleAddReview = (targetSub?: { id?: number; name: string; phone?: string } | Subscriber) => {
+    const name = targetSub ? targetSub.name : reviewSearchQuery.trim()
+    const subId = targetSub ? targetSub.id : (Number.isFinite(Number(reviewSearchQuery.trim())) ? Number(reviewSearchQuery.trim()) : undefined)
+    const phone = targetSub ? targetSub.phone : reviewPhone.trim()
+
+    if (!name && !subId) return
+
+    const newItem: ReviewItem = {
+      id: `rev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      subscriberId: subId,
+      name: name || `مشترك رقم ${subId}`,
+      phone: phone || '',
+      reason: reviewReason.trim() || 'يتعين عليه مراجعة الدائرة',
+      createdAt: new Date().toLocaleDateString('ar-IQ', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      status: 'pending',
+      notes: reviewNotes.trim()
+    }
+
+    setReviewItems((prev) => [newItem, ...prev])
+    setReviewSearchQuery('')
+    setReviewPhone('')
+    setReviewNotes('')
+  }
+
+  // تبديل حالة المراجعة (قيد المراجعة / تم حلها ومراجعتها)
+  const handleToggleReviewStatus = (id: string) => {
+    setReviewItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status: item.status === 'pending' ? 'resolved' : 'pending' } : item
+      )
+    )
+  }
+
+  // حذف مراجعة
+  const handleDeleteReview = (id: string) => {
+    setReviewItems((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  // مشتركون تلقائيون بحاجة لمراجعة الدائرة (حالتهم: يدفع بالدائرة أو يجب فحص حسابه)
+  const officeStatusSubscribers = useMemo(() => {
+    return subscribers.filter((s) =>
+      s.statuses?.some((st) => st === 'يدفع بالدائرة' || st === 'يجب فحص حسابه')
+    )
+  }, [subscribers])
+
+  // عدد المراجعات النشطة
+  const pendingReviewCount = useMemo(() => {
+    return reviewItems.filter((r) => r.status === 'pending').length
+  }, [reviewItems])
+
+  // إجمالي عدد المعلقين في المراجعة (قائمتنا المخصصة + من يحملون حالة بالدائرة ولم يضافوا بعد)
+  const totalReviewBadgeCount = useMemo(() => {
+    const customPending = reviewItems.filter((r) => r.status === 'pending')
+    const addedSubIds = new Set(customPending.map((r) => r.subscriberId).filter(Boolean))
+    const notAddedOfficeCount = officeStatusSubscribers.filter((s) => !addedSubIds.has(s.id)).length
+    return customPending.length + notAddedOfficeCount
+  }, [reviewItems, officeStatusSubscribers])
+
+  // إحصائيات مالية شاملة للقسم الإضافي (الإحصائيات والتحصيل)
+  const overallFinancialStats = useMemo(() => {
+    let totalDueAll = 0
+    let totalPaidAll = 0
+    let totalRemainingAll = 0
+    const subDebtList: Array<{ id: number; name: string; debt: number; phone?: string; areaName?: string }> = []
+
+    subscribersInRange.forEach((sub) => {
+      const b = calculateBilling(sub.id, 2026, billing, subscribers, pricing)
+      const currentDue = b.rows.length > currentPeriodIndex ? b.rows[currentPeriodIndex].remaining : b.totalRemaining
+      const totalPaid = b.rows.reduce((sum, r) => sum + (r.paid || 0), 0)
+      const totalRequired = b.totalCarried + b.rows.reduce((sum, r) => sum + (r.due || 0), 0)
+
+      totalDueAll += totalRequired
+      totalPaidAll += totalPaid
+      totalRemainingAll += currentDue
+
+      if (currentDue > 0) {
+        subDebtList.push({
+          id: sub.id,
+          name: sub.name,
+          debt: currentDue,
+          phone: sub.phone,
+          areaName: areas.find((a) => a.id === sub.areaId)?.name
+        })
+      }
+    })
+
+    subDebtList.sort((a, b) => b.debt - a.debt)
+    const collectionRate = totalDueAll > 0 ? Math.round((totalPaidAll / totalDueAll) * 100) : 0
+
+    return {
+      totalDueAll,
+      totalPaidAll,
+      totalRemainingAll,
+      collectionRate,
+      topDebtors: subDebtList.slice(0, 15),
+      totalDebtorsCount: subDebtList.length
+    }
+  }, [subscribersInRange, billing, subscribers, pricing, currentPeriodIndex, areas])
+
   // ==========================
   // شاشة تسجيل الدخول الرسمية والاحترافية
   // ==========================
@@ -1633,181 +1778,925 @@ export default function MainApp() {
         )}
       </header>
 
-      {/* تبويبات المناطق الرئيسية */}
-      <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4">
-        <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
-          <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
-            {/* زر الكل */}
-            <button
-              onClick={() => {
-                setSelectedAreaId(null)
-                setActiveBranchId(null)
-                setBranchDrawerAreaId(null)
-              }}
-              className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
-                !selectedAreaId ? 'bg-slate-900 text-white border-slate-900' : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-white'
-              }`}
-            >
-              الكل • {formatNumber(subscribersInRange.length)}
-            </button>
+      {/* المحتوى الرئيسي للتطبيق بحسب التبويب السفلي المختار */}
+      <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4 pb-28">
 
-            {/* المناطق */}
-            {areas.map((area) => {
-              const count = subscribersInRange.filter((s) => s.areaId === area.id).length
-              const isSelected = selectedAreaId === area.id
-              const isDrawerOpen = branchDrawerAreaId === area.id
-
-              return (
-                <div
-                  key={area.id}
-                  onClick={() => {
-                    if (selectedAreaId !== area.id) {
-                      setSelectedAreaId(area.id)
-                      setActiveBranchId(null)
-                      setBranchDrawerAreaId(area.id)
-                    } else if (branchDrawerAreaId !== area.id) {
-                      setBranchDrawerAreaId(area.id)
-                    } else {
-                      setSelectedAreaId(null)
-                      setActiveBranchId(null)
-                      setBranchDrawerAreaId(null)
-                    }
-                  }}
-                  className={`depth-chip h-8 px-3 rounded-full border text-[12px] shrink-0 flex items-center gap-2 cursor-pointer select-none transition-all ${
-                    isSelected
-                      ? isDrawerOpen
-                        ? 'bg-slate-800 text-white border-slate-800'
-                        : 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-sky-50 border-sky-100 hover:bg-white text-slate-600'
-                  }`}
-                >
-                  <span className="font-medium">{area.name}</span>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-500'
-                    }`}
-                  >
-                    {formatNumber(count)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* الفروع: لا تظهر إلا بعد فتح المنطقة */}
-          {branchDrawerAreaId && (
-            <div className="px-3 pb-3 pt-0 border-t border-sky-50 bg-sky-50/30">
-              <div className="pt-3 pb-2 flex items-center justify-between">
-                <div className="text-[11px] font-bold text-slate-700">
-                  أفرع {areas.find((a) => a.id === branchDrawerAreaId)?.name}
-                </div>
+        {/* ========================================================= */}
+        {/* التبويب 1: المشتركين */}
+        {/* ========================================================= */}
+        {bottomNavTab === 'subscribers' && (
+          <div>
+            {/* شريط المناطق الرئيسي للأفرع والتنقل السريع */}
+            <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
+              <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
+                {/* زر الكل */}
                 <button
                   onClick={() => {
-                    setBranchDrawerAreaId(null)
+                    setSelectedAreaId(null)
                     setActiveBranchId(null)
+                    setBranchDrawerAreaId(null)
                   }}
-                  className="text-[10px] border border-sky-100 bg-white rounded-full px-3 py-1 hover:bg-sky-50"
-                >
-                  إغلاق
-                </button>
-              </div>
-              <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
-                <button
-                  onClick={() => setActiveBranchId(null)}
-                  className={`h-7 px-3 rounded-full border text-[11px] shrink-0 ${
-                    !activeBranchId ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600'
+                  className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
+                    !selectedAreaId ? 'bg-slate-900 text-white border-slate-900' : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-white'
                   }`}
                 >
-                  كل الأفرع
+                  الكل • {formatNumber(subscribersInRange.length)}
                 </button>
-                {(areas.find((a) => a.id === branchDrawerAreaId)?.branches || []).map((branch) => {
-                  const bCount = subscribersInRange.filter(
-                    (s) => s.areaId === branchDrawerAreaId && s.branchId === branch.id
-                  ).length
-                  const isBranchActive = activeBranchId === branch.id
+
+                {/* المناطق */}
+                {areas.map((area) => {
+                  const count = subscribersInRange.filter((s) => s.areaId === area.id).length
+                  const isSelected = selectedAreaId === area.id
+                  const isDrawerOpen = branchDrawerAreaId === area.id
+
                   return (
-                    <button
-                      key={branch.id}
-                      onClick={() => setActiveBranchId(isBranchActive ? null : branch.id)}
-                      className={`h-7 px-3 rounded-full border text-[11px] shrink-0 flex items-center gap-1.5 ${
-                        isBranchActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+                    <div
+                      key={area.id}
+                      onClick={() => {
+                        if (selectedAreaId !== area.id) {
+                          setSelectedAreaId(area.id)
+                          setActiveBranchId(null)
+                          setBranchDrawerAreaId(area.id)
+                        } else if (branchDrawerAreaId !== area.id) {
+                          setBranchDrawerAreaId(area.id)
+                        } else {
+                          setSelectedAreaId(null)
+                          setActiveBranchId(null)
+                          setBranchDrawerAreaId(null)
+                        }
+                      }}
+                      className={`depth-chip h-8 px-3 rounded-full border text-[12px] shrink-0 flex items-center gap-2 cursor-pointer select-none transition-all ${
+                        isSelected
+                          ? isDrawerOpen
+                            ? 'bg-slate-800 text-white border-slate-800'
+                            : 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-sky-50 border-sky-100 hover:bg-white text-slate-600'
                       }`}
                     >
-                      <span>{branch.name}</span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${isBranchActive ? 'bg-white/20' : 'bg-sky-50'}`}>
-                        {formatNumber(bCount)}
+                      <span className="font-medium">{area.name}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-500'
+                        }`}
+                      >
+                        {formatNumber(count)}
                       </span>
-                    </button>
+                    </div>
                   )
                 })}
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* قائمة المشتركين الرئيسية */}
-        <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center gap-2 bg-sky-50/40">
-            <div className="text-[11px] text-slate-600">
-              <span className="font-bold text-slate-900">{formatNumber(displayedSubscribers.length)}</span> من{' '}
-              {formatNumber(subscribersInRange.length)} • {formatNumber(rangeFrom)} - {formatNumber(rangeTo)}
+              {/* الفروع: لا تظهر إلا بعد فتح المنطقة */}
+              {branchDrawerAreaId && (
+                <div className="px-3 pb-3 pt-0 border-t border-sky-50 bg-sky-50/30">
+                  <div className="pt-3 pb-2 flex items-center justify-between">
+                    <div className="text-[11px] font-bold text-slate-700">
+                      أفرع {areas.find((a) => a.id === branchDrawerAreaId)?.name}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setBranchDrawerAreaId(null)
+                        setActiveBranchId(null)
+                      }}
+                      className="text-[10px] border border-sky-100 bg-white rounded-full px-3 py-1 hover:bg-sky-50"
+                    >
+                      إغلاق
+                    </button>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
+                    <button
+                      onClick={() => setActiveBranchId(null)}
+                      className={`h-7 px-3 rounded-full border text-[11px] shrink-0 ${
+                        !activeBranchId ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600'
+                      }`}
+                    >
+                      كل الأفرع
+                    </button>
+                    {(areas.find((a) => a.id === branchDrawerAreaId)?.branches || []).map((branch) => {
+                      const bCount = subscribersInRange.filter(
+                        (s) => s.areaId === branchDrawerAreaId && s.branchId === branch.id
+                      ).length
+                      const isBranchActive = activeBranchId === branch.id
+                      return (
+                        <button
+                          key={branch.id}
+                          onClick={() => setActiveBranchId(isBranchActive ? null : branch.id)}
+                          className={`h-7 px-3 rounded-full border text-[11px] shrink-0 flex items-center gap-1.5 ${
+                            isBranchActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+                          }`}
+                        >
+                          <span>{branch.name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${isBranchActive ? 'bg-white/20' : 'bg-sky-50'}`}>
+                            {formatNumber(bCount)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* قائمة المشتركين الرئيسية */}
+            <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center gap-2 bg-sky-50/40">
+                <div className="text-[11px] text-slate-600">
+                  <span className="font-bold text-slate-900">{formatNumber(displayedSubscribers.length)}</span> من{' '}
+                  {formatNumber(subscribersInRange.length)} • {formatNumber(rangeFrom)} - {formatNumber(rangeTo)}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  اسحب المشترك لليسار للتعديل السريع
+                </div>
+              </div>
+
+              <div className="divide-y divide-sky-50">
+                {displayedSubscribers.length === 0 ? (
+                  <div className="py-16 text-center text-slate-400 text-[13px]">
+                    لا يوجد مشتركون مطابقون للبحث أو الفلتر
+                  </div>
+                ) : (
+                  displayedSubscribers.map((sub) => {
+                    const currentDue = getSubscriberCurrentDue(sub.id)
+                    return (
+                      <div
+                        key={sub.id}
+                        onClick={() => {
+                          setSelectedSubId(sub.id)
+                          setSelectedYear(2026) // افتراضي 2026
+                        }}
+                        onTouchStart={(e) => handleTouchStart(e, sub.id)}
+                        onTouchEnd={(e) => handleTouchEnd(e, sub)}
+                        onMouseDown={(e) => handleMouseDown(e, sub.id)}
+                        onMouseUp={(e) => handleMouseUp(e, sub)}
+                        className="depth-card w-full text-right px-4 py-3.5 hover:bg-sky-50/40 flex justify-between items-center gap-3 cursor-pointer transition-colors select-none group bg-white"
+                      >
+                        {/* الاسم والرقم على اليمين */}
+                        <div className="min-w-0 flex-1 text-right">
+                          <div className="text-[13px] font-bold truncate text-slate-900 leading-tight">
+                            {formatNumber(sub.id)} - {sub.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span>{areas.find((a) => a.id === sub.areaId)?.name}</span>
+                            <span>•</span>
+                            <span>{sub.propertyType}</span>
+                            {(sub.statuses || []).map((st) => (
+                              <span
+                                key={st}
+                                className={`px-1.5 py-0.2 text-[9px] rounded-full font-medium ${STATUS_CONFIG[st]?.bg || 'bg-zinc-100'} ${STATUS_CONFIG[st]?.text || 'text-zinc-700'}`}
+                              >
+                                {st}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* الدين يظهر على اليسار بلون أسود واضح وكبير */}
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-[15px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
+                            {formatNumber(currentDue)}
+                          </div>
+                          <div className="text-sky-200 group-hover:text-slate-400 transition-colors text-[14px]">‹</div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="divide-y divide-sky-50">
-            {displayedSubscribers.length === 0 ? (
-              <div className="py-16 text-center text-slate-400 text-[13px]">
-                لا يوجد مشتركون مطابقون للبحث أو الفلتر
+        {/* ========================================================= */}
+        {/* التبويب 2: المناطق */}
+        {/* ========================================================= */}
+        {bottomNavTab === 'areas' && (
+          <div className="space-y-4">
+            {/* ترويسة قسم المناطق */}
+            <div className="bg-white rounded-2xl border border-sky-100 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-[16px] font-bold text-slate-900">إدارة واستعراض المناطق</h2>
+                <p className="text-[12px] text-slate-500 mt-0.5">
+                  استعراض جميع المناطق وتوزيع المشتركين حسب الأفرع، وإضافة مناطق وأفرع جديدة
+                </p>
               </div>
-            ) : (
-              displayedSubscribers.map((sub) => {
-                const currentDue = getSubscriberCurrentDue(sub.id)
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-sky-50 border border-sky-100 text-sky-800 rounded-xl text-[11px] font-bold">
+                  {formatNumber(areas.length)} مناطق
+                </span>
+                <span className="px-3 py-1 bg-slate-900 text-white rounded-xl text-[11px] font-bold">
+                  {formatNumber(subscribersInRange.length)} مشترك
+                </span>
+              </div>
+            </div>
+
+            {/* إضافة منطقة جديدة سريعة */}
+            <div className="bg-white rounded-2xl border border-sky-100 p-4 shadow-sm">
+              <div className="text-[12px] font-bold text-slate-800 mb-2">إضافة منطقة سكنية جديدة:</div>
+              <div className="flex gap-2">
+                <input
+                  value={newAreaName}
+                  onChange={(e) => setNewAreaName(e.target.value)}
+                  placeholder="اكتب اسم المنطقة الجديدة..."
+                  className="flex-1 h-10 px-3.5 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddArea()
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddArea}
+                  className="h-10 px-5 bg-slate-900 hover:bg-black text-white rounded-xl text-[12px] font-bold transition-colors shrink-0"
+                >
+                  + إضافة المنطقة
+                </button>
+              </div>
+            </div>
+
+            {/* بطاقات المناطق */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {areas.map((area) => {
+                const areaSubscribers = subscribersInRange.filter((s) => s.areaId === area.id)
+                const areaCount = areaSubscribers.length
+
                 return (
-                  <div
-                    key={sub.id}
-                    onClick={() => {
-                      setSelectedSubId(sub.id)
-                      setSelectedYear(2026) // افتراضي 2026
-                    }}
-                    onTouchStart={(e) => handleTouchStart(e, sub.id)}
-                    onTouchEnd={(e) => handleTouchEnd(e, sub)}
-                    onMouseDown={(e) => handleMouseDown(e, sub.id)}
-                    onMouseUp={(e) => handleMouseUp(e, sub)}
-                    className="depth-card w-full text-right px-4 py-3.5 hover:bg-sky-50/40 flex justify-between items-center gap-3 cursor-pointer transition-colors select-none group bg-white"
-                  >
-                    {/* الاسم والرقم على اليمين */}
-                    <div className="min-w-0 flex-1 text-right">
-                      <div className="text-[13px] font-bold truncate text-slate-900 leading-tight">
-                        {formatNumber(sub.id)} - {sub.name}
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
-                        <span>{areas.find((a) => a.id === sub.areaId)?.name}</span>
-                        <span>•</span>
-                        <span>{sub.propertyType}</span>
-                        {(sub.statuses || []).map((st) => (
-                          <span
-                            key={st}
-                            className={`px-1.5 py-0.2 text-[9px] rounded-full font-medium ${STATUS_CONFIG[st]?.bg || 'bg-zinc-100'} ${STATUS_CONFIG[st]?.text || 'text-zinc-700'}`}
+                  <div key={area.id} className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden flex flex-col justify-between">
+                    <div className="p-4">
+                      {/* رأس بطاقة المنطقة */}
+                      <div className="flex items-center justify-between pb-3 border-b border-sky-50">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-[13px]">
+                            📍
+                          </div>
+                          <div>
+                            {editingAreaId === area.id ? (
+                              <div className="flex gap-1.5 items-center">
+                                <input
+                                  value={editingAreaName}
+                                  onChange={(e) => setEditingAreaName(e.target.value)}
+                                  className="h-7 px-2 border rounded-lg text-[12px]"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (editingAreaName.trim()) {
+                                      setAreas((prev) =>
+                                        prev.map((a) => (a.id === area.id ? { ...a, name: editingAreaName.trim() } : a))
+                                      )
+                                    }
+                                    setEditingAreaId(null)
+                                  }}
+                                  className="h-7 px-2.5 bg-slate-900 text-white rounded-lg text-[10px] font-bold"
+                                >
+                                  حفظ
+                                </button>
+                              </div>
+                            ) : (
+                              <h3 className="font-bold text-[14px] text-slate-900">{area.name}</h3>
+                            )}
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {formatNumber(area.branches.length)} أفرع متفرعة
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAreaId(area.id)
+                              setEditingAreaName(area.name)
+                            }}
+                            className="w-7 h-7 rounded-lg border border-sky-100 bg-sky-50 hover:bg-white text-slate-600 flex items-center justify-center text-[11px]"
+                            title="تعديل اسم المنطقة"
                           >
-                            {st}
+                            ✎
+                          </button>
+                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white font-mono">
+                            {formatNumber(areaCount)} مشترك
                           </span>
-                        ))}
+                        </div>
+                      </div>
+
+                      {/* قائمة أفرع المنطقة */}
+                      <div className="mt-3 space-y-1.5">
+                        <div className="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center justify-between">
+                          <span>أفرع {area.name}:</span>
+                          <span className="text-[10px] text-slate-400 font-normal">عدد المشتركين</span>
+                        </div>
+                        {area.branches.length === 0 ? (
+                          <div className="text-[11px] text-slate-400 py-2 text-center bg-sky-50/30 rounded-xl">
+                            لا توجد أفرع مضافة في هذه المنطقة
+                          </div>
+                        ) : (
+                          area.branches.map((br) => {
+                            const brCount = areaSubscribers.filter((s) => s.branchId === br.id).length
+                            return (
+                              <div
+                                key={br.id}
+                                className="flex items-center justify-between bg-sky-50/40 border border-sky-50 rounded-xl px-3 py-2 text-[11px]"
+                              >
+                                <span className="font-medium text-slate-800">{br.name}</span>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white border border-sky-100 text-slate-600">
+                                  {formatNumber(brCount)} مشترك
+                                </span>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+
+                      {/* إضافة فرع جديد للمنطقة */}
+                      <div className="mt-3 pt-3 border-t border-sky-50 flex gap-2">
+                        <input
+                          id={`quick_br_${area.id}`}
+                          placeholder={`إضافة فرع جديد في ${area.name}...`}
+                          className="flex-1 h-8 px-3 border border-sky-100 rounded-xl text-[11px] bg-sky-50/30 focus:bg-white focus:outline-none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const input = e.target as HTMLInputElement
+                              if (!input.value.trim()) return
+                              setAreas((prev) =>
+                                prev.map((a) =>
+                                  a.id === area.id
+                                    ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
+                                    : a
+                                )
+                              )
+                              input.value = ''
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById(`quick_br_${area.id}`) as HTMLInputElement
+                            if (!input || !input.value.trim()) return
+                            setAreas((prev) =>
+                              prev.map((a) =>
+                                a.id === area.id
+                                  ? { ...a, branches: [...a.branches, { id: `b_${Date.now()}`, name: input.value.trim() }] }
+                                  : a
+                              )
+                            )
+                            input.value = ''
+                          }}
+                          className="h-8 px-3 bg-slate-900 text-white rounded-xl text-[10px] font-bold hover:bg-black transition-colors"
+                        >
+                          + فرع
+                        </button>
                       </div>
                     </div>
 
-                    {/* الدين يظهر على اليسار بلون أسود واضح وكبير */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-[15px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
-                        {formatNumber(currentDue)}
-                      </div>
-                      <div className="text-sky-200 group-hover:text-slate-400 transition-colors text-[14px]">‹</div>
-                    </div>
+                    {/* زر الذهاب للمشتركين التابعين للمنطقة */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAreaId(area.id)
+                        setActiveBranchId(null)
+                        setBranchDrawerAreaId(area.id)
+                        setBottomNavTab('subscribers')
+                      }}
+                      className="w-full py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 text-[11px] font-bold border-t border-sky-100 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <span>عرض وتصفح مشتركي {area.name}</span>
+                      <span>‹</span>
+                    </button>
                   </div>
                 )
-              })
-            )}
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* التبويب 3: يحتاج مراجعة (مراجعة الدائرة) */}
+        {/* ========================================================= */}
+        {bottomNavTab === 'review' && (
+          <div className="space-y-4">
+            {/* كارت الترحيب والتعريف بقسم المراجعة */}
+            <div className="bg-white rounded-2xl border border-sky-100 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  <h2 className="text-[16px] font-bold text-slate-900">قسم المشتركين المطلوب مراجعتهم في الدائرة</h2>
+                </div>
+                <p className="text-[12px] text-slate-500 mt-1">
+                  سجل خاص بالمشتركين الذين يتعين عليهم مراجعة الدائرة لتدقيق العدادات أو تسوية الحسابات أو الدفع
+                </p>
+              </div>
+
+              {/* أزرار الفلترة للحالات */}
+              <div className="flex items-center gap-2 bg-sky-50/70 p-1 rounded-xl border border-sky-100 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('pending')}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                    reviewFilter === 'pending'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  قيد المراجعة ({formatNumber(reviewItems.filter((r) => r.status === 'pending').length)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('resolved')}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                    reviewFilter === 'resolved'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  تمت المراجعة ({formatNumber(reviewItems.filter((r) => r.status === 'resolved').length)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                    reviewFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  الكل ({formatNumber(reviewItems.length)})
+                </button>
+              </div>
+            </div>
+
+            {/* فورم إضافة مراجعة جديدة: اسم الشخص أو رقم اشتراكه */}
+            <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 relative">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-[12px] font-bold">
+                  ✍️
+                </span>
+                <h3 className="text-[13px] font-bold text-slate-900">
+                  إضافة مشترك يتعين عليه مراجعة الدائرة
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                {/* حقل اسم الشخص أو رقم اشتراكه مع اقتراحات فورية */}
+                <div className="relative">
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    اسم الشخص أو رقم اشتراكه <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={reviewSearchQuery}
+                    onChange={(e) => setReviewSearchQuery(e.target.value)}
+                    placeholder="اكتب رقم الاشتراك أو اسم الشخص..."
+                    className="w-full h-11 px-3.5 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20"
+                  />
+                  {/* اقتراحات المشتركين الفورية عند الكتابة */}
+                  {reviewSuggestions.length > 0 && (
+                    <div className="absolute top-[100%] right-0 left-0 mt-1 bg-white border border-sky-200 rounded-xl shadow-xl z-20 overflow-hidden divide-y divide-sky-50">
+                      <div className="px-3 py-1.5 bg-sky-50 text-[10px] font-bold text-sky-800">
+                        مشتركون مطابقون (انقر للاختيار التلقائي):
+                      </div>
+                      {reviewSuggestions.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => {
+                            setReviewSearchQuery(`${s.id} - ${s.name}`)
+                            setReviewPhone(s.phone || '')
+                          }}
+                          className="px-3 py-2 text-[11px] hover:bg-sky-50 cursor-pointer flex justify-between items-center transition-colors"
+                        >
+                          <span className="font-bold text-slate-800">
+                            {formatNumber(s.id)} - {s.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {areas.find((a) => a.id === s.areaId)?.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* رقم هاتف المشترك */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    رقم الهاتف للتواصل <span className="text-[10px] text-slate-400 font-normal">(اختياري)</span>
+                  </label>
+                  <input
+                    value={reviewPhone}
+                    onChange={(e) => setReviewPhone(e.target.value)}
+                    placeholder="رقم هاتف المشترك (مثال: 0780...)"
+                    className="w-full h-11 px-3.5 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20"
+                  />
+                </div>
+              </div>
+
+              {/* سبب المراجعة مع أزرار سريعة جاهزة */}
+              <div className="mb-3">
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  سبب المراجعة بالدائرة:
+                </label>
+                <input
+                  value={reviewReason}
+                  onChange={(e) => setReviewReason(e.target.value)}
+                  placeholder="سبب مراجعة الدائرة..."
+                  className="w-full h-10 px-3.5 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20 mb-2"
+                />
+                <div className="flex gap-1.5 flex-wrap">
+                  {[
+                    'مراجعة حساب بالدائرة',
+                    'تسوية ديون متراكمة',
+                    'تدقيق قراءة العداد',
+                    'اعتراض على القسط',
+                    'تحديث وتصحيح بيانات',
+                    'تغيير ملكية أو عقد'
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setReviewReason(preset)}
+                      className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all ${
+                        reviewReason === preset
+                          ? 'bg-slate-900 text-white border-slate-900 font-bold'
+                          : 'bg-sky-50 border-sky-100 text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ملاحظات إضافية وزر الإضافة */}
+              <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex-1 w-full">
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    ملاحظات إضافية <span className="text-[10px] text-slate-400 font-normal">(اختياري)</span>
+                  </label>
+                  <input
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    placeholder="ملاحظة خاصة للموظف أو المحصل..."
+                    className="w-full h-10 px-3.5 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddReview()}
+                  disabled={!reviewSearchQuery.trim()}
+                  className="w-full sm:w-auto h-10 px-6 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white rounded-xl text-[12px] font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                >
+                  <span>+ إضافة إلى قائمة المراجعة</span>
+                </button>
+              </div>
+            </div>
+
+            {/* تنبيه ذكي: المشتركون الذين حالتهم بالدائرة في النظام */}
+            {officeStatusSubscribers.length > 0 && (
+              <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-700 font-bold text-[12px]">⚠️ مشتركون لديهم حالة مراجعة بالدائرة تلقائياً:</span>
+                    <span className="bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                      {formatNumber(officeStatusSubscribers.length)} مشتركون
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[11px] text-slate-600 mb-2.5">
+                  هؤلاء المشتركون محددون بحالة «يدفع بالدائرة» أو «يجب فحص حسابه» في جدول المشتركين، يمكنك إضافتهم لقائمة المراجعة بنقرة واحدة:
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  {officeStatusSubscribers.slice(0, 10).map((sub) => {
+                    const isAlreadyAdded = reviewItems.some((r) => r.subscriberId === sub.id)
+                    return (
+                      <div
+                        key={sub.id}
+                        className="bg-white border border-amber-200 rounded-xl p-2.5 shrink-0 min-w-[200px] flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="font-bold text-[12px] text-slate-900 truncate">
+                            {formatNumber(sub.id)} - {sub.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {areas.find((a) => a.id === sub.areaId)?.name}
+                          </div>
+                          <div className="mt-1 flex gap-1">
+                            {sub.statuses?.map((st) => (
+                              <span key={st} className="text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-medium">
+                                {st}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-2.5 pt-2 border-t border-amber-100 flex gap-1.5">
+                          {isAlreadyAdded ? (
+                            <span className="text-[10px] text-emerald-600 font-bold py-1">مدرج بالقائمة ✓</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleAddReview({
+                                  id: sub.id,
+                                  name: sub.name,
+                                  phone: sub.phone
+                                })
+                              }
+                              className="w-full py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold transition-colors"
+                            >
+                              + إدراج للمراجعة
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedSubId(sub.id)
+                              setSelectedYear(2026)
+                            }}
+                            className="px-2 py-1 bg-white border border-slate-200 text-slate-700 rounded-lg text-[10px] hover:bg-slate-50"
+                          >
+                            كشف
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* قائمة كروت المراجعات */}
+            <div className="space-y-2.5">
+              <div className="text-[12px] font-bold text-slate-800 flex items-center justify-between">
+                <span>سجل المراجعات ({formatNumber(reviewItems.filter((r) => reviewFilter === 'all' || r.status === reviewFilter).length)}):</span>
+              </div>
+
+              {reviewItems.filter((r) => reviewFilter === 'all' || r.status === reviewFilter).length === 0 ? (
+                <div className="bg-white rounded-2xl border border-sky-100 py-12 text-center text-slate-400 text-[13px]">
+                  {reviewFilter === 'pending'
+                    ? 'لا توجد طلبات مراجعة معلقة حالياً في الدائرة 🎉'
+                    : reviewFilter === 'resolved'
+                    ? 'لم يتم إكمال أي مراجعة بعد'
+                    : 'سجل المراجعات فارغ حالياً، أضف مشتركاً من الأعلى'}
+                </div>
+              ) : (
+                reviewItems
+                  .filter((r) => reviewFilter === 'all' || r.status === reviewFilter)
+                  .map((item) => {
+                    const isPending = item.status === 'pending'
+                    const matchedSub = item.subscriberId
+                      ? subscribers.find((s) => s.id === item.subscriberId)
+                      : null
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`bg-white rounded-2xl border p-4 shadow-sm transition-all ${
+                          isPending ? 'border-amber-200 hover:border-amber-300' : 'border-emerald-200 bg-emerald-50/20'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  isPending ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                                }`}
+                              ></span>
+                              <h4 className="font-bold text-[14px] text-slate-900">
+                                {item.name}
+                              </h4>
+                              {item.subscriberId && (
+                                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-50 border border-sky-100 text-sky-800">
+                                  رقم الاشتراك: {formatNumber(item.subscriberId)}
+                                </span>
+                              )}
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                  isPending
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}
+                              >
+                                {isPending ? 'يتعين عليه مراجعة الدائرة' : 'تمت المراجعة بالدائرة ✓'}
+                              </span>
+                            </div>
+
+                            <div className="text-[12px] text-slate-700 mt-2 flex items-center gap-2">
+                              <span className="font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
+                                السبب: {item.reason}
+                              </span>
+                              {item.notes && (
+                                <span className="text-slate-500 text-[11px]">• {item.notes}</span>
+                              )}
+                            </div>
+
+                            <div className="text-[10px] text-slate-400 mt-2 flex items-center gap-3">
+                              <span>التاريخ: {item.createdAt}</span>
+                              {matchedSub && (
+                                <span>المنطقة: {areas.find((a) => a.id === matchedSub.areaId)?.name}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* أزرار الإجراءات */}
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            {/* زر الاتصال */}
+                            {item.phone && (
+                              <a
+                                href={`tel:${item.phone}`}
+                                className="h-8 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
+                              >
+                                <span>📞</span>
+                                <span>اتصال</span>
+                              </a>
+                            )}
+
+                            {/* زر فتح ملف الحساب */}
+                            {item.subscriberId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedSubId(item.subscriberId!)
+                                  setSelectedYear(2026)
+                                }}
+                                className="h-8 px-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-bold flex items-center gap-1 transition-colors"
+                              >
+                                <span>كشف الحساب ↗</span>
+                              </button>
+                            )}
+
+                            {/* زر تبديل الحالة: تمت المراجعة بالدائرة */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleReviewStatus(item.id)}
+                              className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-colors ${
+                                isPending
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {isPending ? '✓ تمت المراجعة' : 'إعادة للمراجعة'}
+                            </button>
+
+                            {/* زر الحذف */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteReview(item.id)}
+                              className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 flex items-center justify-center text-[12px] transition-colors"
+                              title="حذف من المراجعات"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* التبويب 4: الخيار المفيد (الإحصائيات والتحصيل الشامل) */}
+        {/* ========================================================= */}
+        {bottomNavTab === 'stats' && (
+          <div className="space-y-4">
+            {/* ترويسة قسم الإحصائيات */}
+            <div className="bg-white rounded-2xl border border-sky-100 p-4 shadow-sm">
+              <h2 className="text-[16px] font-bold text-slate-900">تقرير الإحصائيات والتحصيل المالي</h2>
+              <p className="text-[12px] text-slate-500 mt-0.5">
+                متابعة المبالغ المحصلة والديون المتبقية ونسبة الإنجاز وأعلى المشتركين مديونية
+              </p>
+            </div>
+
+            {/* كروت الأرقام المالية الكبرى */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* إجمالي المبالغ المحصلة */}
+              <div className="bg-white rounded-2xl border border-emerald-200 p-4 shadow-sm relative overflow-hidden">
+                <div className="text-[11px] font-bold text-emerald-700 mb-1">المبالغ المسددة والمحصلة (2026)</div>
+                <div className="text-[22px] font-bold text-emerald-600 font-mono">
+                  {formatNumber(overallFinancialStats.totalPaidAll)} <span className="text-[12px] font-sans font-normal text-slate-500">د.ع</span>
+                </div>
+                <div className="text-[10px] text-emerald-600 mt-2 flex items-center gap-1 font-bold">
+                  <span>نسبة التحصيل: {overallFinancialStats.collectionRate}%</span>
+                </div>
+              </div>
+
+              {/* إجمالي الديون المتبقية */}
+              <div className="bg-white rounded-2xl border border-red-200 p-4 shadow-sm relative overflow-hidden">
+                <div className="text-[11px] font-bold text-red-700 mb-1">إجمالي الديون المتبقية بالذمة</div>
+                <div className="text-[22px] font-bold text-red-600 font-mono">
+                  {formatNumber(overallFinancialStats.totalRemainingAll)} <span className="text-[12px] font-sans font-normal text-slate-500">د.ع</span>
+                </div>
+                <div className="text-[10px] text-red-500 mt-2">
+                  من إجمالي المستحق: {formatNumber(overallFinancialStats.totalDueAll)} د.ع
+                </div>
+              </div>
+
+              {/* نسبة الإنجاز مع شريط تقدم */}
+              <div className="bg-white rounded-2xl border border-sky-200 p-4 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="text-[11px] font-bold text-slate-700 mb-1">مؤشر التحصيل العام</div>
+                  <div className="text-[22px] font-bold text-slate-900 font-mono">
+                    {overallFinancialStats.collectionRate}%
+                  </div>
+                </div>
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-3">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, overallFinancialStats.collectionRate)}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* تفاصيل توزيع المشتركين والحالات */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white border border-sky-100 rounded-xl p-3 text-center">
+                <div className="text-[10px] text-slate-500">إجمالي المشتركين</div>
+                <div className="text-[16px] font-bold text-slate-900 font-mono mt-0.5">
+                  {formatNumber(subscribersInRange.length)}
+                </div>
+              </div>
+              <div className="bg-white border border-sky-100 rounded-xl p-3 text-center">
+                <div className="text-[10px] text-slate-500">الاشتراكات السكنية</div>
+                <div className="text-[16px] font-bold text-sky-700 font-mono mt-0.5">
+                  {formatNumber(subscribersInRange.filter((s) => s.propertyType === 'سكني').length)}
+                </div>
+              </div>
+              <div className="bg-white border border-sky-100 rounded-xl p-3 text-center">
+                <div className="text-[10px] text-slate-500">الاشتراكات التجارية</div>
+                <div className="text-[16px] font-bold text-amber-700 font-mono mt-0.5">
+                  {formatNumber(subscribersInRange.filter((s) => s.propertyType === 'تجاري').length)}
+                </div>
+              </div>
+              <div className="bg-white border border-sky-100 rounded-xl p-3 text-center">
+                <div className="text-[10px] text-slate-500">مشتركون عليهم ديون</div>
+                <div className="text-[16px] font-bold text-red-600 font-mono mt-0.5">
+                  {formatNumber(overallFinancialStats.totalDebtorsCount)}
+                </div>
+              </div>
+            </div>
+
+            {/* جدول أعلى المشتركين مديونية للمتابعة السريعة */}
+            <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-3 bg-red-50/50 border-b border-red-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[14px]">🚨</span>
+                  <h3 className="font-bold text-[13px] text-red-900">
+                    أعلى 15 مشتركاً بالمديونية (الأكثر طلباً للتحصيل)
+                  </h3>
+                </div>
+                <span className="text-[11px] text-red-700 font-bold">
+                  مجموع ديونهم كبير يتطلب المتابعة
+                </span>
+              </div>
+
+              <div className="divide-y divide-sky-50">
+                {overallFinancialStats.topDebtors.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-[12px]">
+                    لا توجد ديون مسجلة على المشتركين حالياً
+                  </div>
+                ) : (
+                  overallFinancialStats.topDebtors.map((deb, idx) => (
+                    <div
+                      key={deb.id}
+                      className="px-4 py-3 hover:bg-sky-50/40 flex items-center justify-between gap-3 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-bold text-[13px] text-slate-900 truncate">
+                            {formatNumber(deb.id)} - {deb.name}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {deb.areaName || 'منطقة غير محددة'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-[14px] font-bold text-red-600 font-mono">
+                          {formatNumber(deb.debt)} <span className="text-[10px] font-sans font-normal text-slate-400">د.ع</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSubId(deb.id)
+                            setSelectedYear(2026)
+                          }}
+                          className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-lg text-[10px] font-bold border border-sky-100 transition-colors"
+                        >
+                          كشف الحساب
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ==========================
@@ -3063,6 +3952,142 @@ export default function MainApp() {
           </div>
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
+      {/* ========================================================= */}
+      {bottomNavTab === 'subscribers' && !activeSubscriber && (
+        <button
+          type="button"
+          onClick={() => {
+            setFormError('')
+            setShowAddModal(true)
+          }}
+          className="fixed bottom-[80px] left-4 z-30 h-12 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.35)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700"
+          title="إضافة مشترك جديد"
+        >
+          <span className="text-[20px] font-bold leading-none">+</span>
+          <span className="text-[12px] font-bold">إضافة مشترك</span>
+        </button>
+      )}
+
+      {/* ========================================================= */}
+      {/* القائمة السفلية الثابتة المتطورة (مثل المتاجر والتطبيقات) */}
+      {/* ========================================================= */}
+      <nav
+        aria-label="شريط التنقل السفلي"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-sky-100 shadow-[0_-6px_25px_rgba(0,0,0,0.07)] select-none"
+      >
+        <div className="max-w-[650px] mx-auto px-2 h-[66px] flex items-center justify-around">
+          {/* 1. المشتركين */}
+          <button
+            type="button"
+            onClick={() => setBottomNavTab('subscribers')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all rounded-xl cursor-pointer ${
+              bottomNavTab === 'subscribers'
+                ? 'text-slate-900 font-bold scale-105'
+                : 'text-slate-400 hover:text-slate-600 font-medium'
+            }`}
+          >
+            <div
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-all ${
+                bottomNavTab === 'subscribers' ? 'bg-slate-900 text-white' : 'text-slate-500'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <span className="text-[11px] mt-0.5">المشتركين</span>
+          </button>
+
+          {/* 2. المناطق */}
+          <button
+            type="button"
+            onClick={() => setBottomNavTab('areas')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all rounded-xl cursor-pointer ${
+              bottomNavTab === 'areas'
+                ? 'text-slate-900 font-bold scale-105'
+                : 'text-slate-400 hover:text-slate-600 font-medium'
+            }`}
+          >
+            <div
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-all ${
+                bottomNavTab === 'areas' ? 'bg-slate-900 text-white' : 'text-slate-500'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                <line x1="8" y1="2" x2="8" y2="18" />
+                <line x1="16" y1="6" x2="16" y2="22" />
+              </svg>
+            </div>
+            <span className="text-[11px] mt-0.5">المناطق</span>
+          </button>
+
+          {/* 3. يحتاج مراجعة (مع الشارة الرقمية بالعدد) */}
+          <button
+            type="button"
+            onClick={() => setBottomNavTab('review')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all rounded-xl cursor-pointer relative ${
+              bottomNavTab === 'review'
+                ? 'text-amber-700 font-bold scale-105'
+                : 'text-slate-400 hover:text-slate-600 font-medium'
+            }`}
+          >
+            <div className="relative">
+              <div
+                className={`w-9 h-7 rounded-xl flex items-center justify-center transition-all ${
+                  bottomNavTab === 'review' ? 'bg-amber-600 text-white' : 'text-slate-500'
+                }`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+
+              {/* شارة التنبيه الرقمية الحمراء إذا كان هناك من يحتاج مراجعة */}
+              {totalReviewBadgeCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm font-mono animate-pulse">
+                  {formatNumber(totalReviewBadgeCount)}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] mt-0.5">يحتاج مراجعة</span>
+          </button>
+
+          {/* 4. الإحصائيات والتحصيل (الخيار الإضافي المفيد) */}
+          <button
+            type="button"
+            onClick={() => setBottomNavTab('stats')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all rounded-xl cursor-pointer ${
+              bottomNavTab === 'stats'
+                ? 'text-slate-900 font-bold scale-105'
+                : 'text-slate-400 hover:text-slate-600 font-medium'
+            }`}
+          >
+            <div
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-all ${
+                bottomNavTab === 'stats' ? 'bg-slate-900 text-white' : 'text-slate-500'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+            </div>
+            <span className="text-[11px] mt-0.5">الإحصائيات</span>
+          </button>
+        </div>
+      </nav>
     </div>
   )
 }
