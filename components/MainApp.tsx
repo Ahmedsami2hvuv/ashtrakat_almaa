@@ -1723,10 +1723,16 @@ export default function MainApp() {
                   {' - '}
                   {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
                 </div>
-                <div className="mt-3 flex gap-2 items-center">
+                <div className="mt-3 flex gap-2 items-center flex-wrap">
                   <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
                     {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
+                  <button
+                    onClick={() => setShowContactModal(true)}
+                    className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-3 py-1 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
+                  >
+                    التواصل والموقع والصور
+                  </button>
                   <div className="text-[10px] text-slate-500 font-mono">
                     المستحق: {formatNumber(activeBilling.due)}
                   </div>
@@ -1742,15 +1748,6 @@ export default function MainApp() {
 
             {/* المحتوى */}
             <div className="flex-1 overflow-y-auto pb-4">
-              <div className="subscriber-content subscriber-content-1 px-4 py-3">
-                <button
-                  onClick={() => setShowContactModal(true)}
-                  className="w-full h-10 border border-sky-100 rounded-2xl bg-white text-[12px] font-medium hover:bg-sky-50 text-slate-700"
-                >
-                  التواصل والموقع والصور
-                </button>
-              </div>
-
               {/* السنوات: فقط 2026 و 2027 و 2028 (لا 2025 أبداً)
                   والسنة الحالية 2026 تظهر بلون أحمر دائماً */}
               <div className="subscriber-content subscriber-content-2 px-4 py-2 border-y border-sky-50 bg-white overflow-x-auto whitespace-nowrap flex gap-2 scrollbar-none items-center">
