@@ -31,6 +31,8 @@ export interface Subscriber {
   location?: { lat: number; lng: number; link: string }
   order: number
   statuses?: string[]
+  remainingPrev?: number
+  fee?: number
 }
 
 export type Pricing = Record<PropertyType, Record<MeterType, number>>
@@ -155,13 +157,19 @@ function calculateBilling(
       ? (Number.isFinite(meterAmount) && meterAmount > 0 ? meterAmount * 60 * 200 : 0)
       : pricing[sub.propertyType]?.[sub.meterType] ?? 24600
 
-  // الدين السابق من السنة السابقة (فقط لـ 2027 و 2028)
+  // الدين السابق من السنة السابقة (لـ 2027 و 2028 من السنة السابقة، ولـ 2026 من الديون السابقة)
   let prevRemaining = 0
   if (year > 2026) {
     const prevBilling = calculateBilling(subId, year - 1, billingRecords, subscribers, pricing)
     if (prevBilling.rows.length > 0) {
       prevRemaining = prevBilling.rows[prevBilling.rows.length - 1].remaining
     }
+  } else {
+    const rec0 = billingRecords[subId]?.[2026]?.[0]
+    prevRemaining =
+      rec0?.oldDebtManual !== null && rec0?.oldDebtManual !== undefined
+        ? rec0.oldDebtManual
+        : (sub.remainingPrev ?? 0)
   }
 
   // بداية السنة بسيطة: القديم + الفائدة = الناتج
@@ -182,7 +190,9 @@ function calculateBilling(
     const paid = rec?.paid ?? 0
     const manualOld = rec?.oldDebtManual
     const isManual = manualOld !== null && manualOld !== undefined
-    const oldDebt: number = isManual ? (manualOld as number) : (p === 0 ? totalCarried : rows[p - 1].remaining)
+    const oldDebt: number = (p === 0)
+      ? (isManual ? (manualOld as number) : totalCarried)
+      : (isManual ? (manualOld as number) : rows[p - 1].remaining)
 
     // معادلة الدين: المتبقي = الدين القديم + المستحق - المدفوع
     const remaining = oldDebt + due - paid
@@ -661,10 +671,17 @@ export default function MainApp() {
     setFilterBranchSearch('')
   }
 
-  // حفظ تعديل في جدول الديون
+  // حفظ تعديل في جدول الديون مع تسلسل الحسابات تلقائياً لكل فترات السنة
   const handlePaymentEdit = (subId: number, year: number, periodIdx: number, field: 'old' | 'paid' | 'rem', value: string) => {
     const cleanVal = value.replace(/[^0-9\-]/g, '')
     const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
+
+    // إذا تم تعديل الديون السابقة (الفترة الأولى في 2026): نحدث أيضاً remainingPrev للمشترك
+    if (field === 'old' && periodIdx === 0 && year === 2026) {
+      setSubscribers((prev) =>
+        prev.map((s) => (s.id === subId ? { ...s, remainingPrev: num } : s))
+      )
+    }
 
     setBilling((prev) => {
       const copy = { ...prev }
@@ -693,6 +710,16 @@ export default function MainApp() {
           yearRecords[periodIdx] = {
             ...yearRecords[periodIdx],
             paid: calculatedPaid
+          }
+        }
+      }
+
+      // مسح أي تجميد يدوي (oldDebtManual) في كل الفترات اللاحقة لكي تتسلسل وتتحدث تلقائياً
+      for (let nextP = periodIdx + 1; nextP < 6; nextP++) {
+        if (yearRecords[nextP]) {
+          yearRecords[nextP] = {
+            ...yearRecords[nextP],
+            oldDebtManual: null
           }
         }
       }
@@ -782,6 +809,26 @@ export default function MainApp() {
     setSubscribers((prev) =>
       prev.map((s) => (s.id === editSub.id ? { ...s, ...editSub } as Subscriber : s))
     )
+
+    // إذا تغير نوع العقار أو حجم المتر للمشترك، نضمن تدفق الديون في كل الأشهر بمسح أي تجميد يدوي للأشهر التالية
+    if (editSub.propertyType || editSub.meterType) {
+      setBilling((prev) => {
+        const copy = { ...prev }
+        if (copy[editSub.id!]) {
+          const subBilling = { ...copy[editSub.id!] }
+          YEARS.forEach((y) => {
+            if (subBilling[y]) {
+              subBilling[y] = subBilling[y].map((rec, idx) =>
+                idx === 0 ? rec : { ...rec, oldDebtManual: null }
+              )
+            }
+          })
+          copy[editSub.id!] = subBilling
+        }
+        return copy
+      })
+    }
+
     setShowEditModal(false)
   }
 
