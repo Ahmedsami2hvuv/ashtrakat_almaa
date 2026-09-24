@@ -1701,27 +1701,23 @@ export default function MainApp() {
             {/* رأس النافذة */}
             <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-white">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[15px] font-bold text-slate-900">
-                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
-                  </h2>
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
+                    type="button"
                     onClick={() => {
                       setEditSub({ ...activeSubscriber })
                       setShowEditModal(true)
                     }}
-                    className="w-7 h-7 border border-sky-100 rounded-xl flex items-center justify-center hover:bg-sky-50 bg-white text-slate-500"
+                    className="text-right text-[15px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
+                    title="انقر لتعديل بيانات المشترك"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                      <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
+                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
                   </button>
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1.5">
-                  {areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                  {' - '}
-                  {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name}
+                  <span className="text-[11px] text-slate-500">
+                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                    {' - '}
+                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
+                  </span>
                 </div>
                 <div className="mt-3 flex gap-2 items-center flex-wrap">
                   <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
