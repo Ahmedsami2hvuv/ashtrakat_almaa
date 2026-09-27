@@ -36,7 +36,12 @@ export interface Subscriber {
 }
 
 export type Pricing = Record<PropertyType, Record<MeterType, number>>
-export type BillingPeriodRecord = { oldDebtManual: number | null; paid: number }
+export type BillingPeriodRecord = {
+  oldDebtManual: number | null
+  paid: number
+  totalManual?: number | null
+  remainingManual?: number | null
+}
 export type BillingRecords = Record<number, Record<number, BillingPeriodRecord[]>>
 export type ParsedImportItem = { id: number; name: string; raw: string; statuses: string[]; note?: string }
 
@@ -151,9 +156,12 @@ function calculateBilling(
       periodLabel: string
       old: number
       due: number
+      total: number
       paid: number
       remaining: number
       isManual: boolean
+      isTotalManual?: boolean
+      isRemainingManual?: boolean
     }>,
     remainingPrev: 0,
     fee: 0,
@@ -192,9 +200,12 @@ function calculateBilling(
     periodLabel: string
     old: number
     due: number
+    total: number
     paid: number
     remaining: number
     isManual: boolean
+    isTotalManual?: boolean
+    isRemainingManual?: boolean
   }> = []
 
   for (let p = 0; p < 6; p++) {
@@ -206,16 +217,26 @@ function calculateBilling(
       ? (isManual ? (manualOld as number) : totalCarried)
       : (isManual ? (manualOld as number) : rows[p - 1].remaining)
 
-    // معادلة الدين: المتبقي = الدين القديم + المستحق - المدفوع
-    const remaining = oldDebt + due - paid
+    // حساب المجموع: إما القيمة اليدوية المدخلة أو (الديون السابقة + المستحق)
+    const manualTotal = rec?.totalManual
+    const isTotalManual = manualTotal !== null && manualTotal !== undefined
+    const total: number = isTotalManual ? (manualTotal as number) : (oldDebt + due)
+
+    // حساب المجموع الكلي: إما القيمة اليدوية المدخلة أو (المجموع - المدفوع)
+    const manualRemaining = rec?.remainingManual
+    const isRemainingManual = manualRemaining !== null && manualRemaining !== undefined
+    const remaining: number = isRemainingManual ? (manualRemaining as number) : (total - paid)
 
     rows.push({
       periodLabel: PERIODS[p],
       old: oldDebt,
       due,
+      total,
       paid,
       remaining,
-      isManual
+      isManual,
+      isTotalManual,
+      isRemainingManual
     })
   }
 
@@ -696,7 +717,7 @@ export default function MainApp() {
   }
 
   // حفظ تعديل في جدول الديون مع تسلسل الحسابات تلقائياً لكل فترات السنة
-  const handlePaymentEdit = (subId: number, year: number, periodIdx: number, field: 'old' | 'paid' | 'rem', value: string) => {
+  const handlePaymentEdit = (subId: number, year: number, periodIdx: number, field: 'old' | 'total' | 'paid' | 'rem', value: string) => {
     const cleanVal = value.replace(/[^0-9\-]/g, '')
     const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
 
@@ -718,22 +739,47 @@ export default function MainApp() {
       if (field === 'old') {
         yearRecords[periodIdx] = {
           ...yearRecords[periodIdx],
-          oldDebtManual: cleanVal === '' ? null : num
+          oldDebtManual: cleanVal === '' ? null : num,
+          remainingManual: null
+        }
+      } else if (field === 'total') {
+        // عند تعديل خانة المجموع
+        yearRecords[periodIdx] = {
+          ...yearRecords[periodIdx],
+          totalManual: cleanVal === '' ? null : num,
+          remainingManual: null
         }
       } else if (field === 'paid') {
         yearRecords[periodIdx] = {
           ...yearRecords[periodIdx],
-          paid: num
+          paid: num,
+          remainingManual: null
         }
       } else if (field === 'rem') {
-        // عند تغيير المتبقي نحسب المدفوع = القديم + المستحق - المتبقي
-        const currentBilling = calculateBilling(subId, year, copy, subscribers, pricing)
-        const row = currentBilling.rows[periodIdx]
-        if (row) {
-          const calculatedPaid = row.old + row.due - num
+        // عند تعديل خانة المجموع الكلي
+        if (cleanVal === '') {
           yearRecords[periodIdx] = {
             ...yearRecords[periodIdx],
-            paid: calculatedPaid
+            remainingManual: null
+          }
+        } else {
+          // حساب المجموع الحالي لمعرفة فرق الدفع
+          const currentBilling = calculateBilling(subId, year, copy, subscribers, pricing)
+          const row = currentBilling.rows[periodIdx]
+          const currentTotal = row ? row.total : 0
+          const diff = currentTotal - num
+          if (diff >= 0) {
+            yearRecords[periodIdx] = {
+              ...yearRecords[periodIdx],
+              paid: diff,
+              remainingManual: num
+            }
+          } else {
+            yearRecords[periodIdx] = {
+              ...yearRecords[periodIdx],
+              paid: 0,
+              remainingManual: num
+            }
           }
         }
       }
@@ -2848,7 +2894,7 @@ export default function MainApp() {
                       <div className="px-1 py-3 text-center">الديون السابقة</div>
                       <div className="px-1 py-3 border-r border-white/10 text-center">المجموع</div>
                       <div className="px-1 py-3 border-r border-white/10 text-center">المدفوع</div>
-                      <div className="px-1 py-3 border-r border-white/10 text-center">المجموع الحالي</div>
+                      <div className="px-1 py-3 border-r border-white/10 text-center">المجموع الكلي</div>
                     </div>
 
                     {activeBilling.rows.map((row, idx) => {
@@ -2897,14 +2943,41 @@ export default function MainApp() {
                             />
                           </div>
 
-                          {/* 2. المجموع (الديون السابقة + المستحق) */}
+                          {/* 2. المجموع */}
                           <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
-                            <div className="w-full h-[36px] rounded-lg bg-sky-50/70 border border-sky-100/90 flex items-center justify-center font-mono font-bold text-slate-800 text-[12px] px-1 truncate select-none">
-                              {formatNumber(row.old + row.due)}
-                            </div>
+                            <input
+                              value={
+                                pendingEdits[editKey('total')] !== undefined
+                                  ? pendingEdits[editKey('total')]
+                                  : String(row.total)
+                              }
+                              onChange={(e) => {
+                                const v = e.target.value
+                                if (v === '' || /^[0-9]*$/.test(v)) {
+                                  setPendingEdits((p) => ({ ...p, [editKey('total')]: v }))
+                                }
+                              }}
+                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', e.target.value)}
+                              onFocus={(e) => {
+                                setPendingEdits((p) => ({ ...p, [editKey('total')]: String(row.total) }))
+                                setTimeout(() => e.target.select(), 0)
+                              }}
+                              placeholder="0"
+                              className={`border rounded-lg font-mono font-bold focus:outline-none focus:ring-1 text-center bg-white ${
+                                row.isTotalManual
+                                  ? 'border-sky-300 bg-sky-50 text-sky-900'
+                                  : isCurrentPeriod
+                                  ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-slate-800'
+                                  : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
+                              }`}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              type="text"
+                              style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
+                            />
                           </div>
 
-                          {/* المدفوع */}
+                          {/* 3. المدفوع */}
                           <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
                               value={
@@ -2939,7 +3012,7 @@ export default function MainApp() {
                             />
                           </div>
 
-                          {/* المتبقي */}
+                          {/* 4. المجموع الكلي */}
                           <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
                               value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : String(row.remaining)}
@@ -2962,7 +3035,7 @@ export default function MainApp() {
                                   : isCurrentPeriod
                                   ? 'bg-white border-red-200 text-[#ef4444]'
                                   : 'bg-slate-900 border-slate-900 text-white'
-                              }`}
+                              } ${row.isRemainingManual ? 'ring-1 ring-sky-400' : ''}`}
                               inputMode="numeric"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
