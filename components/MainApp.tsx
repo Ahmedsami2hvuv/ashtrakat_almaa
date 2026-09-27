@@ -112,7 +112,8 @@ const STATUS_OPTIONS = [
   'يدفع بالدائرة',
   'يجب فحص حسابه',
   'يدفع باستمرار',
-  'مفلش'
+  'مفلش',
+  'لا ينظم'
 ] as const
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -122,7 +123,8 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
   'يدفع بالدائرة': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', dot: 'bg-sky-500' },
   'يجب فحص حسابه': { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-500' },
   'يدفع باستمرار': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
-  'مفلش': { bg: 'bg-zinc-100', text: 'text-zinc-700', border: 'border-zinc-300', dot: 'bg-zinc-500' }
+  'مفلش': { bg: 'bg-zinc-100', text: 'text-zinc-700', border: 'border-zinc-300', dot: 'bg-zinc-500' },
+  'لا ينظم': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' }
 }
 
 const DEFAULT_AREAS: Area[] = [
