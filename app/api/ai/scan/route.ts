@@ -24,7 +24,15 @@ interface ScanResult {
   rawSummary: string
 }
 
+let cachedGeminiModel: string | null = null
+
 async function resolveGeminiModel(key: string, requestedModel?: string): Promise<string> {
+  if (requestedModel && requestedModel !== 'auto') {
+    return requestedModel
+  }
+  if (cachedGeminiModel) {
+    return cachedGeminiModel
+  }
   try {
     const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`)
     if (listRes.ok) {
@@ -34,17 +42,15 @@ async function resolveGeminiModel(key: string, requestedModel?: string): Promise
         .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
         .map((m) => m.name.replace(/^models\//, ''))
 
-      if (requestedModel && supported.includes(requestedModel)) {
-        return requestedModel
-      }
-
       const flash = supported.find((n) => n.includes('flash') && !n.includes('8b'))
       const anyFlash = supported.find((n) => n.includes('flash'))
       const pro = supported.find((n) => n.includes('pro'))
-      return flash || anyFlash || pro || supported[0] || requestedModel || 'gemini-1.5-flash'
+      const resolved = flash || anyFlash || pro || supported[0] || 'gemini-1.5-flash'
+      cachedGeminiModel = resolved
+      return resolved
     }
   } catch {}
-  return requestedModel || 'gemini-1.5-flash'
+  return 'gemini-1.5-flash'
 }
 
 export async function POST(req: Request) {
