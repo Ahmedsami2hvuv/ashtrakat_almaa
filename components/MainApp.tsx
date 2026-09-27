@@ -165,6 +165,45 @@ function formatNumber(n: number | string | null | undefined): string {
   return Number(n).toLocaleString('en-US')
 }
 
+// دالة ذكية لتنظيف مدخلات الأرقام ودعم نتائج حاسبة الكيبورد وفواصل الآلاف والأرقام العربية
+export function sanitizeNumberInput(val: string, allowNegative = false): string {
+  if (!val) return ''
+  // 1. تحويل الأرقام العربية المشرقية والفارسية (٠١٢٣٤٥٦٧٨٩) إلى أرقام لاتينية (0-9)
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']
+  let res = String(val)
+  for (let i = 0; i < 10; i++) {
+    res = res.replaceAll(arabicDigits[i], String(i))
+  }
+
+  // 2. التحقق من الإشارة السالبة إن كانت مسموحة
+  const isNegative = allowNegative && res.trim().startsWith('-')
+
+  // 3. إزالة فواصل الآلاف بجميع أنواعها (، , ٬) والمسافات
+  res = res.replace(/[,،٬\s]/g, '')
+
+  // 4. معالجة الأعداد العشرية الناتجة عن الحاسبة (مثلاً 107400.00)
+  if (res.includes('.')) {
+    const floatVal = parseFloat(res)
+    if (!isNaN(floatVal)) {
+      res = String(Math.round(floatVal))
+    }
+  }
+
+  // 5. استخراج الأرقام فقط
+  res = res.replace(/[^0-9]/g, '')
+
+  // 6. إزالة الأصفار البادئة الزائدة (مثلاً إذا كان الحقل فيه 0 وضغط المستخدم على ناتج الحاسبة فصار 0107400)
+  if (res.length > 1 && res.startsWith('0')) {
+    res = res.replace(/^0+/, '')
+    if (res === '') res = '0'
+  }
+
+  if (allowNegative && isNegative && res !== '') {
+    return '-' + res
+  }
+  return res
+}
+
 // حساب الديون لفترات سنة معينة
 function calculateBilling(
   subId: number,
@@ -763,7 +802,7 @@ export default function MainApp() {
 
   // حفظ تعديل في جدول الديون مع تسلسل الحسابات تلقائياً لكل فترات السنة
   const handlePaymentEdit = (subId: number, year: number, periodIdx: number, field: 'old' | 'total' | 'paid' | 'rem', value: string) => {
-    const cleanVal = value.replace(/[^0-9\-]/g, '')
+    const cleanVal = sanitizeNumberInput(value, field === 'rem')
     const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
 
     // إذا تم تعديل الديون السابقة (الفترة الأولى في 2026): نحدث أيضاً remainingPrev للمشترك
@@ -2998,8 +3037,14 @@ export default function MainApp() {
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
                               value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : String(row.old)}
                               onChange={(e) => {
-                                const v = e.target.value
-                                if (v === '' || /^[0-9]*$/.test(v)) {
+                                const v = sanitizeNumberInput(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('old')]: v }))
+                              }}
+                              onPaste={(e) => {
+                                const text = e.clipboardData.getData('text')
+                                if (text) {
+                                  e.preventDefault()
+                                  const v = sanitizeNumberInput(text)
                                   setPendingEdits((p) => ({ ...p, [editKey('old')]: v }))
                                 }
                               }}
@@ -3015,7 +3060,6 @@ export default function MainApp() {
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5'
                               } ${row.isManual ? 'border-sky-200 bg-sky-50' : ''}`}
                               inputMode="numeric"
-                              pattern="[0-9]*"
                               type="text"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -3030,8 +3074,14 @@ export default function MainApp() {
                                   : String(row.total)
                               }
                               onChange={(e) => {
-                                const v = e.target.value
-                                if (v === '' || /^[0-9]*$/.test(v)) {
+                                const v = sanitizeNumberInput(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('total')]: v }))
+                              }}
+                              onPaste={(e) => {
+                                const text = e.clipboardData.getData('text')
+                                if (text) {
+                                  e.preventDefault()
+                                  const v = sanitizeNumberInput(text)
                                   setPendingEdits((p) => ({ ...p, [editKey('total')]: v }))
                                 }
                               }}
@@ -3049,7 +3099,6 @@ export default function MainApp() {
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
                               }`}
                               inputMode="numeric"
-                              pattern="[0-9]*"
                               type="text"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -3066,8 +3115,14 @@ export default function MainApp() {
                                   : String(row.paid)
                               }
                               onChange={(e) => {
-                                const v = e.target.value
-                                if (v === '' || /^[0-9]*$/.test(v)) {
+                                const v = sanitizeNumberInput(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('paid')]: v }))
+                              }}
+                              onPaste={(e) => {
+                                const text = e.clipboardData.getData('text')
+                                if (text) {
+                                  e.preventDefault()
+                                  const v = sanitizeNumberInput(text)
                                   setPendingEdits((p) => ({ ...p, [editKey('paid')]: v }))
                                 }
                               }}
@@ -3086,6 +3141,7 @@ export default function MainApp() {
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5'
                               }`}
                               inputMode="numeric"
+                              type="text"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </div>
@@ -3095,8 +3151,14 @@ export default function MainApp() {
                             <input
                               value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : String(row.remaining)}
                               onChange={(e) => {
-                                const v = e.target.value
-                                if (v === '' || /^-?[0-9]*$/.test(v)) {
+                                const v = sanitizeNumberInput(e.target.value, true)
+                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: v }))
+                              }}
+                              onPaste={(e) => {
+                                const text = e.clipboardData.getData('text')
+                                if (text) {
+                                  e.preventDefault()
+                                  const v = sanitizeNumberInput(text, true)
                                   setPendingEdits((p) => ({ ...p, [editKey('rem')]: v }))
                                 }
                               }}
@@ -3115,6 +3177,7 @@ export default function MainApp() {
                                   : 'bg-slate-900 border-slate-900 text-white'
                               } ${row.isRemainingManual ? 'ring-1 ring-sky-400' : ''}`}
                               inputMode="numeric"
+                              type="text"
                               style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </div>
@@ -3221,7 +3284,7 @@ export default function MainApp() {
                 </label>
                 <input
                   value={newSub.idStr}
-                  onChange={(e) => setNewSub((p) => ({ ...p, idStr: e.target.value.replace(/[^0-9]/g, '') }))}
+                  onChange={(e) => setNewSub((p) => ({ ...p, idStr: sanitizeNumberInput(e.target.value) }))}
                   placeholder="مثال: 5205"
                   className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
                   inputMode="numeric"
