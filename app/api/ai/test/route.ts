@@ -1,5 +1,30 @@
 import { NextResponse } from 'next/server'
 
+async function resolveGeminiModel(key: string, requestedModel?: string): Promise<{ modelName: string; availableModels: string[] }> {
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`)
+    if (listRes.ok) {
+      const data = await listRes.json()
+      const models: any[] = data?.models || []
+      const supported = models
+        .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m) => m.name.replace(/^models\//, ''))
+
+      if (requestedModel && supported.includes(requestedModel)) {
+        return { modelName: requestedModel, availableModels: supported }
+      }
+
+      // اختيار الموديل الأفضل تلقائياً
+      const flash = supported.find((n) => n.includes('flash') && !n.includes('8b'))
+      const anyFlash = supported.find((n) => n.includes('flash'))
+      const pro = supported.find((n) => n.includes('pro'))
+      const fallback = flash || anyFlash || pro || supported[0] || requestedModel || 'gemini-1.5-flash'
+      return { modelName: fallback, availableModels: supported }
+    }
+  } catch {}
+  return { modelName: requestedModel || 'gemini-1.5-flash', availableModels: [] }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -15,15 +40,17 @@ export async function POST(req: Request) {
     const key = apiKey.trim()
 
     if (provider === 'gemini') {
-      const selectedModel = model || 'gemini-1.5-flash'
-      const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${key}`
+      // 1. فحص صحة المفتاح أولاً وجلب الموديل المدعوم تلقائياً
+      const { modelName, availableModels } = await resolveGeminiModel(key, model)
+
+      const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`
       const res = await fetch(testUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: 'اختبار الاتصال، أجب بكلمة واحدة: نعم' }]
+              parts: [{ text: 'اختبار الاتصال، أجب بكلمة: نعم' }]
             }
           ]
         })
@@ -31,11 +58,24 @@ export async function POST(req: Request) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        const msg = errData?.error?.message || `فشل الاتصال بـ Gemini (رمز الخطأ: ${res.status})`
-        return NextResponse.json({ success: false, error: msg }, { status: 400 })
+        const rawMsg = errData?.error?.message || `فشل الاتصال بـ Gemini (رمز: ${res.status})`
+
+        // إذا كانت هناك موديلات أخرى متوفرة، نقترحها أو نجربها
+        if (availableModels.length > 0) {
+          return NextResponse.json({
+            success: false,
+            error: `${rawMsg} (الموديلات المتاحة لمفتاحك هي: ${availableModels.slice(0, 3).join(', ')})`
+          }, { status: 400 })
+        }
+        return NextResponse.json({ success: false, error: rawMsg }, { status: 400 })
       }
 
-      return NextResponse.json({ success: true, message: 'تم الاتصال بـ Gemini بنجاح والمفتاح يعمل 100%!' })
+      return NextResponse.json({
+        success: true,
+        message: `تم الاتصال بـ Gemini بنجاح والمفتاح يعمل 100%! (الموديل الفعال: ${modelName})`,
+        detectedModel: modelName,
+        availableModels
+      })
     }
 
     if (provider === 'openai') {

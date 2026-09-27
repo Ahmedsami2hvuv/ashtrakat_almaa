@@ -24,7 +24,31 @@ interface ScanResult {
   rawSummary: string
 }
 
+async function resolveGeminiModel(key: string, requestedModel?: string): Promise<string> {
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`)
+    if (listRes.ok) {
+      const data = await listRes.json()
+      const models: any[] = data?.models || []
+      const supported = models
+        .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m) => m.name.replace(/^models\//, ''))
+
+      if (requestedModel && supported.includes(requestedModel)) {
+        return requestedModel
+      }
+
+      const flash = supported.find((n) => n.includes('flash') && !n.includes('8b'))
+      const anyFlash = supported.find((n) => n.includes('flash'))
+      const pro = supported.find((n) => n.includes('pro'))
+      return flash || anyFlash || pro || supported[0] || requestedModel || 'gemini-1.5-flash'
+    }
+  } catch {}
+  return requestedModel || 'gemini-1.5-flash'
+}
+
 export async function POST(req: Request) {
+
   try {
     const body = await req.json()
     const {
@@ -187,8 +211,9 @@ export async function POST(req: Request) {
 
     let jsonResponseText = ''
 
+
     if (provider === 'gemini') {
-      const selectedModel = aiSettings?.geminiModel || 'gemini-1.5-flash'
+      const selectedModel = await resolveGeminiModel(apiKey, aiSettings?.geminiModel)
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`
 
       const payload = {
@@ -216,6 +241,7 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
+
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))

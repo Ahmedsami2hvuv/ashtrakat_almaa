@@ -1542,10 +1542,14 @@ export default function MainApp() {
       })
       const data = await res.json()
       if (res.ok && data.success) {
+        if (data.detectedModel && aiSettings.provider === 'gemini') {
+          setAiSettings((prev) => ({ ...prev, geminiModel: data.detectedModel }))
+        }
         setAiTestStatus({ loading: false, msg: data.message || 'المفتاح يعمل بنجاح 100%!', isError: false })
       } else {
         setAiTestStatus({ loading: false, msg: data.error || 'فشل الاتصال بالمفتاح', isError: true })
       }
+
     } catch (err: any) {
       setAiTestStatus({ loading: false, msg: err?.message || 'تعذر الاتصال بالخادم لفحص المفتاح', isError: true })
     }
@@ -4769,14 +4773,17 @@ export default function MainApp() {
                           الموديل المفضل (Model)
                         </label>
                         <select
-                          value={aiSettings.geminiModel || 'gemini-1.5-flash'}
+                          value={aiSettings.geminiModel || 'auto'}
                           onChange={(e) => setAiSettings((p) => ({ ...p, geminiModel: e.target.value }))}
-                          className="w-full h-10 px-3 border border-sky-100 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900"
+                          className="w-full h-10 px-3 border border-sky-100 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900 font-medium"
                         >
-                          <option value="gemini-1.5-flash">Gemini 1.5 Flash (سريع ومثالي للصور)</option>
-                          <option value="gemini-2.0-flash">Gemini 2.0 Flash (أحدث إصدار فائق السرعة)</option>
-                          <option value="gemini-1.5-pro">Gemini 1.5 Pro (أقوى في التدقيق المعقد)</option>
+                          <option value="auto">✨ اكتشاف الموديل الأفضل تلقائياً لمفتاحك (موصى به 100%)</option>
+                          <option value="gemini-2.5-flash">Gemini 2.5 Flash (الجيل الأحدث فائق الذكاء والسرعة)</option>
+                          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                         </select>
+
                       </div>
                     )}
 
