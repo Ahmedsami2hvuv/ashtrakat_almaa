@@ -3010,12 +3010,12 @@ export default function MainApp() {
           القاعدة 9: بعرض 100%، 4 أعمدة: 20% | 27% | 26% | 27%، ارتفاع 36px، بدون سكرول جانبي
       ========================== */}
       {activeSubscriber && activeBilling && (
-        <div className="subscriber-scene fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-[1px] flex flex-col">
+        <div className="subscriber-scene fixed inset-0 z-[10000] bg-slate-900/25 backdrop-blur-[1px] flex flex-col">
           <div className="subscriber-orbit subscriber-orbit-one" />
           <div className="subscriber-orbit subscriber-orbit-two" />
           <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
             {/* رأس النافذة */}
-            <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-white">
+            <div className="subscriber-hero border-b border-sky-100 px-4 py-3 flex justify-between items-start gap-3 bg-white">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -3035,13 +3035,13 @@ export default function MainApp() {
                     {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
                   </span>
                 </div>
-                <div className="mt-3 flex gap-2 items-center flex-wrap">
-                  <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
+                <div className="mt-2 flex gap-2 items-center flex-wrap">
+                  <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
                     {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
                   <button
                     onClick={() => setShowContactModal(true)}
-                    className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-3 py-1 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
                   >
                     التواصل والموقع والصور
                   </button>
@@ -3052,7 +3052,7 @@ export default function MainApp() {
               </div>
               <button
                 onClick={() => setSelectedSubId(null)}
-                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50"
+                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 shrink-0"
               >
                 ✕
               </button>
@@ -3365,62 +3365,62 @@ export default function MainApp() {
                     {PERIODS[currentPeriodIndex]}
                   </span>
                 </div>
+
+                {/* زر رفع أو فتح لكيشن ملحق بالسجل مباشرة لتقليص الفراغ */}
+                {(() => {
+                  const hasLocation = Boolean(
+                    activeSubscriber.location &&
+                    ((activeSubscriber.location.lat && activeSubscriber.location.lng) || activeSubscriber.location.link)
+                  )
+                  return (
+                    <div className="mt-3.5 mb-2 w-full">
+                      {hasLocation ? (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const link =
+                                activeSubscriber.location?.link ||
+                                `https://www.google.com/maps?q=${activeSubscriber.location?.lat},${activeSubscriber.location?.lng}`
+                              window.open(link, '_blank', 'noopener,noreferrer')
+                            }}
+                            className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[12.5px] font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
+                          >
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                              <circle cx="12" cy="9" r="2.5" />
+                            </svg>
+                            <span>فتح لكيشن</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUploadLocation(activeSubscriber.id)}
+                            disabled={isLocating}
+                            title="تحديث الموقع لموقعي الحالي"
+                            className="h-11 px-3 bg-white border border-sky-200 text-slate-700 hover:bg-sky-50 rounded-xl text-[11px] font-medium flex items-center justify-center gap-1 shadow-sm transition-all cursor-pointer"
+                          >
+                            {isLocating ? 'جارِ التحديد...' : 'تحديث اللكيشن'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleUploadLocation(activeSubscriber.id)}
+                          disabled={isLocating}
+                          className="w-full h-11 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[12.5px] font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 cursor-pointer active:scale-[0.98]"
+                        >
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                            <circle cx="12" cy="9" r="2.5" />
+                          </svg>
+                          <span>{isLocating ? 'جارِ تحديد موقعك وحفظه...' : 'رفع لكيشن'}</span>
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
-
-            {/* في نهاية السجل: زر فتح لكيشن أو رفع لكيشن */}
-            {(() => {
-              const hasLocation = Boolean(
-                activeSubscriber.location &&
-                ((activeSubscriber.location.lat && activeSubscriber.location.lng) || activeSubscriber.location.link)
-              )
-              return (
-                <div className="subscriber-footer border-t border-sky-100 bg-white px-3 py-2.5 shrink-0">
-                  {hasLocation ? (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const link =
-                            activeSubscriber.location?.link ||
-                            `https://www.google.com/maps?q=${activeSubscriber.location?.lat},${activeSubscriber.location?.lng}`
-                          window.open(link, '_blank', 'noopener,noreferrer')
-                        }}
-                        className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                          <circle cx="12" cy="9" r="2.5" />
-                        </svg>
-                        <span>فتح لكيشن</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUploadLocation(activeSubscriber.id)}
-                        disabled={isLocating}
-                        title="تحديث الموقع لموقعي الحالي"
-                        className="h-12 px-3 bg-white border border-sky-200 text-slate-700 hover:bg-sky-50 rounded-xl text-[11px] font-medium flex items-center justify-center gap-1 shadow-sm transition-all cursor-pointer"
-                      >
-                        {isLocating ? 'جارِ التحديد...' : 'تحديث اللكيشن'}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleUploadLocation(activeSubscriber.id)}
-                      disabled={isLocating}
-                      className="w-full h-12 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 cursor-pointer"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                        <circle cx="12" cy="9" r="2.5" />
-                      </svg>
-                      <span>{isLocating ? 'جارِ تحديد موقعك وحفظه...' : 'رفع لكيشن'}</span>
-                    </button>
-                  )}
-                </div>
-              )
-            })()}
           </div>
         </div>
       )}
@@ -3429,7 +3429,7 @@ export default function MainApp() {
           فورم إضافة مشترك (A)
       ========================== */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
           <div className="bg-white w-full h-full sm:h-auto sm:max-w-[440px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-2xl">
             <div className="px-5 py-4 border-b border-sky-50 flex justify-between items-center bg-white">
               <h3 className="font-bold text-[14px] text-slate-900">إضافة مشترك جديد</h3>
@@ -3623,7 +3623,7 @@ export default function MainApp() {
           فورم تعديل مشترك (B)
       ========================== */}
       {showEditModal && editSub.id && (
-        <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
           <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-xl">
             <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
               <h3 className="font-bold text-[13px] text-slate-800">تعديل معلومات المشترك #{editSub.id}</h3>
@@ -3782,7 +3782,7 @@ export default function MainApp() {
 
       {/* نافذة التواصل والموقع والصور */}
       {showContactModal && activeSubscriber && (
-        <div className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-[1px] flex items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
           <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col shadow-xl">
             <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
               <h3 className="font-bold text-[13px] text-slate-800">التواصل والموقع والصور</h3>
@@ -3879,7 +3879,7 @@ export default function MainApp() {
           الاستيراد (C) مع البارسر الذكي
       ========================== */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-[1px] flex">
+        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex">
           <div className="depth-panel bg-white w-full sm:w-[520px] h-full border-l border-sky-100 flex flex-col mr-auto sm:mr-0 ml-auto shadow-[-8px_0_30px_rgba(0,0,0,0.1)]">
             <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center bg-slate-900 text-white">
               <h3 className="font-bold text-[13px]">الإعدادات</h3>
@@ -4390,11 +4390,11 @@ export default function MainApp() {
           right: 0,
           width: '100%',
           height: '58px',
-          zIndex: 9999,
+          zIndex: 40,
           backgroundColor: '#ffffff',
           borderTop: '1px solid #e2e8f0',
           boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.06)',
-          display: 'flex',
+          display: activeSubscriber ? 'none' : 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
