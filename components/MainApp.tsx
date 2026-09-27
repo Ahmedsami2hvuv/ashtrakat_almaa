@@ -114,7 +114,6 @@ const STATUS_OPTIONS = [
   'يدفع باستمرار',
   'مفلش',
   'لا ينظم',
-  'لا ينظف',
   'فارغ'
 ] as const
 
@@ -127,11 +126,10 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
   'يدفع باستمرار': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
   'مفلش': { bg: 'bg-zinc-100', text: 'text-zinc-700', border: 'border-zinc-300', dot: 'bg-zinc-500' },
   'لا ينظم': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-  'لا ينظف': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
   'فارغ': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', dot: 'bg-teal-500' }
 }
 
-// دالة فحص ما إذا كان المشترك مصفّر الحساب كلياً بناءً على حالته (مفلش، لا ينظم، لا ينظف)
+// دالة فحص ما إذا كان المشترك مصفّر الحساب كلياً بناءً على حالته (مفلش، لا ينظم)
 export function isZeroAccountSubscriber(sub: Subscriber | null | undefined): boolean {
   if (!sub || !sub.statuses || sub.statuses.length === 0) return false
   return sub.statuses.some((st) => {
@@ -140,10 +138,8 @@ export function isZeroAccountSubscriber(sub: Subscriber | null | undefined): boo
     return (
       s === 'مفلش' ||
       s === 'لا ينظم' ||
-      s === 'لا ينظف' ||
       s.includes('مفلش') ||
-      s.includes('لا ينظم') ||
-      s.includes('لا ينظف')
+      s.includes('لا ينظم')
     )
   })
 }
@@ -351,6 +347,93 @@ function calculateBilling(
   }
 }
 
+// دالة التحقق وتعيين حالات المشتركين تلقائياً:
+// 1. إزالة حالة "لا ينظف" بالكامل من أي مشترك
+// 2. تعيين حالة "يدفع باستمرار" لكل مشترك لديه مدفوعات مسجلة أو مبلغه أقل من 500,000 دينار (ما لم يكن مصفراً)
+export function applyAutoStatuses(
+  subs: Subscriber[],
+  billingRecords: BillingRecords,
+  pricing: Pricing
+): { updatedSubscribers: Subscriber[]; hasChanges: boolean } {
+  let hasChanges = false
+  const pIdx = Math.floor(new Date().getMonth() / 2)
+
+  const updatedSubscribers = subs.map((sub) => {
+    let statuses = Array.isArray(sub.statuses) ? [...sub.statuses] : []
+    const originalLen = statuses.length
+
+    // 1. إزالة "لا ينظف" أو "لاينظف" نهائياً
+    const cleaned = statuses.filter((st) => {
+      if (!st) return false
+      const trimmed = st.trim()
+      return (
+        trimmed !== 'لا ينظف' &&
+        trimmed !== 'لاينظف' &&
+        !trimmed.includes('لا ينظف') &&
+        !trimmed.includes('لاينظف')
+      )
+    })
+    if (cleaned.length !== originalLen) {
+      hasChanges = true
+      statuses = cleaned
+    }
+
+    // 2. فحص هل المشترك مصفّر الحساب (مفلش، لا ينظم)
+    const isZero = isZeroAccountSubscriber({ ...sub, statuses })
+    if (isZero) {
+      if (statuses.includes('يدفع باستمرار')) {
+        statuses = statuses.filter((s) => s !== 'يدفع باستمرار')
+        hasChanges = true
+      }
+      return { ...sub, statuses }
+    }
+
+    // 3. فحص هل لدى المشترك أي مدفوعات مسجلة في أي سنة أو فترة
+    let hasPayments = false
+    const subBilling = billingRecords[sub.id]
+    if (subBilling) {
+      for (const y in subBilling) {
+        const rows = subBilling[y]
+        if (Array.isArray(rows)) {
+          for (const r of rows) {
+            if (r && typeof r.paid === 'number' && r.paid > 0) {
+              hasPayments = true
+              break
+            }
+          }
+        }
+        if (hasPayments) break
+      }
+    }
+
+    // 4. فحص هل عليه مبلغ أقل من 500,000 دينار
+    let isUnder500k = false
+    try {
+      const b = calculateBilling(sub.id, 2026, billingRecords, subs, pricing)
+      const currentDue = b.rows.length > pIdx ? b.rows[pIdx].remaining : b.totalRemaining
+      if (currentDue < 500000) {
+        isUnder500k = true
+      }
+    } catch {
+      if ((sub.remainingPrev ?? 0) < 500000) {
+        isUnder500k = true
+      }
+    }
+
+    // 5. إذا كان عنده مدفوعات أو عليه أقل من 500 ألف -> يُضاف له "يدفع باستمرار"
+    if (hasPayments || isUnder500k) {
+      if (!statuses.includes('يدفع باستمرار')) {
+        statuses.push('يدفع باستمرار')
+        hasChanges = true
+      }
+    }
+
+    return { ...sub, statuses }
+  })
+
+  return { updatedSubscribers, hasChanges }
+}
+
 // دالة ترتيب البحث حسب الاسم الأول ثم الثاني ثم الثالث
 function searchRank(name: string, query: string): number {
   const words = name.trim().split(/\s+/)
@@ -515,9 +598,14 @@ export default function MainApp() {
   // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط
   useEffect(() => {
     const applyData = (data: Record<string, unknown>) => {
+      const rawSubs = (data.subscribers as Subscriber[]) || []
+      const rawBill = (data.billing as BillingRecords) || {}
+      const rawPrice = (data.pricing as Pricing) || DEFAULT_PRICING
+      const { updatedSubscribers } = applyAutoStatuses(rawSubs, rawBill, rawPrice)
+
       if (data.areas) setAreas(data.areas as Area[])
       if (data.pricing) setPricing(data.pricing as Pricing)
-      if (data.subscribers) setSubscribers(data.subscribers as Subscriber[])
+      setSubscribers(updatedSubscribers)
       if (data.billing) setBilling(data.billing as BillingRecords)
       if (data.collectorName) setCollectorName(data.collectorName as string)
       if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
@@ -547,6 +635,15 @@ export default function MainApp() {
     init()
   }, [])
 
+  // مراقبة تحديثات الفواتير والمدفوعات لتحديث الحالات تلقائياً
+  useEffect(() => {
+    if (!dataLoaded || subscribers.length === 0) return
+    const { updatedSubscribers, hasChanges } = applyAutoStatuses(subscribers, billing, pricing)
+    if (hasChanges) {
+      setSubscribers(updatedSubscribers)
+    }
+  }, [billing, dataLoaded])
+
   // المزامنة اللحظية الحية الفورية (Realtime Broadcast + Database Changes)
   const isIncomingSyncRef = useRef<boolean>(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -556,9 +653,14 @@ export default function MainApp() {
 
     const applyIncomingData = (data: Record<string, unknown>) => {
       isIncomingSyncRef.current = true
+      const rawSubs = (data.subscribers as Subscriber[]) || []
+      const rawBill = (data.billing as BillingRecords) || {}
+      const rawPrice = (data.pricing as Pricing) || DEFAULT_PRICING
+      const { updatedSubscribers } = applyAutoStatuses(rawSubs, rawBill, rawPrice)
+
       if (data.areas) setAreas(data.areas as Area[])
       if (data.pricing) setPricing(data.pricing as Pricing)
-      if (data.subscribers) setSubscribers(data.subscribers as Subscriber[])
+      setSubscribers(updatedSubscribers)
       if (data.billing) setBilling(data.billing as BillingRecords)
       if (data.collectorName) setCollectorName(data.collectorName as string)
       if (data.collectorPhone) setCollectorPhone(data.collectorPhone as string)
@@ -2992,7 +3094,7 @@ export default function MainApp() {
                       <span className="w-2.5 h-2.5 rounded-full bg-zinc-400"></span>
                       <span className="font-bold text-zinc-800">الحساب مصفّر كلياً (0 د.ع)</span>
                       <span className="text-zinc-500 text-[11px]">
-                        بسبب حالة المشترك ({activeSubscriber.statuses?.filter((s) => s === 'مفلش' || s === 'لا ينظم' || s === 'لا ينظف' || s.includes('مفلش') || s.includes('لا ينظم') || s.includes('لا ينظف')).join('، ')})
+                        بسبب حالة المشترك ({activeSubscriber.statuses?.filter((s) => s === 'مفلش' || s === 'لا ينظم' || s.includes('مفلش') || s.includes('لا ينظم')).join('، ')})
                       </span>
                     </div>
                     <span className="text-[10px] bg-zinc-200 text-zinc-700 px-2 py-0.5 rounded-full font-bold">
