@@ -1524,12 +1524,17 @@ export default function MainApp() {
   // ==========================================
 
   const handleTestApiKey = async () => {
-    setAiTestStatus({ loading: true, msg: 'جاري فحص الاتصال بالمفتاح...', isError: false })
+    setAiTestStatus({ loading: true, msg: 'جاري فحص الاتصال بالمفاتيح المضافة...', isError: false })
     try {
-      const key =
-        aiSettings.provider === 'gemini' ? aiSettings.geminiKey :
-        aiSettings.provider === 'openai' ? aiSettings.openaiKey :
-        aiSettings.provider === 'grok' ? aiSettings.grokKey : aiSettings.deepseekKey
+      const keys =
+        aiSettings.provider === 'gemini'
+          ? (aiSettings.geminiKeys && aiSettings.geminiKeys.length > 0 ? aiSettings.geminiKeys : (aiSettings.geminiKey ? [aiSettings.geminiKey] : []))
+          : aiSettings.provider === 'openai'
+          ? (aiSettings.openaiKeys && aiSettings.openaiKeys.length > 0 ? aiSettings.openaiKeys : (aiSettings.openaiKey ? [aiSettings.openaiKey] : []))
+          : aiSettings.provider === 'grok'
+          ? (aiSettings.grokKeys && aiSettings.grokKeys.length > 0 ? aiSettings.grokKeys : (aiSettings.grokKey ? [aiSettings.grokKey] : []))
+          : (aiSettings.deepseekKeys && aiSettings.deepseekKeys.length > 0 ? aiSettings.deepseekKeys : (aiSettings.deepseekKey ? [aiSettings.deepseekKey] : []))
+
       const model =
         aiSettings.provider === 'gemini' ? aiSettings.geminiModel :
         aiSettings.provider === 'openai' ? aiSettings.openaiModel :
@@ -1538,22 +1543,22 @@ export default function MainApp() {
       const res = await fetch('/api/ai/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: aiSettings.provider, apiKey: key, model })
+        body: JSON.stringify({ provider: aiSettings.provider, apiKeys: keys, model })
       })
       const data = await res.json()
       if (res.ok && data.success) {
         if (data.detectedModel && aiSettings.provider === 'gemini') {
           setAiSettings((prev) => ({ ...prev, geminiModel: data.detectedModel }))
         }
-        setAiTestStatus({ loading: false, msg: data.message || 'المفتاح يعمل بنجاح 100%!', isError: false })
+        setAiTestStatus({ loading: false, msg: data.message || 'المفاتيح تعمل بنجاح 100%!', isError: false })
       } else {
-        setAiTestStatus({ loading: false, msg: data.error || 'فشل الاتصال بالمفتاح', isError: true })
+        setAiTestStatus({ loading: false, msg: data.error || 'فشل الاتصال بالمفاتيح', isError: true })
       }
-
     } catch (err: any) {
-      setAiTestStatus({ loading: false, msg: err?.message || 'تعذر الاتصال بالخادم لفحص المفتاح', isError: true })
+      setAiTestStatus({ loading: false, msg: err?.message || 'تعذر الاتصال بالخادم لفحص المفاتيح', isError: true })
     }
   }
+
 
   const handleSaveAiSettings = () => {
     try {
@@ -4725,46 +4730,84 @@ export default function MainApp() {
                       </div>
                     </div>
 
-                    {/* حقل إدخال مفتاح الـ API */}
+                    {/* حقل إدخال مفاتيح الـ API المتعددة لمضاعفة الليمت */}
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">
-                          مفتاح واجهة البرمجة (API Key) لـ {aiSettings.provider.toUpperCase()}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowAiApiKey((p) => !p)}
-                          className="text-[10px] text-slate-500 hover:text-slate-800 font-bold"
-                        >
-                          {showAiApiKey ? 'إخفاء المفتاح 🙈' : 'إظهار المفتاح 👁️'}
-                        </button>
-                      </div>
 
-                      <div className="relative">
-                        <input
-                          type={showAiApiKey ? 'text' : 'password'}
-                          value={
-                            aiSettings.provider === 'gemini' ? (aiSettings.geminiKey || '') :
-                            aiSettings.provider === 'openai' ? (aiSettings.openaiKey || '') :
-                            aiSettings.provider === 'grok' ? (aiSettings.grokKey || '') :
-                            (aiSettings.deepseekKey || '')
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value
-                            setAiSettings((p) => ({
-                              ...p,
-                              [aiSettings.provider === 'gemini' ? 'geminiKey' :
-                               aiSettings.provider === 'openai' ? 'openaiKey' :
-                               aiSettings.provider === 'grok' ? 'grokKey' : 'deepseekKey']: val
-                            }))
-                            setAiTestStatus(null)
-                          }}
-                          placeholder={`ألصق مفتاح الـ API هنا (مثال: AIzaSy...)`}
-                          dir="ltr"
-                          className="w-full h-11 px-3.5 border border-sky-100 rounded-xl text-[12px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/20"
-                        />
-                      </div>
+                      {(() => {
+                        const currentKeys =
+                          aiSettings.provider === 'gemini'
+                            ? (aiSettings.geminiKeys && aiSettings.geminiKeys.length > 0 ? aiSettings.geminiKeys : (aiSettings.geminiKey ? [aiSettings.geminiKey] : []))
+                            : aiSettings.provider === 'openai'
+                            ? (aiSettings.openaiKeys && aiSettings.openaiKeys.length > 0 ? aiSettings.openaiKeys : (aiSettings.openaiKey ? [aiSettings.openaiKey] : []))
+                            : aiSettings.provider === 'grok'
+                            ? (aiSettings.grokKeys && aiSettings.grokKeys.length > 0 ? aiSettings.grokKeys : (aiSettings.grokKey ? [aiSettings.grokKey] : []))
+                            : (aiSettings.deepseekKeys && aiSettings.deepseekKeys.length > 0 ? aiSettings.deepseekKeys : (aiSettings.deepseekKey ? [aiSettings.deepseekKey] : []))
+
+                        const textValue = currentKeys.join('\n')
+                        const keysCount = currentKeys.filter(Boolean).length
+
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 flex-wrap">
+                                <span>مفاتيح الـ API لـ {aiSettings.provider.toUpperCase()}</span>
+                                {keysCount > 1 && (
+                                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                                    {keysCount} مفاتيح مضافة (الحد مضاعف {keysCount} أضعاف 🚀)
+                                  </span>
+                                )}
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setShowAiApiKey((p) => !p)}
+                                className="text-[10.5px] text-slate-500 hover:text-slate-800 font-bold"
+                              >
+                                {showAiApiKey ? 'إخفاء المفاتيح 🙈' : 'إظهار المفاتيح 👁️'}
+                              </button>
+                            </div>
+
+                            <div className="relative">
+                              <textarea
+                                rows={Math.max(3, Math.min(6, keysCount + 1))}
+                                value={showAiApiKey ? textValue : textValue.replace(/[^\n]/g, '•')}
+                                onChange={(e) => {
+                                  const raw = e.target.value
+                                  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean)
+                                  setAiSettings((p) => {
+                                    const singleKeyProp =
+                                      p.provider === 'gemini' ? 'geminiKey' :
+                                      p.provider === 'openai' ? 'openaiKey' :
+                                      p.provider === 'grok' ? 'grokKey' : 'deepseekKey'
+                                    const multiKeyProp =
+                                      p.provider === 'gemini' ? 'geminiKeys' :
+                                      p.provider === 'openai' ? 'openaiKeys' :
+                                      p.provider === 'grok' ? 'grokKeys' : 'deepseekKeys'
+
+                                    return {
+                                      ...p,
+                                      [singleKeyProp]: lines[0] || '',
+                                      [multiKeyProp]: lines
+                                    }
+                                  })
+                                  setAiTestStatus(null)
+                                }}
+                                placeholder={`ألصق المفاتيح هنا (كل مفتاح في سطر لمضاعفة الكوتا):\nAIzaSyKey1...\nAIzaSyKey2...\nAIzaSyKey3...`}
+                                dir="ltr"
+                                className="w-full p-3 border border-sky-100 rounded-xl text-[12px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/20 leading-relaxed resize-y"
+                              />
+                            </div>
+
+                            <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-2.5 text-[11px] text-sky-900 leading-relaxed flex items-start gap-1.5">
+                              <span className="shrink-0 text-sm">💡</span>
+                              <span>
+                                <b>مضاعفة الليمت التلقائي:</b> يمكنك إضافة مفتاح أو اثنين أو عشرة (كل مفتاح في سطر جديد). عندما ينتهي ليمت أو كوتا أي مفتاح أثناء مسح السجلات، سينتقل النظام فوراً وتلقائياً للمفتاح التالي بدون أي توقف!
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
+
 
                     {/* اختيار الموديل */}
                     {aiSettings.provider === 'gemini' && (

@@ -74,22 +74,44 @@ export async function POST(req: Request) {
     }
 
     const provider = aiSettings?.provider || 'gemini'
-    const apiKey = (
-      provider === 'gemini' ? (aiSettings?.geminiKey || process.env.GEMINI_API_KEY) :
-      provider === 'openai' ? (aiSettings?.openaiKey || process.env.OPENAI_API_KEY) :
-      provider === 'grok' ? (aiSettings?.grokKey || process.env.GROK_API_KEY) :
-      (aiSettings?.deepseekKey || process.env.DEEPSEEK_API_KEY)
-    )?.trim()
+    const keysList: string[] = []
 
-    if (!apiKey) {
+    if (provider === 'gemini') {
+      if (Array.isArray(aiSettings?.geminiKeys)) {
+        aiSettings.geminiKeys.forEach((k: any) => { if (typeof k === 'string' && k.trim()) keysList.push(k.trim()) })
+      }
+      if (keysList.length === 0 && aiSettings?.geminiKey?.trim()) keysList.push(aiSettings.geminiKey.trim())
+      if (keysList.length === 0 && process.env.GEMINI_API_KEY?.trim()) keysList.push(process.env.GEMINI_API_KEY.trim())
+    } else if (provider === 'openai') {
+      if (Array.isArray(aiSettings?.openaiKeys)) {
+        aiSettings.openaiKeys.forEach((k: any) => { if (typeof k === 'string' && k.trim()) keysList.push(k.trim()) })
+      }
+      if (keysList.length === 0 && aiSettings?.openaiKey?.trim()) keysList.push(aiSettings.openaiKey.trim())
+      if (keysList.length === 0 && process.env.OPENAI_API_KEY?.trim()) keysList.push(process.env.OPENAI_API_KEY.trim())
+    } else if (provider === 'grok') {
+      if (Array.isArray(aiSettings?.grokKeys)) {
+        aiSettings.grokKeys.forEach((k: any) => { if (typeof k === 'string' && k.trim()) keysList.push(k.trim()) })
+      }
+      if (keysList.length === 0 && aiSettings?.grokKey?.trim()) keysList.push(aiSettings.grokKey.trim())
+      if (keysList.length === 0 && process.env.GROK_API_KEY?.trim()) keysList.push(process.env.GROK_API_KEY.trim())
+    } else {
+      if (Array.isArray(aiSettings?.deepseekKeys)) {
+        aiSettings.deepseekKeys.forEach((k: any) => { if (typeof k === 'string' && k.trim()) keysList.push(k.trim()) })
+      }
+      if (keysList.length === 0 && aiSettings?.deepseekKey?.trim()) keysList.push(aiSettings.deepseekKey.trim())
+      if (keysList.length === 0 && process.env.DEEPSEEK_API_KEY?.trim()) keysList.push(process.env.DEEPSEEK_API_KEY.trim())
+    }
+
+    if (keysList.length === 0) {
       return NextResponse.json(
         {
           success: false,
-          error: `لم يتم العثور على مفتاح API لمزود (${provider}). يرجى الدخول إلى "الإعدادات" ثم تبويب "الذكاء الاصطناعي" وإدخال المفتاح أولاً.`
+          error: `لم يتم العثور على أي مفتاح API لمزود (${provider}). يرجى الدخول إلى "الإعدادات" ثم تبويب "الذكاء الاصطناعي" وإضافة مفتاحك أولاً.`
         },
         { status: 400 }
       )
     }
+
 
     // التعليمات الاحترافية لنماذج الرؤية الحاسوبية بالذكاء الاصطناعي
     const systemPrompt = `
@@ -210,93 +232,133 @@ export async function POST(req: Request) {
 `
 
     let jsonResponseText = ''
-
+    let lastErrorMsg = ''
 
     if (provider === 'gemini') {
-      const selectedModel = await resolveGeminiModel(apiKey, aiSettings?.geminiModel)
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`
+      let success = false
+      for (let i = 0; i < keysList.length; i++) {
+        const currentKey = keysList[i]
+        try {
+          const selectedModel = await resolveGeminiModel(currentKey, aiSettings?.geminiModel)
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${currentKey}`
 
-      const payload = {
-        contents: [
-          {
-            parts: [
-              { text: systemPrompt },
+          const payload = {
+            contents: [
               {
-                inlineData: {
-                  mimeType: mimeType,
-                  data: base64Clean
-                }
+                parts: [
+                  { text: systemPrompt },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Clean
+                    }
+                  }
+                ]
               }
-            ]
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json'
+            }
           }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: 'application/json'
+
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+
+          if (res.ok) {
+            const resData = await res.json()
+            jsonResponseText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+            if (jsonResponseText) {
+              success = true
+              break // نجح الطلب مع هذا المفتاح، نخرج من الحلقة!
+            }
+          } else {
+            const errJson = await res.json().catch(() => ({}))
+            lastErrorMsg = errJson?.error?.message || `خطأ ${res.status}`
+            console.warn(`Gemini key #${i + 1} failed, trying next key... Error:`, lastErrorMsg)
+          }
+        } catch (keyErr: any) {
+          lastErrorMsg = keyErr?.message || 'خطأ اتصال'
         }
       }
 
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}))
-        const errMsg = errJson?.error?.message || `فشل تحليل الصورة من Gemini (رمز: ${res.status})`
-        return NextResponse.json({ success: false, error: errMsg }, { status: 400 })
+      if (!success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `تعذر تحليل الصورة (تمت تجربة ${keysList.length} مفاتيح وجميعها نفد رصيدها أو بها خطأ): ${lastErrorMsg}`
+          },
+          { status: 400 }
+        )
       }
-
-      const resData = await res.json()
-      jsonResponseText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     } else if (provider === 'openai') {
       const selectedModel = aiSettings?.openaiModel || 'gpt-4o'
       const apiUrl = 'https://api.openai.com/v1/chat/completions'
 
-      const payload = {
-        model: selectedModel,
-        messages: [
-          {
-            role: 'system',
-            content: 'أنت محلل سجلات مالي تجيب بصيغة JSON فقط.'
-          },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: systemPrompt },
+      let success = false
+      for (let i = 0; i < keysList.length; i++) {
+        const currentKey = keysList[i]
+        try {
+          const payload = {
+            model: selectedModel,
+            messages: [
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Clean}`
-                }
+                role: 'system',
+                content: 'أنت محلل سجلات مالي تجيب بصيغة JSON فقط.'
+              },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: systemPrompt },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:${mimeType};base64,${base64Clean}`
+                    }
+                  }
+                ]
               }
-            ]
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1
           }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.1
+
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${currentKey}`
+            },
+            body: JSON.stringify(payload)
+          })
+
+          if (res.ok) {
+            const resData = await res.json()
+            jsonResponseText = resData?.choices?.[0]?.message?.content || ''
+            if (jsonResponseText) {
+              success = true
+              break
+            }
+          } else {
+            const errJson = await res.json().catch(() => ({}))
+            lastErrorMsg = errJson?.error?.message || `خطأ ${res.status}`
+          }
+        } catch (err: any) {
+          lastErrorMsg = err?.message || 'خطأ اتصال'
+        }
       }
 
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(payload)
-      })
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}))
-        const errMsg = errJson?.error?.message || `فشل تحليل الصورة من OpenAI (رمز: ${res.status})`
-        return NextResponse.json({ success: false, error: errMsg }, { status: 400 })
+      if (!success) {
+        return NextResponse.json(
+          { success: false, error: `فشل التحليل عبر OpenAI (تمت تجربة ${keysList.length} مفاتيح): ${lastErrorMsg}` },
+          { status: 400 }
+        )
       }
-
-      const resData = await res.json()
-      jsonResponseText = resData?.choices?.[0]?.message?.content || ''
     } else {
+
       return NextResponse.json(
         { success: false, error: `المزود (${provider}) غير مهيأ لمعالجة الصور حالياً، يرجى اختيار Gemini أو OpenAI` },
         { status: 400 }

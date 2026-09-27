@@ -10,7 +10,7 @@ async function resolveGeminiModel(key: string, requestedModel?: string): Promise
         .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
         .map((m) => m.name.replace(/^models\//, ''))
 
-      if (requestedModel && supported.includes(requestedModel)) {
+      if (requestedModel && requestedModel !== 'auto' && supported.includes(requestedModel)) {
         return { modelName: requestedModel, availableModels: supported }
       }
 
@@ -18,64 +18,32 @@ async function resolveGeminiModel(key: string, requestedModel?: string): Promise
       const flash = supported.find((n) => n.includes('flash') && !n.includes('8b'))
       const anyFlash = supported.find((n) => n.includes('flash'))
       const pro = supported.find((n) => n.includes('pro'))
-      const fallback = flash || anyFlash || pro || supported[0] || requestedModel || 'gemini-1.5-flash'
+      const fallback = flash || anyFlash || pro || supported[0] || 'gemini-1.5-flash'
       return { modelName: fallback, availableModels: supported }
     }
   } catch {}
-  return { modelName: requestedModel || 'gemini-1.5-flash', availableModels: [] }
+  return { modelName: requestedModel && requestedModel !== 'auto' ? requestedModel : 'gemini-1.5-flash', availableModels: [] }
 }
 
-export async function POST(req: Request) {
+async function testSingleKey(provider: string, key: string, model?: string): Promise<{ success: boolean; message: string; modelName?: string }> {
   try {
-    const body = await req.json()
-    const { provider, apiKey, model } = body
-
-    if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'يرجى إدخال مفتاح الـ API أولاً' },
-        { status: 400 }
-      )
-    }
-
-    const key = apiKey.trim()
-
     if (provider === 'gemini') {
-      // 1. فحص صحة المفتاح أولاً وجلب الموديل المدعوم تلقائياً
-      const { modelName, availableModels } = await resolveGeminiModel(key, model)
-
+      const { modelName } = await resolveGeminiModel(key, model)
       const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`
       const res = await fetch(testUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: 'اختبار الاتصال، أجب بكلمة: نعم' }]
-            }
-          ]
+          contents: [{ parts: [{ text: 'اختبار الاتصال، أجب بكلمة: نعم' }] }]
         })
       })
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        const rawMsg = errData?.error?.message || `فشل الاتصال بـ Gemini (رمز: ${res.status})`
-
-        // إذا كانت هناك موديلات أخرى متوفرة، نقترحها أو نجربها
-        if (availableModels.length > 0) {
-          return NextResponse.json({
-            success: false,
-            error: `${rawMsg} (الموديلات المتاحة لمفتاحك هي: ${availableModels.slice(0, 3).join(', ')})`
-          }, { status: 400 })
-        }
-        return NextResponse.json({ success: false, error: rawMsg }, { status: 400 })
+        const rawMsg = errData?.error?.message || `فشل الاتصال (رمز: ${res.status})`
+        return { success: false, message: rawMsg }
       }
-
-      return NextResponse.json({
-        success: true,
-        message: `تم الاتصال بـ Gemini بنجاح والمفتاح يعمل 100%! (الموديل الفعال: ${modelName})`,
-        detectedModel: modelName,
-        availableModels
-      })
+      return { success: true, message: 'يعمل بنجاح', modelName }
     }
 
     if (provider === 'openai') {
@@ -92,14 +60,11 @@ export async function POST(req: Request) {
           max_tokens: 5
         })
       })
-
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        const msg = errData?.error?.message || `فشل الاتصال بـ OpenAI (رمز الخطأ: ${res.status})`
-        return NextResponse.json({ success: false, error: msg }, { status: 400 })
+        return { success: false, message: errData?.error?.message || `خطأ ${res.status}` }
       }
-
-      return NextResponse.json({ success: true, message: 'تم الاتصال بـ OpenAI بنجاح والمفتاح يعمل 100%!' })
+      return { success: true, message: 'يعمل بنجاح' }
     }
 
     if (provider === 'grok') {
@@ -116,14 +81,11 @@ export async function POST(req: Request) {
           max_tokens: 5
         })
       })
-
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        const msg = errData?.error?.message || `فشل الاتصال بـ Grok (رمز الخطأ: ${res.status})`
-        return NextResponse.json({ success: false, error: msg }, { status: 400 })
+        return { success: false, message: errData?.error?.message || `خطأ ${res.status}` }
       }
-
-      return NextResponse.json({ success: true, message: 'تم الاتصال بـ Grok بنجاح والمفتاح يعمل 100%!' })
+      return { success: true, message: 'يعمل بنجاح' }
     }
 
     if (provider === 'deepseek') {
@@ -140,20 +102,91 @@ export async function POST(req: Request) {
           max_tokens: 5
         })
       })
-
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        const msg = errData?.error?.message || `فشل الاتصال بـ DeepSeek (رمز الخطأ: ${res.status})`
-        return NextResponse.json({ success: false, error: msg }, { status: 400 })
+        return { success: false, message: errData?.error?.message || `خطأ ${res.status}` }
       }
-
-      return NextResponse.json({ success: true, message: 'تم الاتصال بـ DeepSeek بنجاح والمفتاح يعمل 100%!' })
+      return { success: true, message: 'يعمل بنجاح' }
     }
 
-    return NextResponse.json({ success: false, error: 'مزود الذكاء الاصطناعي غير مدعوم' }, { status: 400 })
+    return { success: false, message: 'مزود غير مدعوم' }
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'خطأ اتصال' }
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json()
+    const { provider, apiKey, apiKeys, model } = body
+
+    // تجميع المفاتيح سواء تم إرسال مفتاح واحد أو مصفوفة مفاتيح
+    const keysList: string[] = []
+    if (Array.isArray(apiKeys)) {
+      apiKeys.forEach((k) => {
+        if (typeof k === 'string' && k.trim()) keysList.push(k.trim())
+      })
+    }
+    if (keysList.length === 0 && apiKey && typeof apiKey === 'string' && apiKey.trim()) {
+      keysList.push(apiKey.trim())
+    }
+
+    if (keysList.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'يرجى إدخال مفتاح واحد على الأقل لفحصه' },
+        { status: 400 }
+      )
+    }
+
+    // فحص جميع المفاتيح
+    const results = await Promise.all(
+      keysList.map(async (key, idx) => {
+        const res = await testSingleKey(provider, key, model)
+        return {
+          index: idx + 1,
+          keyMasked: key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : '****',
+          ...res
+        }
+      })
+    )
+
+    const workingKeys = results.filter((r) => r.success)
+    const failedKeys = results.filter((r) => !r.success)
+
+    if (workingKeys.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `جميع المفاتيح المدخلة (${results.length}) غير صالحة: ${failedKeys[0]?.message || ''}`,
+          results
+        },
+        { status: 400 }
+      )
+    }
+
+    let detectedModel = workingKeys[0]?.modelName
+
+    let summaryMsg = ''
+    if (results.length === 1) {
+      summaryMsg = `تم الاتصال بنجاح والمفتاح يعمل 100%!${detectedModel ? ` (الموديل: ${detectedModel})` : ''}`
+    } else {
+      summaryMsg = `رائع جداً! تم فحص (${results.length}) مفاتيح: (${workingKeys.length}) مفاتيح تعمل بنجاح وفعالة! ليمت الاستخدام تضاعف بمقدار ${workingKeys.length} أضعاف 🚀`
+      if (failedKeys.length > 0) {
+        summaryMsg += ` (تنبيه: هناك ${failedKeys.length} مفاتيح بها مشكلة).`
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: summaryMsg,
+      detectedModel,
+      totalKeys: results.length,
+      workingCount: workingKeys.length,
+      results
+    })
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error?.message || 'حدث خطأ غير متوقع أثناء فحص المفتاح' },
+      { success: false, error: error?.message || 'حدث خطأ غير متوقع أثناء فحص المفاتيح' },
       { status: 500 }
     )
   }

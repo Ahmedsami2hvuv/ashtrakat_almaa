@@ -106,12 +106,17 @@ export interface CollectorDB {
 export interface AISettings {
   provider: 'gemini' | 'openai' | 'grok' | 'deepseek'
   geminiKey?: string
+  geminiKeys?: string[]
   geminiModel?: string
   openaiKey?: string
+  openaiKeys?: string[]
   openaiModel?: string
   grokKey?: string
+  grokKeys?: string[]
   grokModel?: string
   deepseekKey?: string
+  deepseekKeys?: string[]
   deepseekModel?: string
 }
+
 
