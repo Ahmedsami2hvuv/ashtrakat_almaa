@@ -114,6 +114,7 @@ const STATUS_OPTIONS = [
   'يدفع باستمرار',
   'مفلش',
   'لا ينظم',
+  'لا ينظف',
   'فارغ'
 ] as const
 
@@ -126,7 +127,25 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
   'يدفع باستمرار': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
   'مفلش': { bg: 'bg-zinc-100', text: 'text-zinc-700', border: 'border-zinc-300', dot: 'bg-zinc-500' },
   'لا ينظم': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+  'لا ينظف': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
   'فارغ': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', dot: 'bg-teal-500' }
+}
+
+// دالة فحص ما إذا كان المشترك مصفّر الحساب كلياً بناءً على حالته (مفلش، لا ينظم، لا ينظف)
+export function isZeroAccountSubscriber(sub: Subscriber | null | undefined): boolean {
+  if (!sub || !sub.statuses || sub.statuses.length === 0) return false
+  return sub.statuses.some((st) => {
+    if (!st) return false
+    const s = st.trim()
+    return (
+      s === 'مفلش' ||
+      s === 'لا ينظم' ||
+      s === 'لا ينظف' ||
+      s.includes('مفلش') ||
+      s.includes('لا ينظم') ||
+      s.includes('لا ينظف')
+    )
+  })
 }
 
 const DEFAULT_AREAS: Area[] = [
@@ -174,6 +193,28 @@ function calculateBilling(
     totalRemaining: 0
   }
   if (!sub) return emptyRes
+
+  // إذا كان المشترك مؤشراً عليه (مفلش) أو (لا ينظم / لا ينظف) يكون حسابه مصفراً كلياً
+  if (isZeroAccountSubscriber(sub)) {
+    return {
+      rows: PERIODS.map((periodLabel) => ({
+        periodLabel,
+        old: 0,
+        due: 0,
+        total: 0,
+        paid: 0,
+        remaining: 0,
+        isManual: false,
+        isTotalManual: false,
+        isRemainingManual: false
+      })),
+      remainingPrev: 0,
+      fee: 0,
+      totalCarried: 0,
+      due: 0,
+      totalRemaining: 0
+    }
+  }
 
   const meterAmount = Number.parseInt(sub.meterType, 10)
   const due =
@@ -2000,11 +2041,22 @@ export default function MainApp() {
                           </div>
                         </div>
 
-                        {/* الدين يظهر على اليسار بلون أسود واضح وكبير */}
+                        {/* الدين يظهر على اليسار بلون أسود واضح وكبير أو شارة مصفّر */}
                         <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-[15px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
-                            {formatNumber(currentDue)}
-                          </div>
+                          {isZeroAccountSubscriber(sub) ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] bg-zinc-100 text-zinc-600 border border-zinc-200 px-2 py-0.5 rounded-full font-bold">
+                                مصفّر
+                              </span>
+                              <div className="text-[15px] font-bold text-zinc-400 font-mono tracking-tight min-w-[50px] text-left">
+                                0
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-[15px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
+                              {formatNumber(currentDue)}
+                            </div>
+                          )}
                           <div className="text-sky-200 group-hover:text-slate-400 transition-colors text-[14px]">‹</div>
                         </div>
                       </div>
@@ -2830,14 +2882,29 @@ export default function MainApp() {
                 })}
               </div>
 
-              {/* بداية السنة بسيطة: القديم + الفائدة = الناتج */}
+              {/* بداية السنة أو تنبيه تصفير الحساب كلياً */}
               <div className="subscriber-content subscriber-content-3 w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
-                <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
-                  <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
-                  <span className="text-slate-600">
-                    القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
-                  </span>
-                </div>
+                {isZeroAccountSubscriber(activeSubscriber) ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-[12px] flex items-center justify-between shadow-sm w-full">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-zinc-400"></span>
+                      <span className="font-bold text-zinc-800">الحساب مصفّر كلياً (0 د.ع)</span>
+                      <span className="text-zinc-500 text-[11px]">
+                        بسبب حالة المشترك ({activeSubscriber.statuses?.filter((s) => s === 'مفلش' || s === 'لا ينظم' || s === 'لا ينظف' || s.includes('مفلش') || s.includes('لا ينظم') || s.includes('لا ينظف')).join('، ')})
+                      </span>
+                    </div>
+                    <span className="text-[10px] bg-zinc-200 text-zinc-700 px-2 py-0.5 rounded-full font-bold">
+                      بدون ديون أو مستحقات
+                    </span>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
+                    <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
+                    <span className="text-slate-600">
+                      القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* أزرار التالي والسابق للتنقل بين المشتركين (تحت بداية السنة وفوق الجدول) */}
