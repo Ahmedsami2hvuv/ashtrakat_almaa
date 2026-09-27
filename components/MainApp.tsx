@@ -1534,15 +1534,27 @@ export default function MainApp() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="بحث برقم المشترك او الاسم او الهاتف..."
-                  className="w-full h-11 pr-4 pl-10 border border-sky-100 rounded-2xl text-[13px] focus:outline-none focus:border-slate-900 bg-sky-50/50 focus:bg-white transition-colors"
+                  className="w-full h-11 pr-4 pl-16 border border-sky-100 rounded-2xl text-[13px] focus:outline-none focus:border-slate-900 bg-sky-50/50 focus:bg-white transition-colors"
                   autoFocus
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <circle cx="11" cy="11" r="6" />
-                    <path d="m21 21-4.3-4.3" />
-                  </svg>
-                </span>
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                  {Boolean(searchQuery) && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
+                      title="مسح البحث"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <span className="text-slate-400">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -1658,9 +1670,21 @@ export default function MainApp() {
                       value={filterAreaSearch}
                       onChange={(e) => setFilterAreaSearch(e.target.value)}
                       placeholder="بحث في المناطق..."
-                      className="w-full h-8 pr-3 pl-8 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                      className="w-full h-8 pr-3 pl-14 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
                     />
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">⌕</span>
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {Boolean(filterAreaSearch) && (
+                        <button
+                          type="button"
+                          onClick={() => setFilterAreaSearch('')}
+                          className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[10px] font-bold"
+                          title="مسح"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <span className="text-slate-400 text-[12px]">⌕</span>
+                    </div>
                   </div>
                   <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
                     {areas
@@ -1728,9 +1752,21 @@ export default function MainApp() {
                           value={filterBranchSearch}
                           onChange={(e) => setFilterBranchSearch(e.target.value)}
                           placeholder="بحث في الأفرع..."
-                          className="w-full h-8 pr-3 pl-8 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                          className="w-full h-8 pr-3 pl-14 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
                         />
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">⌕</span>
+                        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          {Boolean(filterBranchSearch) && (
+                            <button
+                              type="button"
+                              onClick={() => setFilterBranchSearch('')}
+                              className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[10px] font-bold"
+                              title="مسح"
+                            >
+                              ✕
+                            </button>
+                          )}
+                          <span className="text-slate-400 text-[12px]">⌕</span>
+                        </div>
                       </div>
                     </>
                   ) : (
@@ -2381,12 +2417,24 @@ export default function MainApp() {
                   <label className="text-[11px] font-bold text-slate-700 block mb-1">
                     اسم الشخص أو رقم اشتراكه <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    value={reviewSearchQuery}
-                    onChange={(e) => setReviewSearchQuery(e.target.value)}
-                    placeholder="اكتب رقم الاشتراك أو اسم الشخص..."
-                    className="w-full h-11 px-3.5 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20"
-                  />
+                  <div className="relative">
+                    <input
+                      value={reviewSearchQuery}
+                      onChange={(e) => setReviewSearchQuery(e.target.value)}
+                      placeholder="اكتب رقم الاشتراك أو اسم الشخص..."
+                      className="w-full h-11 pr-3.5 pl-10 border border-sky-100 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-sky-50/20"
+                    />
+                    {Boolean(reviewSearchQuery) && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewSearchQuery('')}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
+                        title="مسح"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                   {/* اقتراحات المشتركين الفورية عند الكتابة */}
                   {reviewSuggestions.length > 0 && (
                     <div className="absolute top-[100%] right-0 left-0 mt-1 bg-white border border-sky-200 rounded-xl shadow-xl z-20 overflow-hidden divide-y divide-sky-50">
@@ -3296,12 +3344,24 @@ export default function MainApp() {
                 <label className="text-[11px] font-bold text-slate-700">
                   اسم المشترك <span className="text-red-500">*</span>
                 </label>
-                <input
-                  value={newSub.name}
-                  onChange={(e) => setNewSub((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="الاسم الثلاثي..."
-                  className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:border-slate-900 bg-white"
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    value={newSub.name}
+                    onChange={(e) => setNewSub((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="الاسم الثلاثي..."
+                    className="w-full h-11 pr-4 pl-10 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:border-slate-900 bg-white"
+                  />
+                  {Boolean(newSub.name) && (
+                    <button
+                      type="button"
+                      onClick={() => setNewSub((p) => ({ ...p, name: '' }))}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
+                      title="مسح الاسم"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* المنطقة * إجباري */}
@@ -3461,11 +3521,23 @@ export default function MainApp() {
             <form onSubmit={handleEditSubscriberSubmit} className="p-4 space-y-4 overflow-y-auto">
               <div>
                 <label className="text-[11px] text-slate-600 font-medium">الاسم</label>
-                <input
-                  value={editSub.name || ''}
-                  onChange={(e) => setEditSub((p) => ({ ...p, name: e.target.value }))}
-                  className="mt-1.5 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white"
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    value={editSub.name || ''}
+                    onChange={(e) => setEditSub((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full h-10 pr-4 pl-10 border border-sky-100 rounded-2xl text-[13px] focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white"
+                  />
+                  {Boolean(editSub.name) && (
+                    <button
+                      type="button"
+                      onClick={() => setEditSub((p) => ({ ...p, name: '' }))}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
+                      title="مسح الاسم بالكامل"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
