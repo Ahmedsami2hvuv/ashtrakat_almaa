@@ -2933,7 +2933,7 @@ export default function MainApp() {
                       disabled={!prevSub}
                       className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
-                      <span className="text-[18px] leading-none font-normal">›</span>
+                      <span className="text-[18px] leading-none font-normal">‹</span>
                       <div className="text-right overflow-hidden">
                         {prevSub ? <><div className="text-[9px] text-slate-400 leading-tight">السابق</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(prevSub.id)} - {prevSub.name}</div></> : <span>لا يوجد سابق</span>}
                       </div>
@@ -2953,7 +2953,7 @@ export default function MainApp() {
                       <div className="text-left overflow-hidden">
                         {nextSub ? <><div className="text-[9px] text-slate-400 leading-tight">التالي</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(nextSub.id)} - {nextSub.name}</div></> : <span>لا يوجد تالي</span>}
                       </div>
-                      <span className="text-[18px] leading-none font-normal">‹</span>
+                      <span className="text-[18px] leading-none font-normal">›</span>
                     </button>
                   </div>
                 )
