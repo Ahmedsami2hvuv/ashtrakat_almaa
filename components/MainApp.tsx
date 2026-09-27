@@ -2907,11 +2907,18 @@ export default function MainApp() {
                 )}
               </div>
 
-              {/* أزرار التالي والسابق للتنقل بين المشتركين (تحت بداية السنة وفوق الجدول) */}
+              {/* أزرار التالي والسابق للتنقل بين المشتركين (تعمل دائماً حتى عند البحث) */}
               {(() => {
-                const currentIndex = displayedSubscribers.findIndex((s) => s.id === activeSubscriber.id)
-                const prevSub = currentIndex > 0 ? displayedSubscribers[currentIndex - 1] : null
-                const nextSub = currentIndex < displayedSubscribers.length - 1 ? displayedSubscribers[currentIndex + 1] : null
+                // قائمة التنقل الذكية:
+                // إذا كان هناك بحث نشط أو كانت نتائج البحث عنصراً واحداً فقط،
+                // نعتمد على القائمة الكاملة مرتبة بالتسلسل لكي تعمل أزرار التالي والسابق دائماً
+                const navList = (searchQuery.trim() || displayedSubscribers.length <= 1)
+                  ? [...subscribersInRange].sort((a, b) => a.id - b.id)
+                  : displayedSubscribers
+
+                const currentIndex = navList.findIndex((s) => s.id === activeSubscriber.id)
+                const prevSub = currentIndex > 0 ? navList[currentIndex - 1] : null
+                const nextSub = currentIndex >= 0 && currentIndex < navList.length - 1 ? navList[currentIndex + 1] : null
                 return (
                   <div className="subscriber-content px-2 pt-2.5 flex gap-2">
                     <button
