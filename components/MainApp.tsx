@@ -4267,7 +4267,7 @@ export default function MainApp() {
             setFormError('')
             setShowAddModal(true)
           }}
-          style={{ position: 'fixed', bottom: '74px', left: '16px', zIndex: 9998 }}
+          style={{ position: 'fixed', bottom: '68px', left: '16px', zIndex: 9998 }}
           className="h-11 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.35)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700/80"
           title="إضافة مشترك جديد"
         >
@@ -4277,7 +4277,7 @@ export default function MainApp() {
       )}
 
       {/* ========================================================= */}
-      {/* القائمة السفلية الأصلية الثابتة بأسفل الشاشة تماماً (مثل كل التطبيقات) */}
+      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (أفقية بارتفاع 58px) */}
       {/* ========================================================= */}
       <nav
         aria-label="شريط التنقل السفلي"
@@ -4287,26 +4287,67 @@ export default function MainApp() {
           left: 0,
           right: 0,
           width: '100%',
+          height: '58px',
           zIndex: 9999,
-          paddingBottom: 'env(safe-area-inset-bottom, 4px)'
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          boxSizing: 'border-box'
         }}
-        className="bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] select-none"
       >
-        <div className="max-w-[500px] mx-auto h-[64px] grid grid-cols-4 items-center px-1">
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '460px',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 4px',
+            boxSizing: 'border-box'
+          }}
+        >
           {/* 1. المشتركين */}
           <button
             type="button"
             onClick={() => setBottomNavTab('subscribers')}
-            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none"
+            style={{
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 0',
+              cursor: 'pointer',
+              color: bottomNavTab === 'subscribers' ? '#0f172a' : '#94a3b8',
+              transition: 'all 0.15s ease'
+            }}
           >
             <div
-              className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
-                bottomNavTab === 'subscribers'
-                  ? 'bg-slate-900 text-white shadow-sm scale-105'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              style={{
+                width: '38px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '12px',
+                backgroundColor: bottomNavTab === 'subscribers' ? '#0f172a' : 'transparent',
+                color: bottomNavTab === 'subscribers' ? '#ffffff' : '#94a3b8',
+                transition: 'all 0.2s ease'
+              }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'subscribers' ? 2.2 : 1.8}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'subscribers' ? 2.2 : 1.8}>
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -4314,63 +4355,104 @@ export default function MainApp() {
               </svg>
             </div>
             <span
-              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
-                bottomNavTab === 'subscribers' ? 'font-bold text-slate-900' : 'font-medium text-slate-400'
-              }`}
+              style={{
+                fontSize: '10.5px',
+                marginTop: '2px',
+                fontWeight: bottomNavTab === 'subscribers' ? 'bold' : '500',
+                color: bottomNavTab === 'subscribers' ? '#0f172a' : '#94a3b8'
+              }}
             >
               المشتركين
             </span>
-            {bottomNavTab === 'subscribers' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-0.5 animate-fadeIn"></span>
-            )}
           </button>
 
           {/* 2. المناطق */}
           <button
             type="button"
             onClick={() => setBottomNavTab('areas')}
-            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none"
+            style={{
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 0',
+              cursor: 'pointer',
+              color: bottomNavTab === 'areas' ? '#0f172a' : '#94a3b8',
+              transition: 'all 0.15s ease'
+            }}
           >
             <div
-              className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
-                bottomNavTab === 'areas'
-                  ? 'bg-slate-900 text-white shadow-sm scale-105'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              style={{
+                width: '38px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '12px',
+                backgroundColor: bottomNavTab === 'areas' ? '#0f172a' : 'transparent',
+                color: bottomNavTab === 'areas' ? '#ffffff' : '#94a3b8',
+                transition: 'all 0.2s ease'
+              }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'areas' ? 2.2 : 1.8}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'areas' ? 2.2 : 1.8}>
                 <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
                 <line x1="8" y1="2" x2="8" y2="18" />
                 <line x1="16" y1="6" x2="16" y2="22" />
               </svg>
             </div>
             <span
-              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
-                bottomNavTab === 'areas' ? 'font-bold text-slate-900' : 'font-medium text-slate-400'
-              }`}
+              style={{
+                fontSize: '10.5px',
+                marginTop: '2px',
+                fontWeight: bottomNavTab === 'areas' ? 'bold' : '500',
+                color: bottomNavTab === 'areas' ? '#0f172a' : '#94a3b8'
+              }}
             >
               المناطق
             </span>
-            {bottomNavTab === 'areas' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-0.5 animate-fadeIn"></span>
-            )}
           </button>
 
           {/* 3. يحتاج مراجعة */}
           <button
             type="button"
             onClick={() => setBottomNavTab('review')}
-            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none relative"
+            style={{
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 0',
+              cursor: 'pointer',
+              color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8',
+              position: 'relative',
+              transition: 'all 0.15s ease'
+            }}
           >
-            <div className="relative">
+            <div style={{ position: 'relative' }}>
               <div
-                className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
-                  bottomNavTab === 'review'
-                    ? 'bg-amber-600 text-white shadow-sm scale-105'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
+                style={{
+                  width: '38px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  backgroundColor: bottomNavTab === 'review' ? '#d97706' : 'transparent',
+                  color: bottomNavTab === 'review' ? '#ffffff' : '#94a3b8',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                   <line x1="16" y1="13" x2="8" y2="13" />
@@ -4378,54 +4460,91 @@ export default function MainApp() {
                   <polyline points="10 9 9 9 8 9" />
                 </svg>
               </div>
-
               {totalReviewBadgeCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm font-mono animate-pulse">
-                  {formatNumber(totalReviewBadgeCount)}
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-3px',
+                    right: '-4px',
+                    minWidth: '15px',
+                    height: '15px',
+                    padding: '0 3px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    borderRadius: '99px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1.5px solid #ffffff'
+                  }}
+                >
+                  {totalReviewBadgeCount}
                 </span>
               )}
             </div>
             <span
-              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
-                bottomNavTab === 'review' ? 'font-bold text-amber-700' : 'font-medium text-slate-400'
-              }`}
+              style={{
+                fontSize: '10.5px',
+                marginTop: '2px',
+                fontWeight: bottomNavTab === 'review' ? 'bold' : '500',
+                color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8'
+              }}
             >
               يحتاج مراجعة
             </span>
-            {bottomNavTab === 'review' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-0.5 animate-fadeIn"></span>
-            )}
           </button>
 
           {/* 4. الإحصائيات */}
           <button
             type="button"
             onClick={() => setBottomNavTab('stats')}
-            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none"
+            style={{
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 0',
+              cursor: 'pointer',
+              color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8',
+              transition: 'all 0.15s ease'
+            }}
           >
             <div
-              className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
-                bottomNavTab === 'stats'
-                  ? 'bg-slate-900 text-white shadow-sm scale-105'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              style={{
+                width: '38px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '12px',
+                backgroundColor: bottomNavTab === 'stats' ? '#0f172a' : 'transparent',
+                color: bottomNavTab === 'stats' ? '#ffffff' : '#94a3b8',
+                transition: 'all 0.2s ease'
+              }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
                 <line x1="18" y1="20" x2="18" y2="10" />
                 <line x1="12" y1="20" x2="12" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="14" />
               </svg>
             </div>
             <span
-              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
-                bottomNavTab === 'stats' ? 'font-bold text-slate-900' : 'font-medium text-slate-400'
-              }`}
+              style={{
+                fontSize: '10.5px',
+                marginTop: '2px',
+                fontWeight: bottomNavTab === 'stats' ? 'bold' : '500',
+                color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8'
+              }}
             >
               الإحصائيات
             </span>
-            {bottomNavTab === 'stats' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-0.5 animate-fadeIn"></span>
-            )}
           </button>
         </div>
       </nav>
