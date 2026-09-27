@@ -102,3 +102,16 @@ export interface CollectorDB {
   range_from: number
   range_to: number
 }
+
+export interface AISettings {
+  provider: 'gemini' | 'openai' | 'grok' | 'deepseek'
+  geminiKey?: string
+  geminiModel?: string
+  openaiKey?: string
+  openaiModel?: string
+  grokKey?: string
+  grokModel?: string
+  deepseekKey?: string
+  deepseekModel?: string
+}
+
