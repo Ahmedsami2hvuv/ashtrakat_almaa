@@ -4107,6 +4107,9 @@ export default function MainApp() {
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
       {/* ========================================================= */}
+      {/* ========================================================= */}
+      {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
+      {/* ========================================================= */}
       {bottomNavTab === 'subscribers' && !activeSubscriber && (
         <button
           type="button"
@@ -4114,7 +4117,8 @@ export default function MainApp() {
             setFormError('')
             setShowAddModal(true)
           }}
-          className="fixed bottom-20 left-4 z-30 h-11 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.3)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700/80"
+          style={{ position: 'fixed', bottom: '74px', left: '16px', zIndex: 9998 }}
+          className="h-11 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.35)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700/80"
           title="إضافة مشترك جديد"
         >
           <span className="text-[18px] font-bold leading-none">+</span>
@@ -4123,35 +4127,51 @@ export default function MainApp() {
       )}
 
       {/* ========================================================= */}
-      {/* شريط التنقل السفلي الفاخر العائم مع أنيميشن انسيابي (مثل تطبيقات الهواتف الذكية الحديثة) */}
+      {/* القائمة السفلية الأصلية الثابتة بأسفل الشاشة تماماً (مثل كل التطبيقات) */}
       {/* ========================================================= */}
-      <div className="fixed bottom-3 sm:bottom-4 left-0 right-0 z-40 px-3 flex justify-center pointer-events-none select-none">
-        <nav
-          aria-label="شريط التنقل السفلي"
-          className="pointer-events-auto bg-white/95 backdrop-blur-2xl border border-slate-200/90 shadow-[0_12px_35px_-6px_rgba(15,23,42,0.18)] rounded-full p-1.5 flex items-center gap-1 sm:gap-1.5 max-w-fit transition-all duration-300"
-        >
+      <nav
+        aria-label="شريط التنقل السفلي"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          width: '100%',
+          zIndex: 9999,
+          paddingBottom: 'env(safe-area-inset-bottom, 4px)'
+        }}
+        className="bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] select-none"
+      >
+        <div className="max-w-[500px] mx-auto h-[64px] grid grid-cols-4 items-center px-1">
           {/* 1. المشتركين */}
           <button
             type="button"
             onClick={() => setBottomNavTab('subscribers')}
-            className={`cursor-pointer transition-all duration-300 ease-out border-0 outline-none flex items-center justify-center ${
-              bottomNavTab === 'subscribers'
-                ? 'bg-slate-900 text-white rounded-full px-4 py-2 shadow-md shadow-slate-900/20 gap-2 scale-100'
-                : 'w-10 h-10 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100/70 bg-transparent active:scale-90'
-            }`}
+            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none"
           >
-            <span className="shrink-0 transition-transform duration-200">
+            <div
+              className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
+                bottomNavTab === 'subscribers'
+                  ? 'bg-slate-900 text-white shadow-sm scale-105'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'subscribers' ? 2.2 : 1.8}>
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
+            </div>
+            <span
+              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
+                bottomNavTab === 'subscribers' ? 'font-bold text-slate-900' : 'font-medium text-slate-400'
+              }`}
+            >
+              المشتركين
             </span>
             {bottomNavTab === 'subscribers' && (
-              <span className="text-[12px] font-bold whitespace-nowrap animate-fadeIn">
-                المشتركين
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-0.5 animate-fadeIn"></span>
             )}
           </button>
 
@@ -4159,87 +4179,106 @@ export default function MainApp() {
           <button
             type="button"
             onClick={() => setBottomNavTab('areas')}
-            className={`cursor-pointer transition-all duration-300 ease-out border-0 outline-none flex items-center justify-center ${
-              bottomNavTab === 'areas'
-                ? 'bg-slate-900 text-white rounded-full px-4 py-2 shadow-md shadow-slate-900/20 gap-2 scale-100'
-                : 'w-10 h-10 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100/70 bg-transparent active:scale-90'
-            }`}
+            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none"
           >
-            <span className="shrink-0 transition-transform duration-200">
+            <div
+              className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
+                bottomNavTab === 'areas'
+                  ? 'bg-slate-900 text-white shadow-sm scale-105'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'areas' ? 2.2 : 1.8}>
                 <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
                 <line x1="8" y1="2" x2="8" y2="18" />
                 <line x1="16" y1="6" x2="16" y2="22" />
               </svg>
+            </div>
+            <span
+              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
+                bottomNavTab === 'areas' ? 'font-bold text-slate-900' : 'font-medium text-slate-400'
+              }`}
+            >
+              المناطق
             </span>
             {bottomNavTab === 'areas' && (
-              <span className="text-[12px] font-bold whitespace-nowrap animate-fadeIn">
-                المناطق
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-0.5 animate-fadeIn"></span>
             )}
           </button>
 
-          {/* 3. يحتاج مراجعة (مع الشارة التنبيهية) */}
+          {/* 3. يحتاج مراجعة */}
           <button
             type="button"
             onClick={() => setBottomNavTab('review')}
-            className={`cursor-pointer transition-all duration-300 ease-out border-0 outline-none flex items-center justify-center relative ${
-              bottomNavTab === 'review'
-                ? 'bg-amber-600 text-white rounded-full px-4 py-2 shadow-md shadow-amber-600/25 gap-2 scale-100'
-                : 'w-10 h-10 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100/70 bg-transparent active:scale-90'
-            }`}
+            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none relative"
           >
-            <div className="relative shrink-0 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-              {totalReviewBadgeCount > 0 && bottomNavTab !== 'review' && (
-                <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm font-mono animate-pulse">
+            <div className="relative">
+              <div
+                className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
+                  bottomNavTab === 'review'
+                    ? 'bg-amber-600 text-white shadow-sm scale-105'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+
+              {totalReviewBadgeCount > 0 && (
+                <span className="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm font-mono animate-pulse">
                   {formatNumber(totalReviewBadgeCount)}
                 </span>
               )}
             </div>
+            <span
+              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
+                bottomNavTab === 'review' ? 'font-bold text-amber-700' : 'font-medium text-slate-400'
+              }`}
+            >
+              يحتاج مراجعة
+            </span>
             {bottomNavTab === 'review' && (
-              <div className="flex items-center gap-1.5 whitespace-nowrap animate-fadeIn">
-                <span className="text-[12px] font-bold">يحتاج مراجعة</span>
-                {totalReviewBadgeCount > 0 && (
-                  <span className="min-w-[16px] h-[16px] px-1 bg-white text-amber-700 text-[10px] font-bold rounded-full flex items-center justify-center font-mono">
-                    {formatNumber(totalReviewBadgeCount)}
-                  </span>
-                )}
-              </div>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-0.5 animate-fadeIn"></span>
             )}
           </button>
 
-          {/* 4. الإحصائيات والتحصيل */}
+          {/* 4. الإحصائيات */}
           <button
             type="button"
             onClick={() => setBottomNavTab('stats')}
-            className={`cursor-pointer transition-all duration-300 ease-out border-0 outline-none flex items-center justify-center ${
-              bottomNavTab === 'stats'
-                ? 'bg-slate-900 text-white rounded-full px-4 py-2 shadow-md shadow-slate-900/20 gap-2 scale-100'
-                : 'w-10 h-10 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100/70 bg-transparent active:scale-90'
-            }`}
+            className="flex flex-col items-center justify-center h-full w-full py-1 cursor-pointer transition-all duration-200 active:scale-90 bg-transparent border-0 outline-none"
           >
-            <span className="shrink-0 transition-transform duration-200">
+            <div
+              className={`w-10 h-7 flex items-center justify-center rounded-full transition-all duration-300 ${
+                bottomNavTab === 'stats'
+                  ? 'bg-slate-900 text-white shadow-sm scale-105'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
                 <line x1="18" y1="20" x2="18" y2="10" />
                 <line x1="12" y1="20" x2="12" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="14" />
               </svg>
+            </div>
+            <span
+              className={`text-[11px] mt-0.5 transition-colors duration-200 ${
+                bottomNavTab === 'stats' ? 'font-bold text-slate-900' : 'font-medium text-slate-400'
+              }`}
+            >
+              الإحصائيات
             </span>
             {bottomNavTab === 'stats' && (
-              <span className="text-[12px] font-bold whitespace-nowrap animate-fadeIn">
-                الإحصائيات
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-0.5 animate-fadeIn"></span>
             )}
           </button>
-        </nav>
-      </div>
+        </div>
+      </nav>
     </div>
   )
 }
