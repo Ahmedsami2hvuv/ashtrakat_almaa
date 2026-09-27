@@ -204,6 +204,21 @@ export function sanitizeNumberInput(val: string, allowNegative = false): string 
   return res
 }
 
+// دالة لتنسيق الأرقام بفواصل خفيفة وصغيرة بعد كل 3 أرقام لكي لا تزيد حجم الخلية
+export function formatInputDisplay(val: string | number | null | undefined): string {
+  if (val === null || val === undefined || val === '') return ''
+  const str = String(val).trim()
+  if (str === '-' || str === '') return str
+  const isNegative = str.startsWith('-')
+  const clean = sanitizeNumberInput(str, true)
+  if (!clean || clean === '-') return isNegative ? '-' : ''
+  const isNegClean = clean.startsWith('-')
+  const pureNum = isNegClean ? clean.slice(1) : clean
+  // فصل كل 3 أرقام بفاصلة صغيرة
+  const withCommas = pureNum.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return isNegClean ? '-' + withCommas : withCommas
+}
+
 // حساب الديون لفترات سنة معينة
 function calculateBilling(
   subId: number,
@@ -3080,66 +3095,66 @@ export default function MainApp() {
                           style={{ gridTemplateColumns: '25% 25% 25% 25%', width: '100%', minHeight: '44px' }}
                         >
                           {/* 1. الديون السابقة */}
-                          <div className="px-1 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
-                              value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : String(row.old)}
+                              value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : formatInputDisplay(row.old)}
                               onChange={(e) => {
-                                const v = sanitizeNumberInput(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('old')]: v }))
+                                const formatted = formatInputDisplay(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('old')]: formatted }))
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const v = sanitizeNumberInput(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('old')]: v }))
+                                  const formatted = formatInputDisplay(text)
+                                  setPendingEdits((p) => ({ ...p, [editKey('old')]: formatted }))
                                 }
                               }}
                               onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', e.target.value)}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('old')]: String(row.old) }))
+                                setPendingEdits((p) => ({ ...p, [editKey('old')]: formatInputDisplay(row.old) }))
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
-                              className={`border rounded-lg font-mono focus:outline-none focus:ring-1 bg-white text-center ${
+                              className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 bg-white text-center ${
                                 isCurrentPeriod
                                   ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-[#ef4444]'
-                                  : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5'
+                                  : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
                               } ${row.isManual ? 'border-sky-200 bg-sky-50' : ''}`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           {/* 2. المجموع */}
-                          <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
                               value={
                                 pendingEdits[editKey('total')] !== undefined
                                   ? pendingEdits[editKey('total')]
-                                  : String(row.total)
+                                  : formatInputDisplay(row.total)
                               }
                               onChange={(e) => {
-                                const v = sanitizeNumberInput(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('total')]: v }))
+                                const formatted = formatInputDisplay(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('total')]: formatted }))
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const v = sanitizeNumberInput(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('total')]: v }))
+                                  const formatted = formatInputDisplay(text)
+                                  setPendingEdits((p) => ({ ...p, [editKey('total')]: formatted }))
                                 }
                               }}
                               onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', e.target.value)}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('total')]: String(row.total) }))
+                                setPendingEdits((p) => ({ ...p, [editKey('total')]: formatInputDisplay(row.total) }))
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
-                              className={`border rounded-lg font-mono font-bold focus:outline-none focus:ring-1 text-center bg-white ${
+                              className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center bg-white ${
                                 row.isTotalManual
                                   ? 'border-sky-300 bg-sky-50 text-sky-900'
                                   : isCurrentPeriod
@@ -3148,74 +3163,74 @@ export default function MainApp() {
                               }`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           {/* 3. المدفوع */}
-                          <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
                               value={
                                 pendingEdits[editKey('paid')] !== undefined
                                   ? pendingEdits[editKey('paid')]
                                   : row.paid === 0
                                   ? ''
-                                  : String(row.paid)
+                                  : formatInputDisplay(row.paid)
                               }
                               onChange={(e) => {
-                                const v = sanitizeNumberInput(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('paid')]: v }))
+                                const formatted = formatInputDisplay(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('paid')]: formatted }))
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const v = sanitizeNumberInput(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('paid')]: v }))
+                                  const formatted = formatInputDisplay(text)
+                                  setPendingEdits((p) => ({ ...p, [editKey('paid')]: formatted }))
                                 }
                               }}
                               onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', e.target.value)}
                               onFocus={(e) => {
                                 setPendingEdits((p) => ({
                                   ...p,
-                                  [editKey('paid')]: row.paid === 0 ? '' : String(row.paid)
+                                  [editKey('paid')]: row.paid === 0 ? '' : formatInputDisplay(row.paid)
                                 }))
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
-                              className={`border rounded-lg font-mono focus:outline-none focus:ring-1 bg-white text-center ${
+                              className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 bg-white text-center ${
                                 isCurrentPeriod
-                                  ? 'border-red-200 focus:border-red-400 focus:ring-red-100'
-                                  : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5'
+                                  ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-slate-800'
+                                  : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
                               }`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           {/* 4. المجموع الكلي */}
-                          <div className="px-1 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
                             <input
-                              value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : String(row.remaining)}
+                              value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : formatInputDisplay(row.remaining)}
                               onChange={(e) => {
-                                const v = sanitizeNumberInput(e.target.value, true)
-                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: v }))
+                                const formatted = formatInputDisplay(e.target.value)
+                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: formatted }))
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const v = sanitizeNumberInput(text, true)
-                                  setPendingEdits((p) => ({ ...p, [editKey('rem')]: v }))
+                                  const formatted = formatInputDisplay(text)
+                                  setPendingEdits((p) => ({ ...p, [editKey('rem')]: formatted }))
                                 }
                               }}
                               onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', e.target.value)}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: String(row.remaining) }))
+                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: formatInputDisplay(row.remaining) }))
                                 setTimeout(() => e.target.select(), 0)
                               }}
-                              className={`border rounded-lg font-mono font-bold focus:outline-none focus:ring-1 text-center ${
+                              className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center ${
                                 row.remaining === 0
                                   ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
                                   : row.remaining < 0
@@ -3226,7 +3241,7 @@ export default function MainApp() {
                               } ${row.isRemainingManual ? 'ring-1 ring-sky-400' : ''}`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '13px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
                             />
                           </div>
                         </div>
