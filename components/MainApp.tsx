@@ -3068,13 +3068,13 @@ export default function MainApp() {
                 <div className="bg-white rounded-2xl border border-sky-100 overflow-hidden shadow-sm w-full">
                   <div className="w-full">
                     <div
-                      className="bg-slate-900 text-white text-[11px] font-bold grid w-full"
+                      className="bg-slate-900 text-white text-[11.5px] font-bold grid w-full"
                       style={{ gridTemplateColumns: '25% 25% 25% 25%', width: '100%' }}
                     >
-                      <div className="px-1 py-3 text-center">الديون السابقة</div>
-                      <div className="px-1 py-3 border-r border-white/10 text-center">المجموع</div>
-                      <div className="px-1 py-3 border-r border-white/10 text-center">المدفوع</div>
-                      <div className="px-1 py-3 border-r border-white/10 text-center">المجموع الكلي</div>
+                      <div className="px-1 py-2 text-center">الديون السابقة</div>
+                      <div className="px-1 py-2 border-r border-white/10 text-center">المجموع</div>
+                      <div className="px-1 py-2 border-r border-white/10 text-center">المدفوع</div>
+                      <div className="px-1 py-2 border-r border-white/10 text-center">المجموع الكلي</div>
                     </div>
 
                     {activeBilling.rows.map((row, idx) => {
@@ -3092,10 +3092,10 @@ export default function MainApp() {
                               ? 'bg-white border-sky-50'
                               : 'bg-sky-50/30 border-sky-50'
                           }`}
-                          style={{ gridTemplateColumns: '25% 25% 25% 25%', width: '100%', minHeight: '44px' }}
+                          style={{ gridTemplateColumns: '25% 25% 25% 25%', width: '100%', minHeight: '38px' }}
                         >
                           {/* 1. الديون السابقة */}
-                          <div className="px-0.5 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
                               value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : formatInputDisplay(row.old)}
@@ -3124,12 +3124,12 @@ export default function MainApp() {
                               } ${row.isManual ? 'border-sky-200 bg-sky-50' : ''}`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           {/* 2. المجموع */}
-                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               value={
                                 pendingEdits[editKey('total')] !== undefined
@@ -3163,12 +3163,12 @@ export default function MainApp() {
                               }`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           {/* 3. المدفوع */}
-                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               value={
                                 pendingEdits[editKey('paid')] !== undefined
@@ -3205,12 +3205,12 @@ export default function MainApp() {
                               }`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           {/* 4. المجموع الكلي */}
-                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '44px' }}>
+                          <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : formatInputDisplay(row.remaining)}
                               onChange={(e) => {
@@ -3241,7 +3241,7 @@ export default function MainApp() {
                               } ${row.isRemainingManual ? 'ring-1 ring-sky-400' : ''}`}
                               inputMode="numeric"
                               type="text"
-                              style={{ width: '100%', height: '36px', fontSize: '12px', padding: '0 2px', boxSizing: 'border-box' }}
+                              style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
                             />
                           </div>
                         </div>
