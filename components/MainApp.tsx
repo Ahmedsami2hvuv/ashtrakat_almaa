@@ -1805,10 +1805,11 @@ export default function MainApp() {
     >
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
 
-      {/* الهيدر الرئيسي - الحفاظ على شكل ومقاس الأزرار 100% */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
-        <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {/* الهيدر الرئيسي - يتم إخفاؤه تلقائياً عند فتح تفاصيل المشترك حتى لا يتداخل أو يغطي النافذة */}
+      {!activeSubscriber && (
+        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
+          <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
+            <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 3L4 9v6l8 6 8-6V9l-8-6z" fill="white" opacity="0.9" />
@@ -2315,6 +2316,7 @@ export default function MainApp() {
           </div>
         )}
       </header>
+      )}
 
       {/* المحتوى الرئيسي للتطبيق بحسب التبويب السفلي المختار */}
       <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4 pb-28">
@@ -3269,8 +3271,11 @@ export default function MainApp() {
           <div className="subscriber-orbit subscriber-orbit-one" />
           <div className="subscriber-orbit subscriber-orbit-two" />
           <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-3 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-24px)] flex flex-col overflow-hidden shadow-[0_12px_50px_rgba(0,0,0,0.2)]">
-            {/* رأس النافذة الثابت - لا يختفي مع التمرير أبداً */}
-            <div className="subscriber-hero border-b border-sky-100 px-4 py-3 bg-white shrink-0 shadow-sm">
+            {/* رأس النافذة الثابت - لا يختفي مع التمرير ومحمي بمسافة أمان علوية */}
+            <div
+              className="subscriber-hero border-b border-sky-100 px-4 pt-3.5 pb-2.5 bg-white shrink-0 shadow-sm"
+              style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}
+            >
               <div className="flex justify-between items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -3398,25 +3403,13 @@ export default function MainApp() {
                     </span>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center justify-between font-mono shadow-sm w-full gap-2">
+                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center justify-between font-mono shadow-sm w-full">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
                       <span className="text-slate-600">
                         القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleOpenAiScanner}
-                      className="h-7 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-sans font-bold flex items-center gap-1 transition-all shrink-0 active:scale-95 cursor-pointer"
-                      title="مسح وتدقيق السجل الورقي بالذكاء الاصطناعي"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
-                      <span>مسح السجل</span>
-                    </button>
                   </div>
                 )}
 
