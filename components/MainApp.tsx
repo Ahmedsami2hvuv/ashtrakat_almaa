@@ -2215,17 +2215,16 @@ export default function MainApp() {
                       >
                         {/* الاسم والرقم على اليمين */}
                         <div className="min-w-0 flex-1 text-right">
-                          <div className="text-[13px] font-bold truncate text-slate-900 leading-tight">
-                            {formatNumber(sub.id)} - {sub.name}
+                          <div className="text-[15px] sm:text-[16px] font-bold truncate text-slate-900 leading-snug">
+                            <span className="font-mono text-slate-900 font-extrabold">{formatNumber(sub.id)}</span> - <span>{sub.name}</span>
                           </div>
-                          <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
-                            <span>{areas.find((a) => a.id === sub.areaId)?.name}</span>
-                            <span>•</span>
-                            <span>{sub.propertyType}</span>
+                          <div className="text-[11.5px] text-slate-600 mt-1.5 flex items-center gap-1.5 flex-wrap">
+                            <span className="px-2 py-0.5 bg-sky-50 text-sky-800 rounded-md border border-sky-100 font-medium">{areas.find((a) => a.id === sub.areaId)?.name}</span>
+                            <span className="px-2 py-0.5 bg-slate-50 text-slate-700 rounded-md border border-slate-200/80 font-medium">{sub.propertyType}</span>
                             {(sub.statuses || []).map((st) => (
                               <span
                                 key={st}
-                                className={`px-1.5 py-0.2 text-[9px] rounded-full font-medium ${STATUS_CONFIG[st]?.bg || 'bg-zinc-100'} ${STATUS_CONFIG[st]?.text || 'text-zinc-700'}`}
+                                className={`px-2 py-0.5 text-[11px] rounded-md font-bold shadow-xs ${STATUS_CONFIG[st]?.bg || 'bg-zinc-100'} ${STATUS_CONFIG[st]?.text || 'text-zinc-700'}`}
                               >
                                 {st}
                               </span>
@@ -2237,19 +2236,19 @@ export default function MainApp() {
                         <div className="flex items-center gap-3 shrink-0">
                           {isZeroAccountSubscriber(sub) ? (
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-zinc-100 text-zinc-600 border border-zinc-200 px-2 py-0.5 rounded-full font-bold">
+                              <span className="text-[11px] bg-zinc-100 text-zinc-600 border border-zinc-200 px-2.5 py-0.5 rounded-md font-bold">
                                 مصفّر
                               </span>
-                              <div className="text-[15px] font-bold text-zinc-400 font-mono tracking-tight min-w-[50px] text-left">
+                              <div className="text-[16px] font-bold text-zinc-400 font-mono tracking-tight min-w-[50px] text-left">
                                 0
                               </div>
                             </div>
                           ) : (
-                            <div className="text-[15px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
+                            <div className="text-[16px] font-bold text-[#111827] font-mono tracking-tight min-w-[70px] text-left">
                               {formatNumber(currentDue)}
                             </div>
                           )}
-                          <div className="text-sky-200 group-hover:text-slate-400 transition-colors text-[14px]">‹</div>
+                          <div className="text-sky-300 group-hover:text-slate-400 transition-colors text-[16px] font-bold">‹</div>
                         </div>
                       </div>
                     )
@@ -3024,28 +3023,28 @@ export default function MainApp() {
                       setEditSub({ ...activeSubscriber })
                       setShowEditModal(true)
                     }}
-                    className="text-right text-[15px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
+                    className="text-right text-[16px] sm:text-[17px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
                     title="انقر لتعديل بيانات المشترك"
                   >
-                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
+                    <span className="font-mono font-extrabold">{formatNumber(activeSubscriber.id)}</span> - <span>{activeSubscriber.name}</span>
                   </button>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[12px] text-slate-500 font-medium">
                     ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
                     {' - '}
                     {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
                   </span>
                 </div>
-                <div className="mt-2 flex gap-2 items-center flex-wrap">
-                  <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
+                <div className="mt-2.5 flex gap-2 items-center flex-wrap">
+                  <div className="inline-flex border border-sky-100 rounded-lg bg-sky-50 px-3 py-1 text-[12px] font-semibold text-slate-700">
                     {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
                   <button
                     onClick={() => setShowContactModal(true)}
-                    className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1.5 border border-sky-200 rounded-lg bg-white hover:bg-sky-50 px-3.5 py-1 text-[12px] font-bold text-sky-700 transition-colors shadow-xs active:scale-95"
                   >
                     التواصل والموقع والصور
                   </button>
-                  <div className="text-[10px] text-slate-500 font-mono">
+                  <div className="text-[12px] text-slate-600 font-mono font-bold bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1">
                     المستحق: {formatNumber(activeBilling.due)}
                   </div>
                 </div>
@@ -3135,11 +3134,20 @@ export default function MainApp() {
                         }
                       }}
                       disabled={!prevSub}
-                      className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                      className={`flex-1 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
-                      <span className="text-[18px] leading-none font-normal">‹</span>
+                      <span className="text-[18px] leading-none font-bold text-slate-700">‹</span>
                       <div className="text-right overflow-hidden">
-                        {prevSub ? <><div className="text-[9px] text-slate-400 leading-tight">السابق</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(prevSub.id)} - {prevSub.name}</div></> : <span>لا يوجد سابق</span>}
+                        {prevSub ? (
+                          <>
+                            <div className="text-[10px] text-slate-500 font-bold leading-tight">السابق</div>
+                            <div className="truncate max-w-[150px] leading-tight text-[12.5px] font-bold text-slate-900">
+                              <span className="font-mono">{formatNumber(prevSub.id)}</span> - {prevSub.name}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">لا يوجد سابق</span>
+                        )}
                       </div>
                     </button>
                     <button
@@ -3152,12 +3160,21 @@ export default function MainApp() {
                         }
                       }}
                       disabled={!nextSub}
-                      className={`flex-1 h-11 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                      className={`flex-1 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
                       <div className="text-left overflow-hidden">
-                        {nextSub ? <><div className="text-[9px] text-slate-400 leading-tight">التالي</div><div className="truncate max-w-[100px] leading-tight">{formatNumber(nextSub.id)} - {nextSub.name}</div></> : <span>لا يوجد تالي</span>}
+                        {nextSub ? (
+                          <>
+                            <div className="text-[10px] text-slate-500 font-bold leading-tight">التالي</div>
+                            <div className="truncate max-w-[150px] leading-tight text-[12.5px] font-bold text-slate-900">
+                              <span className="font-mono">{formatNumber(nextSub.id)}</span> - {nextSub.name}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">لا يوجد تالي</span>
+                        )}
                       </div>
-                      <span className="text-[18px] leading-none font-normal">›</span>
+                      <span className="text-[18px] leading-none font-bold text-slate-700">›</span>
                     </button>
                   </div>
                 )
