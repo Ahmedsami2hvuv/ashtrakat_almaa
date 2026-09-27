@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { AISettings } from '../lib/types'
-
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -502,55 +500,8 @@ export default function MainApp() {
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
   const [showContactModal, setShowContactModal] = useState<boolean>(false)
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
-  const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import' | 'ai'>('collector')
+  const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import'>('collector')
   const [isLocating, setIsLocating] = useState<boolean>(false)
-
-  // إعدادات الذكاء الاصطناعي
-  const [aiSettings, setAiSettings] = useState<AISettings>({
-    provider: 'gemini',
-    geminiKey: '',
-    geminiModel: 'gemini-1.5-flash',
-    openaiKey: '',
-    openaiModel: 'gpt-4o',
-    grokKey: '',
-    grokModel: 'grok-2-vision-1212',
-    deepseekKey: '',
-    deepseekModel: 'deepseek-chat'
-  })
-  const [showAiApiKey, setShowAiApiKey] = useState<boolean>(false)
-  const [aiTestStatus, setAiTestStatus] = useState<{ loading: boolean; msg: string; isError: boolean } | null>(null)
-  const [aiSettingsSaveMsg, setAiSettingsSaveMsg] = useState<string>('')
-
-  // الماسح الضوئي الذكي للسجل الورقي
-  const [showAiScannerModal, setShowAiScannerModal] = useState<boolean>(false)
-  const [aiScanImage, setAiScanImage] = useState<string | null>(null)
-  const [showEnlargedImage, setShowEnlargedImage] = useState<boolean>(false)
-  const [isAiScanning, setIsAiScanning] = useState<boolean>(false)
-  const [aiScanProgressMsg, setAiScanProgressMsg] = useState<string>('')
-  const [aiScanError, setAiScanError] = useState<string>('')
-  const [aiScanResult, setAiScanResult] = useState<{
-    detectedSubscriberName?: string
-    detectedSubscriberId?: string
-    detectedYear: number
-    firstOldDebt: number
-    periods: Array<{
-      periodIndex: number
-      periodLabel: string
-      oldDebt: number
-      total: number
-      paid: number
-      receiptNo?: string
-      receiptDate?: string
-      notes?: string
-    }>
-    audit: {
-      hasDiscrepancies: boolean
-      notes: string[]
-    }
-    rawSummary?: string
-  } | null>(null)
-  const [scannerNotification, setScannerNotification] = useState<string | null>(null)
-
 
   // فورم المشترك
   const [newSub, setNewSub] = useState({
@@ -661,7 +612,6 @@ export default function MainApp() {
       if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
       if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
       if (data.reviewItems) setReviewItems(data.reviewItems as ReviewItem[])
-      if (data.aiSettings) setAiSettings(data.aiSettings as AISettings)
     }
 
     const init = async () => {
@@ -679,22 +629,11 @@ export default function MainApp() {
           if (saved) applyData(JSON.parse(saved))
         } catch {}
       }
-
-      // جلب إعدادات الذكاء الاصطناعي الإضافية المخزنة محلياً إن وجدت
-      try {
-        const localAi = localStorage.getItem('ashtrakat_almaa_ai_settings')
-        if (localAi) {
-          const parsed = JSON.parse(localAi)
-          setAiSettings((prev) => ({ ...prev, ...parsed }))
-        }
-      } catch {}
-
       setIsLoadingCloud(false)
       setDataLoaded(true)
     }
     init()
   }, [])
-
 
   // مراقبة تحديثات الفواتير والمدفوعات لتحديث الحالات تلقائياً
   useEffect(() => {
@@ -728,7 +667,6 @@ export default function MainApp() {
       if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
       if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
       if (data.reviewItems) setReviewItems(data.reviewItems as ReviewItem[])
-      if (data.aiSettings) setAiSettings(data.aiSettings as AISettings)
       setTimeout(() => { isIncomingSyncRef.current = false }, 100)
     }
 
@@ -764,8 +702,7 @@ export default function MainApp() {
     if (!dataLoaded) return
     if (isIncomingSyncRef.current) return
 
-    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiSettings }
-
+    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems }
 
     // 1. حفظ محلي فوري
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
@@ -1520,245 +1457,6 @@ export default function MainApp() {
     }
   }, [subscribersInRange, billing, subscribers, pricing, currentPeriodIndex, areas])
 
-  // ==========================================
-  // دوال الذكاء الاصطناعي ومسح السجلات الورقية
-  // ==========================================
-
-  const handleTestApiKey = async () => {
-    setAiTestStatus({ loading: true, msg: 'جاري فحص الاتصال بالمفاتيح المضافة...', isError: false })
-    try {
-      const keys =
-        aiSettings.provider === 'gemini'
-          ? (aiSettings.geminiKeys && aiSettings.geminiKeys.length > 0 ? aiSettings.geminiKeys : (aiSettings.geminiKey ? [aiSettings.geminiKey] : []))
-          : aiSettings.provider === 'openai'
-          ? (aiSettings.openaiKeys && aiSettings.openaiKeys.length > 0 ? aiSettings.openaiKeys : (aiSettings.openaiKey ? [aiSettings.openaiKey] : []))
-          : aiSettings.provider === 'grok'
-          ? (aiSettings.grokKeys && aiSettings.grokKeys.length > 0 ? aiSettings.grokKeys : (aiSettings.grokKey ? [aiSettings.grokKey] : []))
-          : (aiSettings.deepseekKeys && aiSettings.deepseekKeys.length > 0 ? aiSettings.deepseekKeys : (aiSettings.deepseekKey ? [aiSettings.deepseekKey] : []))
-
-      const model =
-        aiSettings.provider === 'gemini' ? aiSettings.geminiModel :
-        aiSettings.provider === 'openai' ? aiSettings.openaiModel :
-        aiSettings.provider === 'grok' ? aiSettings.grokModel : aiSettings.deepseekModel
-
-      const res = await fetch('/api/ai/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: aiSettings.provider, apiKeys: keys, model })
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        if (data.detectedModel && aiSettings.provider === 'gemini') {
-          setAiSettings((prev) => ({ ...prev, geminiModel: data.detectedModel }))
-        }
-        setAiTestStatus({ loading: false, msg: data.message || 'المفاتيح تعمل بنجاح 100%!', isError: false })
-      } else {
-        setAiTestStatus({ loading: false, msg: data.error || 'فشل الاتصال بالمفاتيح', isError: true })
-      }
-    } catch (err: any) {
-      setAiTestStatus({ loading: false, msg: err?.message || 'تعذر الاتصال بالخادم لفحص المفاتيح', isError: true })
-    }
-  }
-
-
-  const handleSaveAiSettings = () => {
-    try {
-      localStorage.setItem('ashtrakat_almaa_ai_settings', JSON.stringify(aiSettings))
-    } catch {}
-    setAiSettingsSaveMsg('تم حفظ إعدادات ومفاتيح الذكاء الاصطناعي بنجاح!')
-    setTimeout(() => setAiSettingsSaveMsg(''), 4000)
-  }
-
-  const handleOpenAiScanner = () => {
-    setAiScanImage(null)
-    setAiScanResult(null)
-    setAiScanError('')
-    setAiScanProgressMsg('')
-    setShowAiScannerModal(true)
-  }
-
-  // دالة متقدمة وسريعة لضغط وتصغير الصورة في المتصفح فوراً لتقليل حجمها بنسبة 95% وزيادة سرعة الذكاء الاصطناعي
-  const compressAndResizeImage = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const MAX_DIM = 1300
-          let width = img.width
-          let height = img.height
-
-          if (width > height) {
-            if (width > MAX_DIM) {
-              height = Math.round((height * MAX_DIM) / width)
-              width = MAX_DIM
-            }
-          } else {
-            if (height > MAX_DIM) {
-              width = Math.round((width * MAX_DIM) / height)
-              height = MAX_DIM
-            }
-          }
-
-          const canvas = document.createElement('canvas')
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-          if (!ctx) {
-            resolve(e.target?.result as string)
-            return
-          }
-          ctx.drawImage(img, 0, 0, width, height)
-          // ضغط الصورة إلى JPEG بجودة 0.78 ليصبح الحجم خفيفاً وسريع الرفع مع وضوح الأرقام
-          const compressed = canvas.toDataURL('image/jpeg', 0.78)
-          resolve(compressed)
-        }
-        img.onerror = () => resolve(e.target?.result as string)
-        img.src = e.target?.result as string
-      }
-      reader.onerror = () => resolve('')
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setAiScanError('الملف المحدد ليس صورة صالحة')
-      return
-    }
-    setAiScanError('')
-    try {
-      const compressedBase64 = await compressAndResizeImage(file)
-      if (compressedBase64) {
-        setAiScanImage(compressedBase64)
-        setAiScanResult(null)
-      }
-    } catch {
-      setAiScanError('تعذر تجهيز الصورة، يرجى المحاولة مرة أخرى')
-    }
-  }
-
-  const handleStartAiScan = async () => {
-    if (!aiScanImage || !activeSubscriber) return
-    setIsAiScanning(true)
-    setAiScanError('')
-    setAiScanProgressMsg('🔍 جاري فحص السجل الورقي بالذكاء الاصطناعي...')
-
-    const progressTimer1 = setTimeout(() => {
-      setAiScanProgressMsg('📋 استخراج الخلية الأولى في الديون السابقة...')
-    }, 2500)
-
-    const progressTimer2 = setTimeout(() => {
-      setAiScanProgressMsg('💰 قراءة مبالغ عمود المستحصل (المدفوعات)...')
-    }, 5500)
-
-    const progressTimer3 = setTimeout(() => {
-      setAiScanProgressMsg('🧮 تدقيق العمليات الحسابية واكتشاف أي فروقات...')
-    }, 8500)
-
-    try {
-      const res = await fetch('/api/ai/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: aiScanImage,
-          targetYear: selectedYear,
-          subscriberName: activeSubscriber.name,
-          subscriberId: activeSubscriber.id.toString(),
-          aiSettings
-        })
-      })
-
-      clearTimeout(progressTimer1)
-      clearTimeout(progressTimer2)
-      clearTimeout(progressTimer3)
-
-      const resData = await res.json()
-      if (res.ok && resData.success && resData.data) {
-        setAiScanResult(resData.data)
-        setAiScanProgressMsg('')
-      } else {
-        setAiScanError(resData.error || 'تعذر تحليل السجل الورقي، يرجى المحاولة بصورة أوضح')
-        setAiScanProgressMsg('')
-      }
-    } catch (err: any) {
-      clearTimeout(progressTimer1)
-      clearTimeout(progressTimer2)
-      clearTimeout(progressTimer3)
-      setAiScanError(err?.message || 'حدث خطأ في الاتصال أثناء تحليل الصورة')
-      setAiScanProgressMsg('')
-    } finally {
-      setIsAiScanning(false)
-    }
-  }
-
-  const handleApplyScanResult = () => {
-    if (!activeSubscriber || !aiScanResult) return
-    const subId = activeSubscriber.id
-    const yr = selectedYear
-    const firstDebt = Number(aiScanResult.firstOldDebt) || 0
-
-    // 1. تحديث أول خلية بالديون السابقة (إذا كانت 2026 نحدث remainingPrev)
-    if (yr === 2026) {
-      setSubscribers((prev) =>
-        prev.map((s) => (s.id === subId ? { ...s, remainingPrev: firstDebt } : s))
-      )
-    }
-
-    // 2. تحديث سجلات الفترات والمدفوعات
-    setBilling((prev) => {
-      const copy = { ...prev }
-      if (!copy[subId]) copy[subId] = {}
-      if (!copy[subId][yr]) {
-        copy[subId][yr] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
-      }
-      const yearRecords = [...copy[subId][yr]]
-
-      // تثبيت الديون السابقة الأولى
-      if (yearRecords[0]) {
-        yearRecords[0] = {
-          ...yearRecords[0],
-          oldDebtManual: firstDebt,
-          remainingManual: null
-        }
-      }
-
-      // تنزيل مبالغ المدفوعات المستحصلة لكل فترة تم اكتشافها
-      if (aiScanResult.periods && Array.isArray(aiScanResult.periods)) {
-        aiScanResult.periods.forEach((p) => {
-          const idx = p.periodIndex
-          if (idx >= 0 && idx < 6) {
-            yearRecords[idx] = {
-              ...(yearRecords[idx] || { oldDebtManual: null, paid: 0 }),
-              paid: Number(p.paid) || 0,
-              remainingManual: null
-            }
-          }
-        })
-      }
-
-      // مسح أي تجميد يدوي للأرصدة في الفترات اللاحقة لكي تتسلسل الحسابات تلقائياً ودقيقاً
-      for (let i = 1; i < 6; i++) {
-        if (yearRecords[i]) {
-          yearRecords[i] = {
-            ...yearRecords[i],
-            oldDebtManual: null,
-            remainingManual: null
-          }
-        }
-      }
-
-      copy[subId][yr] = yearRecords
-      return copy
-    })
-
-    setShowAiScannerModal(false)
-    setScannerNotification(`تم بنجاح تنزيل أول خلية بالديون السابقة (${formatNumber(firstDebt)} د.ع) وتسجيل المدفوعات وتحديث حسابات سنة ${yr} تلقائياً!`)
-    setTimeout(() => setScannerNotification(null), 6000)
-  }
-
   // ==========================
   // شاشة تسجيل الدخول الرسمية والاحترافية
   // ==========================
@@ -1852,11 +1550,10 @@ export default function MainApp() {
     >
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
 
-      {/* الهيدر الرئيسي - يتم إخفاؤه تلقائياً عند فتح تفاصيل المشترك حتى لا يتداخل أو يغطي النافذة */}
-      {!activeSubscriber && (
-        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
-          <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
-            <div className="flex items-center gap-3">
+      {/* الهيدر الرئيسي - الحفاظ على شكل ومقاس الأزرار 100% */}
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
+        <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 3L4 9v6l8 6 8-6V9l-8-6z" fill="white" opacity="0.9" />
@@ -2363,7 +2060,6 @@ export default function MainApp() {
           </div>
         )}
       </header>
-      )}
 
       {/* المحتوى الرئيسي للتطبيق بحسب التبويب السفلي المختار */}
       <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4 pb-28">
@@ -3314,125 +3010,81 @@ export default function MainApp() {
           القاعدة 9: بعرض 100%، 4 أعمدة: 20% | 27% | 26% | 27%، ارتفاع 36px، بدون سكرول جانبي
       ========================== */}
       {activeSubscriber && activeBilling && (
-        <div className="subscriber-scene fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] flex flex-col">
+        <div className="subscriber-scene fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-[1px] flex flex-col">
           <div className="subscriber-orbit subscriber-orbit-one" />
           <div className="subscriber-orbit subscriber-orbit-two" />
-          <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-3 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-24px)] flex flex-col overflow-hidden shadow-[0_12px_50px_rgba(0,0,0,0.2)]">
-            {/* رأس النافذة الثابت - لا يختفي مع التمرير ومحمي بمسافة أمان علوية */}
-            <div
-              className="subscriber-hero border-b border-sky-100 px-4 pt-3.5 pb-2.5 bg-white shrink-0 shadow-sm"
-              style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 12px))' }}
-            >
-              <div className="flex justify-between items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditSub({ ...activeSubscriber })
-                        setShowEditModal(true)
-                      }}
-                      className="text-right text-[15px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
-                      title="انقر لتعديل بيانات المشترك"
-                    >
-                      {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
-                    </button>
-                    <span className="text-[11px] text-slate-500">
-                      ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                      {' - '}
-                      {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                    <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
-                      {activeSubscriber.propertyType} - {activeSubscriber.meterType}
-                    </div>
-                    <button
-                      onClick={() => setShowContactModal(true)}
-                      className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
-                    >
-                      التواصل والموقع والصور
-                    </button>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      المستحق: {formatNumber(activeBilling.due)}
-                    </div>
-                  </div>
+          <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
+            {/* رأس النافذة */}
+            <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-white">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditSub({ ...activeSubscriber })
+                      setShowEditModal(true)
+                    }}
+                    className="text-right text-[15px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
+                    title="انقر لتعديل بيانات المشترك"
+                  >
+                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
+                  </button>
+                  <span className="text-[11px] text-slate-500">
+                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                    {' - '}
+                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
+                  </span>
                 </div>
-
-                <button
-                  onClick={() => setSelectedSubId(null)}
-                  className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 shrink-0"
-                  title="إغلاق النافذة"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* شريط السنوات وزر مسح السجل بالذكاء الاصطناعي - مدمج وواضح في الرأس */}
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
-                {/* اختيار السنة */}
-                <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-full border border-slate-200 shrink-0">
-                  {YEARS.map((y) => {
-                    const is2026 = y === 2026
-                    const isSelected = selectedYear === y
-                    return (
-                      <button
-                        key={y}
-                        type="button"
-                        onClick={() => setSelectedYear(y)}
-                        className={`h-7 px-3 rounded-full text-[11px] font-bold transition-all ${
-                          is2026
-                            ? isSelected
-                              ? 'bg-[#ef4444] text-white shadow-sm'
-                              : 'text-red-600 hover:bg-red-50'
-                            : isSelected
-                            ? 'bg-slate-900 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-white'
-                        }`}
-                      >
-                        {y}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* زر الكاميرا لقراءة وتدقيق السجل الورقي بالذكاء الاصطناعي - بارز ومباشر */}
-                <button
-                  type="button"
-                  onClick={handleOpenAiScanner}
-                  className="h-8 px-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11.5px] font-bold rounded-full flex items-center gap-1.5 shadow-sm transition-all active:scale-95 shrink-0"
-                  title={`قراءة سجل سنة ${selectedYear} بالذكاء الاصطناعي وتنزيل الديون والمدفوعات`}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                  <span>📷 مسح السجل ({selectedYear})</span>
-                </button>
-              </div>
-
-              {/* إشعار نجاح تنزيل البيانات من الماسح الضوئي */}
-              {scannerNotification && (
-                <div className="mt-2.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11.5px] font-bold flex items-center justify-between shadow-sm animate-fade-in">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>{scannerNotification}</span>
+                <div className="mt-3 flex gap-2 items-center flex-wrap">
+                  <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
+                    {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
                   <button
-                    onClick={() => setScannerNotification(null)}
-                    className="text-emerald-600 hover:text-emerald-900 text-[13px] px-1"
+                    onClick={() => setShowContactModal(true)}
+                    className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-3 py-1 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
                   >
-                    ✕
+                    التواصل والموقع والصور
                   </button>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    المستحق: {formatNumber(activeBilling.due)}
+                  </div>
                 </div>
-              )}
+              </div>
+              <button
+                onClick={() => setSelectedSubId(null)}
+                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* المحتوى القابل للتمرير */}
+            {/* المحتوى */}
             <div className="flex-1 overflow-y-auto pb-4">
-
-
+              {/* السنوات: فقط 2026 و 2027 و 2028 (لا 2025 أبداً)
+                  والسنة الحالية 2026 تظهر بلون أحمر دائماً */}
+              <div className="subscriber-content subscriber-content-2 px-4 py-2 border-y border-sky-50 bg-white overflow-x-auto whitespace-nowrap flex gap-2 scrollbar-none items-center">
+                {YEARS.map((y) => {
+                  const is2026 = y === 2026
+                  const isSelected = selectedYear === y
+                  return (
+                    <button
+                      key={y}
+                      onClick={() => setSelectedYear(y)}
+                      className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
+                        is2026
+                          ? isSelected
+                            ? 'bg-[#ef4444] text-white border-[#ef4444]'
+                            : 'bg-red-50 border-red-200 text-red-600'
+                          : isSelected
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+                      }`}
+                    >
+                      {y}
+                    </button>
+                  )
+                })}
+              </div>
 
               {/* بداية السنة أو تنبيه تصفير الحساب كلياً */}
               <div className="subscriber-content subscriber-content-3 w-full mt-3 px-2" style={{ boxSizing: 'border-box' }}>
@@ -3450,16 +3102,13 @@ export default function MainApp() {
                     </span>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center justify-between font-mono shadow-sm w-full">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
-                      <span className="text-slate-600">
-                        القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
-                      </span>
-                    </div>
+                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
+                    <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
+                    <span className="text-slate-600">
+                      القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
+                    </span>
                   </div>
                 )}
-
               </div>
 
               {/* أزرار التالي والسابق للتنقل بين المشتركين (تعمل دائماً حتى عند البحث) */}
@@ -4243,14 +3892,8 @@ export default function MainApp() {
             </div>
 
             <div className="px-3 py-3 border-b border-sky-50 flex gap-2 overflow-x-auto scrollbar-none bg-sky-50/30">
-              {(['collector', 'areas', 'import', 'ai'] as const).map((tab) => {
-                const labels = {
-                  collector: 'المحصل',
-                  pricing: 'التسعير',
-                  areas: 'المناطق والافرع',
-                  import: 'الاستيراد',
-                  ai: 'الذكاء الاصطناعي 🤖'
-                }
+              {(['collector', 'areas', 'import'] as const).map((tab) => {
+                const labels = { collector: 'المحصل', pricing: 'التسعير', areas: 'المناطق والافرع', import: 'الاستيراد' }
                 return (
                   <button
                     key={tab}
@@ -4264,7 +3907,6 @@ export default function MainApp() {
                 )
               })}
             </div>
-
 
             <div className="flex-1 overflow-y-auto p-4 bg-[#f0f9ff]/50">
               {/* تبويب المحصل */}
@@ -4709,665 +4351,10 @@ export default function MainApp() {
                   </div>
                 </div>
               )}
-
-              {/* ========================================================= */}
-              {/* تبويب إعدادات الذكاء الاصطناعي (AI Settings) */}
-              {/* ========================================================= */}
-              {settingsTab === 'ai' && (
-                <div className="space-y-4">
-                  <div className="border border-sky-100 rounded-2xl p-4 bg-white shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[13px] font-bold text-slate-800 flex items-center gap-2">
-                        <span>إعدادات الذكاء الاصطناعي</span>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                          المسح الضوئي الذكي
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      هنا يمكنك ربط مفتاح واجهة الذكاء الاصطناعي (API Key) المفضل لديك لقراءة دفاتر وسجلات الاشتراكات الورقية بالكاميرا واستخراج الديون والمدفوعات وتدقيقها تلقائياً.
-                    </p>
-
-                    {/* اختيار المزود */}
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
-                        مزود الذكاء الاصطناعي
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: 'gemini', name: 'Google Gemini', desc: 'موصى به (سريع ومجاني للصور والخط اليدوي)' },
-                          { id: 'openai', name: 'OpenAI (GPT-4o)', desc: 'دقة عالية جداً' },
-                          { id: 'grok', name: 'xAI Grok', desc: 'نموذج جروك' },
-                          { id: 'deepseek', name: 'DeepSeek', desc: 'ديب سيك' }
-                        ].map((prov) => {
-                          const isSel = aiSettings.provider === prov.id
-                          return (
-                            <button
-                              key={prov.id}
-                              type="button"
-                              onClick={() => {
-                                setAiSettings((p) => ({ ...p, provider: prov.id as any }))
-                                setAiTestStatus(null)
-                              }}
-                              className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between ${
-                                isSel
-                                  ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600'
-                                  : 'border-slate-200 bg-white hover:border-slate-300'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className={`text-[12px] font-bold ${isSel ? 'text-emerald-900' : 'text-slate-800'}`}>
-                                  {prov.name}
-                                </span>
-                                {isSel && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
-                              </div>
-                              <span className="text-[9.5px] text-slate-500 mt-1 leading-snug">
-                                {prov.desc}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* حقل إدخال مفاتيح الـ API المتعددة لمضاعفة الليمت */}
-                    <div>
-
-                      {(() => {
-                        const currentKeys =
-                          aiSettings.provider === 'gemini'
-                            ? (aiSettings.geminiKeys && aiSettings.geminiKeys.length > 0 ? aiSettings.geminiKeys : (aiSettings.geminiKey ? [aiSettings.geminiKey] : []))
-                            : aiSettings.provider === 'openai'
-                            ? (aiSettings.openaiKeys && aiSettings.openaiKeys.length > 0 ? aiSettings.openaiKeys : (aiSettings.openaiKey ? [aiSettings.openaiKey] : []))
-                            : aiSettings.provider === 'grok'
-                            ? (aiSettings.grokKeys && aiSettings.grokKeys.length > 0 ? aiSettings.grokKeys : (aiSettings.grokKey ? [aiSettings.grokKey] : []))
-                            : (aiSettings.deepseekKeys && aiSettings.deepseekKeys.length > 0 ? aiSettings.deepseekKeys : (aiSettings.deepseekKey ? [aiSettings.deepseekKey] : []))
-
-                        const textValue = currentKeys.join('\n')
-                        const keysCount = currentKeys.filter(Boolean).length
-
-                        return (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 flex-wrap">
-                                <span>مفاتيح الـ API لـ {aiSettings.provider.toUpperCase()}</span>
-                                {keysCount > 1 && (
-                                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                                    {keysCount} مفاتيح مضافة (الحد مضاعف {keysCount} أضعاف 🚀)
-                                  </span>
-                                )}
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => setShowAiApiKey((p) => !p)}
-                                className="text-[10.5px] text-slate-500 hover:text-slate-800 font-bold"
-                              >
-                                {showAiApiKey ? 'إخفاء المفاتيح 🙈' : 'إظهار المفاتيح 👁️'}
-                              </button>
-                            </div>
-
-                            <div className="relative">
-                              <textarea
-                                rows={Math.max(3, Math.min(6, keysCount + 1))}
-                                value={showAiApiKey ? textValue : textValue.replace(/[^\n]/g, '•')}
-                                onChange={(e) => {
-                                  const raw = e.target.value
-                                  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean)
-                                  setAiSettings((p) => {
-                                    const singleKeyProp =
-                                      p.provider === 'gemini' ? 'geminiKey' :
-                                      p.provider === 'openai' ? 'openaiKey' :
-                                      p.provider === 'grok' ? 'grokKey' : 'deepseekKey'
-                                    const multiKeyProp =
-                                      p.provider === 'gemini' ? 'geminiKeys' :
-                                      p.provider === 'openai' ? 'openaiKeys' :
-                                      p.provider === 'grok' ? 'grokKeys' : 'deepseekKeys'
-
-                                    return {
-                                      ...p,
-                                      [singleKeyProp]: lines[0] || '',
-                                      [multiKeyProp]: lines
-                                    }
-                                  })
-                                  setAiTestStatus(null)
-                                }}
-                                placeholder={`ألصق المفاتيح هنا (كل مفتاح في سطر لمضاعفة الكوتا):\nAIzaSyKey1...\nAIzaSyKey2...\nAIzaSyKey3...`}
-                                dir="ltr"
-                                className="w-full p-3 border border-sky-100 rounded-xl text-[12px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/20 leading-relaxed resize-y"
-                              />
-                            </div>
-
-                            <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-2.5 text-[11px] text-sky-900 leading-relaxed flex items-start gap-1.5">
-                              <span className="shrink-0 text-sm">💡</span>
-                              <span>
-                                <b>مضاعفة الليمت التلقائي:</b> يمكنك إضافة مفتاح أو اثنين أو عشرة (كل مفتاح في سطر جديد). عندما ينتهي ليمت أو كوتا أي مفتاح أثناء مسح السجلات، سينتقل النظام فوراً وتلقائياً للمفتاح التالي بدون أي توقف!
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </div>
-
-
-                    {/* اختيار الموديل */}
-                    {aiSettings.provider === 'gemini' && (
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                          الموديل المفضل (Model)
-                        </label>
-                        <select
-                          value={aiSettings.geminiModel || 'auto'}
-                          onChange={(e) => setAiSettings((p) => ({ ...p, geminiModel: e.target.value }))}
-                          className="w-full h-10 px-3 border border-sky-100 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900 font-medium"
-                        >
-                          <option value="auto">✨ اكتشاف الموديل الأفضل تلقائياً لمفتاحك (موصى به 100%)</option>
-                          <option value="gemini-2.5-flash">Gemini 2.5 Flash (الجيل الأحدث فائق الذكاء والسرعة)</option>
-                          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                        </select>
-
-                      </div>
-                    )}
-
-                    {aiSettings.provider === 'openai' && (
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                          الموديل المفضل (Model)
-                        </label>
-                        <select
-                          value={aiSettings.openaiModel || 'gpt-4o'}
-                          onChange={(e) => setAiSettings((p) => ({ ...p, openaiModel: e.target.value }))}
-                          className="w-full h-10 px-3 border border-sky-100 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900"
-                        >
-                          <option value="gpt-4o">GPT-4o (الأفضل للرؤية)</option>
-                          <option value="gpt-4o-mini">GPT-4o-mini (سريع واقتصادي)</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {/* أزرار الفحص والحفظ */}
-                    <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                      <button
-                        type="button"
-                        onClick={handleTestApiKey}
-                        disabled={aiTestStatus?.loading}
-                        className="flex-1 h-11 border border-slate-300 hover:border-slate-800 text-slate-700 font-bold rounded-xl text-[12px] flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {aiTestStatus?.loading ? (
-                          <>
-                            <span className="w-3.5 h-3.5 border-2 border-slate-700 border-t-transparent rounded-full animate-spin"></span>
-                            <span>جاري الاختبار...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>⚡ فحص واختبار المفتاح</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleSaveAiSettings}
-                        className="flex-1 h-11 bg-slate-900 hover:bg-black text-white font-bold rounded-xl text-[12px] flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                      >
-                        <span>💾 حفظ الإعدادات</span>
-                      </button>
-                    </div>
-
-                    {/* نتيجة فحص المفتاح */}
-                    {aiTestStatus && (
-                      <div
-                        className={`p-3 rounded-xl text-[12px] font-medium leading-relaxed border ${
-                          aiTestStatus.isError
-                            ? 'bg-red-50 border-red-200 text-red-700'
-                            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        }`}
-                      >
-                        {aiTestStatus.msg}
-                      </div>
-                    )}
-
-                    {/* إشعار الحفظ */}
-                    {aiSettingsSaveMsg && (
-                      <div className="p-3 rounded-xl text-[12px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-800 text-center animate-fade-in">
-                        {aiSettingsSaveMsg}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* بطاقة إرشادية عربية سهلة: كيف تحصل على مفتاح Gemini مجاناً؟ */}
-                  <div className="border border-sky-200/80 rounded-2xl p-4 bg-sky-50/50 text-[11.5px] text-slate-700 space-y-2">
-                    <div className="font-bold text-slate-900 flex items-center gap-1.5 text-[12px]">
-                      <span>💡 نصيحة: كيف تحصل على مفتاح Google Gemini مجاناً؟</span>
-                    </div>
-                    <p className="leading-relaxed text-slate-600">
-                      شركة جوجل تمنحك مفتاحاً مجانياً سخياً جداً للذكاء الاصطناعي (Google AI Studio)، وهو أفضل موديل لقراءة سجلات الماء والخط اليدوي العربي:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-1 text-slate-600 font-medium">
-                      <li>ادخل على موقع: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-sky-700 font-bold underline">Google AI Studio (اضغط هنا)</a></li>
-                      <li>سجّل الدخول بحساب جوجل (Gmail) الخاص بك.</li>
-                      <li>اضغط على زر <b>Create API Key</b>.</li>
-                      <li>انسخ المفتاح وضعه في الحقل أعلاه واضغط حفظ، ومبروك عليك مسح السجلات بالكاميرا مجاناً!</li>
-                    </ol>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
-
-      {/* ========================================================= */}
-      {/* نافذة (مودال) مسح وتدقيق السجل الورقي بالذكاء الاصطناعي 📷 */}
-      {/* ========================================================= */}
-      {showAiScannerModal && activeSubscriber && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-fade-in">
-            {/* رأس المودال */}
-            <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                  📷
-                </div>
-                <div>
-                  <h3 className="font-bold text-[13.5px] leading-tight">
-                    مسح السجل الورقي بالذكاء الاصطناعي
-                  </h3>
-                  <div className="text-[11px] text-slate-300 mt-0.5">
-                    المشترك: <span className="text-white font-bold">{formatNumber(activeSubscriber.id)} - {activeSubscriber.name}</span> | سنة: <span className="text-amber-300 font-bold">{selectedYear}</span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAiScannerModal(false)}
-                className="w-8 h-8 border border-white/20 rounded-xl flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* محتوى المودال القابل للتمرير */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/50">
-              {/* رسائل الخطأ إن وجدت */}
-              {aiScanError && (
-                <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-[12px] font-medium leading-relaxed flex items-start gap-2">
-                  <span className="shrink-0 text-base">⚠️</span>
-                  <span>{aiScanError}</span>
-                </div>
-              )}
-
-              {/* 1. قسم التقاط / اختيار الصورة */}
-              {!aiScanImage && (
-                <div className="space-y-3">
-                  <div className="border-2 border-dashed border-sky-200 rounded-3xl p-6 sm:p-8 bg-white text-center flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl mb-3 shadow-inner">
-                      📸
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-[15px] mb-1">
-                      التقط صورة لصفحة السجل أو الورقة
-                    </h4>
-                    <p className="text-[11.5px] text-slate-500 max-w-sm mb-5 leading-relaxed">
-                      وجّه الكاميرا بشكل مستوٍ على جدول سنة <b className="text-slate-800">{selectedYear}</b> بحيث يظهر عمود (الديون السابقة، المجموع، المبلغ المستحصل).
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-                      {/* زر فتح الكاميرا المباشرة */}
-                      <label className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-2xl text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                          <circle cx="12" cy="13" r="4" />
-                        </svg>
-                        <span>فتح الكاميرا فوراً</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handleImageSelected}
-                          className="hidden"
-                        />
-                      </label>
-
-                      {/* زر اختيار صورة من الاستوديو */}
-                      <label className="flex-1 h-12 bg-white hover:bg-slate-50 active:scale-95 border border-slate-300 text-slate-700 font-bold rounded-2xl text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-all">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                        <span>اختيار من الاستوديو</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageSelected}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3.5 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
-                    <span className="shrink-0 text-sm">💡</span>
-                    <span>
-                      <b>تذكير ذكي:</b> الذكاء سيتعرف تلقائياً على أول خلية في خانة <b>الديون السابقة</b> لسنة {selectedYear}، ويستخرج كل <b>المدفوعات</b>، ويفحص الحسابات إذا كان بالورقة أي خطأ حسابي!
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* 2. معاينة الصورة الملتقطة بشكل مصغر وأنيق وأزرار المعالجة السريعة */}
-              {aiScanImage && !aiScanResult && (
-                <div className="space-y-3.5">
-                  {/* كارت المعاينة المصغرة النظيف */}
-                  <div className="bg-white border border-slate-200 rounded-3xl p-3.5 flex items-center gap-3.5 shadow-sm">
-                    {/* الصورة المصغرة بنظام Thumbnail أنيق ومضغوط */}
-                    <div
-                      onClick={() => setShowEnlargedImage(true)}
-                      className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-slate-900 shrink-0 shadow-sm cursor-pointer group"
-                      title="انقر لتكبير الصورة"
-                    >
-                      <img
-                        src={aiScanImage}
-                        alt="معاينة مصغرة للسجل"
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10.5px] font-bold transition-opacity">
-                        🔍 تكبير
-                      </div>
-                    </div>
-
-                    {/* بيانات وتفاصيل الصورة */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-[12px] mb-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>تم التقاط الصورة وتجهيزها</span>
-                      </div>
-                      <div className="text-[11.5px] text-slate-700 truncate font-bold">
-                        {activeSubscriber.name}
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        سنة الفحص: <b className="text-slate-800">{selectedYear}</b>
-                      </div>
-
-                      <div className="flex items-center gap-2 mt-2">
-                        <label className="text-[10.5px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-lg cursor-pointer transition-colors inline-flex items-center gap-1">
-                          <span>🔄 تغيير الصورة</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageSelected}
-                            className="hidden"
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowEnlargedImage(true)}
-                          className="text-[10.5px] font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
-                        >
-                          🔍 تكبير
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* شاشة التحميل أثناء المعالجة */}
-                  {isAiScanning ? (
-                    <div className="p-5 rounded-3xl bg-white border border-emerald-200 text-center space-y-3 shadow-md animate-fade-in">
-                      <div className="w-10 h-10 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mx-auto"></div>
-                      <div>
-                        <div className="font-bold text-slate-800 text-[13.5px]">
-                          {aiScanProgressMsg || 'جاري قراءة السجل بالذكاء الاصطناعي...'}
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          تتم المعالجة الآن بسرعة فائقة بعد ضغط الصورة وتجهيزها...
-                        </p>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-emerald-500 h-full w-3/4 rounded-full animate-pulse"></div>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleStartAiScan}
-                      className="w-full h-12 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold rounded-2xl text-[13.5px] flex items-center justify-center gap-2 shadow-lg hover:shadow-emerald-600/30 transition-all active:scale-98 cursor-pointer"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                        <path d="M5 12h14M12 5l7 7-7 7" />
-                      </svg>
-                      <span>🚀 ابدأ قراءة السجل وتدقيق الحسابات</span>
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* 3. نتائج الاستخراج والتدقيق الحسابي مع إمكانية التعديل */}
-              {aiScanResult && (
-                <div className="space-y-4">
-                  {/* شريط معلومات الورقة مع مصغرة الصورة للتحقق السريع */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-sm">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {aiScanImage && (
-                        <div
-                          onClick={() => setShowEnlargedImage(true)}
-                          className="w-12 h-12 rounded-xl overflow-hidden border-2 border-emerald-400 bg-slate-900 shrink-0 cursor-pointer shadow-xs group relative"
-                          title="انقر لتكبير صورة السجل"
-                        >
-                          <img src={aiScanImage} alt="مصغرة" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 text-white text-[9px] font-bold">🔍</div>
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <div className="text-[12.5px] font-bold text-slate-800 truncate">
-                          {aiScanResult.detectedSubscriberName || activeSubscriber.name}
-                        </div>
-                        <div className="text-[10.5px] text-slate-500 mt-0.5">
-                          سجل سنة: <b className="text-emerald-700 font-bold">{selectedYear}</b> {aiScanResult.detectedSubscriberId ? ` | رقم #${aiScanResult.detectedSubscriberId}` : ''}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowEnlargedImage(true)}
-                      className="text-[11px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-1.5 rounded-xl transition-colors shrink-0 flex items-center gap-1"
-                    >
-                      <span>🔍</span>
-                      <span>معاينة الورقة</span>
-                    </button>
-                  </div>
-
-                  {/* أول خلية بالديون السابقة (الرئيسية) */}
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-[12.5px] font-bold text-emerald-900 flex items-center gap-1.5">
-                        <span>⭐ أول خلية بالديون السابقة (بداية سنة {selectedYear})</span>
-                      </label>
-                      <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                        أهم حقل مطلوب
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={aiScanResult.firstOldDebt}
-                        onChange={(e) => {
-                          const val = Number(e.target.value) || 0
-                          setAiScanResult((p) => p ? { ...p, firstOldDebt: val } : null)
-                        }}
-                        className="w-full h-12 px-4 rounded-xl border border-emerald-300 text-[17px] font-bold font-sans text-emerald-900 text-center bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="0"
-                      />
-                      <span className="text-[12px] font-bold text-emerald-800 shrink-0">د.ع</span>
-                    </div>
-                    <p className="text-[10.5px] text-emerald-700/90 mt-1.5">
-                      تم استخراجها من أول سطر في عمود "الديون السابقة" (الشرطة تعني 0، ويمكنك تعديلها يدوياً إن أردت).
-                    </p>
-                  </div>
-
-                  {/* جدول المدفوعات المستحصلة للفترات الست */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-[12.5px] text-slate-800 flex items-center gap-1.5">
-                        <span>💵 المدفوعات المسددة (المبلغ المستحصل)</span>
-                      </h4>
-                      <span className="text-[10px] text-slate-500">يمكنك تعديل أي رقم بالنقر عليه</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {PERIODS.map((periodLabel, idx) => {
-                        const pData = aiScanResult.periods?.find((p) => p.periodIndex === idx)
-                        const paidVal = pData?.paid ?? 0
-                        const receiptInfo = [pData?.receiptNo ? `وصل: ${pData.receiptNo}` : '', pData?.receiptDate ? `تاريخ: ${pData.receiptDate}` : ''].filter(Boolean).join(' | ')
-
-                        return (
-                          <div
-                            key={idx}
-                            className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
-                              paidVal > 0 ? 'bg-emerald-50/40 border-emerald-200' : 'bg-slate-50/60 border-slate-200'
-                            }`}
-                          >
-                            <div className="min-w-[80px]">
-                              <span className="text-[11.5px] font-bold text-slate-700 block">
-                                الفترة {periodLabel}
-                              </span>
-                              {receiptInfo && (
-                                <span className="text-[9.5px] text-emerald-700 font-mono block">
-                                  {receiptInfo}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10.5px] text-slate-500">المدفوع:</span>
-                              <input
-                                type="number"
-                                value={paidVal === 0 ? '' : paidVal}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value) || 0
-                                  setAiScanResult((prev) => {
-                                    if (!prev) return null
-                                    const nextPeriods = [...(prev.periods || [])]
-                                    const existingIdx = nextPeriods.findIndex((p) => p.periodIndex === idx)
-                                    if (existingIdx >= 0) {
-                                      nextPeriods[existingIdx] = { ...nextPeriods[existingIdx], paid: val }
-                                    } else {
-                                      nextPeriods.push({
-                                        periodIndex: idx,
-                                        periodLabel,
-                                        oldDebt: 0,
-                                        total: 0,
-                                        paid: val
-                                      })
-                                    }
-                                    return { ...prev, periods: nextPeriods }
-                                  })
-                                }}
-                                placeholder="0"
-                                className="w-28 h-9 px-2.5 text-center font-bold font-sans text-[13px] rounded-lg border border-slate-300 focus:outline-none focus:border-slate-800 bg-white"
-                              />
-                              <span className="text-[11px] text-slate-600 font-bold shrink-0">د.ع</span>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* التدقيق الحسابي للورقة */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-[12px] text-slate-800 flex items-center gap-1.5">
-                        <span>🧮 تقرير التدقيق الحسابي للسجل الورقي</span>
-                      </div>
-                      {aiScanResult.audit?.hasDiscrepancies ? (
-                        <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                          يوجد ملاحظات بالورقة
-                        </span>
-                      ) : (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                          الحسابات سليمة ✅
-                        </span>
-                      )}
-                    </div>
-
-                    {aiScanResult.audit?.notes && aiScanResult.audit.notes.length > 0 ? (
-                      <div className="space-y-1.5 pt-1">
-                        {aiScanResult.audit.notes.map((note, i) => (
-                          <div key={i} className="text-[11px] p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 leading-relaxed flex items-start gap-1.5">
-                            <span className="shrink-0">📌</span>
-                            <span>{note}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-slate-500 leading-relaxed">
-                        تمت مطابقة أرقام السجل الورقي مع العمليات الحسابية ولا توجد أي فروقات غير طبيعية.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* أزرار الحفظ والاعتماد */}
-                  <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={handleApplyScanResult}
-                      className="flex-1 h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-2xl text-[13.5px] flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
-                    >
-                      <span>✅ اعتماد وتنزيل في حساب المشترك فوراً</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAiScanResult(null)
-                        setAiScanImage(null)
-                      }}
-                      className="h-12 px-4 border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold rounded-2xl text-[12px] transition-colors"
-                    >
-                      إعادة تصوير
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* نافذة معاينة الصورة بالحجم الكامل عند النقر على المصغرة */}
-          {showEnlargedImage && aiScanImage && (
-            <div
-              className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in"
-              onClick={() => setShowEnlargedImage(false)}
-            >
-              <div
-                className="relative max-w-xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl p-2 border border-white/10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between px-3 py-2 text-white">
-                  <span className="text-[12px] font-bold">معاينة ورقة السجل</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowEnlargedImage(false)}
-                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="max-h-[75vh] overflow-auto flex items-center justify-center bg-black/60 rounded-2xl p-1">
-                  <img
-                    src={aiScanImage}
-                    alt="الصورة بالحجم الكامل"
-                    className="max-h-[72vh] w-auto max-w-full object-contain rounded-xl"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
 
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
@@ -5392,20 +4379,18 @@ export default function MainApp() {
       )}
 
       {/* ========================================================= */}
-      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (تختفي تلقائياً عند فتح أي مشترك) */}
+      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (أفقية بارتفاع 58px) */}
       {/* ========================================================= */}
-      {!activeSubscriber && (
-        <nav
-          aria-label="شريط التنقل السفلي"
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            width: '100%',
-            height: '58px',
-            zIndex: 9999,
-
+      <nav
+        aria-label="شريط التنقل السفلي"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          width: '100%',
+          height: '58px',
+          zIndex: 9999,
           backgroundColor: '#ffffff',
           borderTop: '1px solid #e2e8f0',
           boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.06)',
@@ -5665,8 +4650,6 @@ export default function MainApp() {
           </button>
         </div>
       </nav>
-      )}
     </div>
   )
 }
-
