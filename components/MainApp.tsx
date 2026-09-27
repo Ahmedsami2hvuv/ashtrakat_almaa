@@ -3256,74 +3256,78 @@ export default function MainApp() {
           القاعدة 9: بعرض 100%، 4 أعمدة: 20% | 27% | 26% | 27%، ارتفاع 36px، بدون سكرول جانبي
       ========================== */}
       {activeSubscriber && activeBilling && (
-        <div className="subscriber-scene fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-[1px] flex flex-col">
+        <div className="subscriber-scene fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] flex flex-col">
           <div className="subscriber-orbit subscriber-orbit-one" />
           <div className="subscriber-orbit subscriber-orbit-two" />
-          <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
-            {/* رأس النافذة */}
-            <div className="subscriber-hero border-b border-sky-100 px-4 py-4 flex justify-between items-start gap-3 bg-white">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditSub({ ...activeSubscriber })
-                      setShowEditModal(true)
-                    }}
-                    className="text-right text-[15px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
-                    title="انقر لتعديل بيانات المشترك"
-                  >
-                    {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
-                  </button>
-                  <span className="text-[11px] text-slate-500">
-                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                    {' - '}
-                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
-                  </span>
-                </div>
-                <div className="mt-3 flex gap-2 items-center flex-wrap">
-                  <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-3 py-1 text-[11px] font-medium text-slate-700">
-                    {activeSubscriber.propertyType} - {activeSubscriber.meterType}
+          <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-3 sm:rounded-2xl sm:border sm:border-sky-100 sm:h-[calc(100%-24px)] flex flex-col overflow-hidden shadow-[0_12px_50px_rgba(0,0,0,0.2)]">
+            {/* رأس النافذة الثابت - لا يختفي مع التمرير أبداً */}
+            <div className="subscriber-hero border-b border-sky-100 px-4 py-3 bg-white shrink-0 shadow-sm">
+              <div className="flex justify-between items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditSub({ ...activeSubscriber })
+                        setShowEditModal(true)
+                      }}
+                      className="text-right text-[15px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
+                      title="انقر لتعديل بيانات المشترك"
+                    >
+                      {formatNumber(activeSubscriber.id)} - {activeSubscriber.name}
+                    </button>
+                    <span className="text-[11px] text-slate-500">
+                      ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                      {' - '}
+                      {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
+                    </span>
                   </div>
-                  <button
-                    onClick={() => setShowContactModal(true)}
-                    className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-3 py-1 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
-                  >
-                    التواصل والموقع والصور
-                  </button>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    المستحق: {formatNumber(activeBilling.due)}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedSubId(null)}
-                className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50"
-              >
-                ✕
-              </button>
-            </div>
 
-            {/* المحتوى */}
-            <div className="flex-1 overflow-y-auto pb-4">
-              {/* السنوات: فقط 2026 و 2027 و 2028 مع زر مسح السجل الورقي بالذكاء الاصطناعي */}
-              <div className="subscriber-content subscriber-content-2 px-3 py-2 border-y border-sky-50 bg-white flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
-                <div className="flex gap-1.5 items-center shrink-0">
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <div className="inline-flex border border-sky-100 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
+                      {activeSubscriber.propertyType} - {activeSubscriber.meterType}
+                    </div>
+                    <button
+                      onClick={() => setShowContactModal(true)}
+                      className="inline-flex items-center gap-1 border border-sky-200 rounded-full bg-white hover:bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-700 transition-colors shadow-sm"
+                    >
+                      التواصل والموقع والصور
+                    </button>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      المستحق: {formatNumber(activeBilling.due)}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedSubId(null)}
+                  className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 shrink-0"
+                  title="إغلاق النافذة"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* شريط السنوات وزر مسح السجل بالذكاء الاصطناعي - مدمج وواضح في الرأس */}
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+                {/* اختيار السنة */}
+                <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-full border border-slate-200 shrink-0">
                   {YEARS.map((y) => {
                     const is2026 = y === 2026
                     const isSelected = selectedYear === y
                     return (
                       <button
                         key={y}
+                        type="button"
                         onClick={() => setSelectedYear(y)}
-                        className={`h-8 px-3.5 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
+                        className={`h-7 px-3 rounded-full text-[11px] font-bold transition-all ${
                           is2026
                             ? isSelected
-                              ? 'bg-[#ef4444] text-white border-[#ef4444]'
-                              : 'bg-red-50 border-red-200 text-red-600'
+                              ? 'bg-[#ef4444] text-white shadow-sm'
+                              : 'text-red-600 hover:bg-red-50'
                             : isSelected
-                            ? 'bg-slate-900 text-white border-slate-900'
-                            : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+                            ? 'bg-slate-900 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-white'
                         }`}
                       >
                         {y}
@@ -3332,36 +3336,41 @@ export default function MainApp() {
                   })}
                 </div>
 
-                {/* زر الكاميرا لقراءة وتدقيق السجل الورقي بالذكاء الاصطناعي */}
+                {/* زر الكاميرا لقراءة وتدقيق السجل الورقي بالذكاء الاصطناعي - بارز ومباشر */}
                 <button
                   type="button"
                   onClick={handleOpenAiScanner}
-                  className="h-8 px-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 shrink-0"
+                  className="h-8 px-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11.5px] font-bold rounded-full flex items-center gap-1.5 shadow-sm transition-all active:scale-95 shrink-0"
                   title={`قراءة سجل سنة ${selectedYear} بالذكاء الاصطناعي وتنزيل الديون والمدفوعات`}
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
-                  <span>مسح السجل ({selectedYear})</span>
+                  <span>📷 مسح السجل ({selectedYear})</span>
                 </button>
               </div>
 
               {/* إشعار نجاح تنزيل البيانات من الماسح الضوئي */}
               {scannerNotification && (
-                <div className="mx-3 mt-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[12px] font-bold flex items-center justify-between shadow-sm animate-fade-in">
+                <div className="mt-2.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11.5px] font-bold flex items-center justify-between shadow-sm animate-fade-in">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                     <span>{scannerNotification}</span>
                   </div>
                   <button
                     onClick={() => setScannerNotification(null)}
-                    className="text-emerald-600 hover:text-emerald-900 text-[14px] px-1"
+                    className="text-emerald-600 hover:text-emerald-900 text-[13px] px-1"
                   >
                     ✕
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* المحتوى القابل للتمرير */}
+            <div className="flex-1 overflow-y-auto pb-4">
+
 
 
               {/* بداية السنة أو تنبيه تصفير الحساب كلياً */}
@@ -3380,13 +3389,28 @@ export default function MainApp() {
                     </span>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center gap-2 font-mono shadow-sm w-full">
-                    <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
-                    <span className="text-slate-600">
-                      القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
-                    </span>
+                  <div className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-[12px] flex items-center justify-between font-mono shadow-sm w-full gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-800 font-sans shrink-0">بداية السنة:</span>
+                      <span className="text-slate-600">
+                        القديم {formatNumber(activeBilling.remainingPrev)} + الفائدة {formatNumber(activeBilling.fee)} = {formatNumber(activeBilling.totalCarried)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAiScanner}
+                      className="h-7 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-sans font-bold flex items-center gap-1 transition-all shrink-0 active:scale-95 cursor-pointer"
+                      title="مسح وتدقيق السجل الورقي بالذكاء الاصطناعي"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <span>مسح السجل</span>
+                    </button>
                   </div>
                 )}
+
               </div>
 
               {/* أزرار التالي والسابق للتنقل بين المشتركين (تعمل دائماً حتى عند البحث) */}
@@ -5190,18 +5214,20 @@ export default function MainApp() {
       )}
 
       {/* ========================================================= */}
-      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (أفقية بارتفاع 58px) */}
+      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (تختفي تلقائياً عند فتح أي مشترك) */}
       {/* ========================================================= */}
-      <nav
-        aria-label="شريط التنقل السفلي"
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          width: '100%',
-          height: '58px',
-          zIndex: 9999,
+      {!activeSubscriber && (
+        <nav
+          aria-label="شريط التنقل السفلي"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            width: '100%',
+            height: '58px',
+            zIndex: 9999,
+
           backgroundColor: '#ffffff',
           borderTop: '1px solid #e2e8f0',
           boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.06)',
@@ -5461,6 +5487,8 @@ export default function MainApp() {
           </button>
         </div>
       </nav>
+      )}
     </div>
   )
 }
+
