@@ -1105,6 +1105,10 @@ export default function MainApp() {
     const branchId = newSub.branchId || area?.branches[0]?.id || ''
     const maxOrder = subscribers.reduce((acc, curr) => Math.max(acc, curr.order), 0)
 
+    const rawMeter = newSub.meterType?.trim()
+    const meterDigits = rawMeter ? rawMeter.replace(/[^\d]/g, '') : ''
+    const meterType = meterDigits ? `${meterDigits} متر` : (newSub.propertyType === 'تجاري' ? '10 متر' : '4 متر')
+
     const created: Subscriber = {
       id,
       name: newSub.name.trim(),
@@ -1112,7 +1116,7 @@ export default function MainApp() {
       areaId: newSub.areaId,
       branchId,
       propertyType: newSub.propertyType,
-      meterType: newSub.meterType,
+      meterType,
       detailedAddress: `قرب ${area?.name || ''}`,
       order: maxOrder + 1,
       statuses: newSub.statuses
@@ -1148,15 +1152,20 @@ export default function MainApp() {
     e.preventDefault()
     if (!editSub.id) return
 
+    const originalSub = subscribers.find((s) => s.id === editSub.id)
+    const rawMeter = editSub.meterType?.trim()
+    const meterDigits = rawMeter ? rawMeter.replace(/[^\d]/g, '') : ''
+    const finalMeterType = meterDigits ? `${meterDigits} متر` : (originalSub?.meterType || '4 متر')
+    const finalEditSub = { ...editSub, meterType: finalMeterType }
+
     setSubscribers((prev) =>
-      prev.map((s) => (s.id === editSub.id ? { ...s, ...editSub } as Subscriber : s))
+      prev.map((s) => (s.id === editSub.id ? { ...s, ...finalEditSub } as Subscriber : s))
     )
 
     // إذا تغير نوع العقار أو حجم المتر للمشترك، نضمن إعادة احتساب الفواتير بالسعر الجديد وتدفق الديون بمسح أي تجميد يدوي سابق
-    const originalSub = subscribers.find((s) => s.id === editSub.id)
     const isPricingChanged =
-      (editSub.propertyType && editSub.propertyType !== originalSub?.propertyType) ||
-      (editSub.meterType && editSub.meterType !== originalSub?.meterType)
+      (finalEditSub.propertyType && finalEditSub.propertyType !== originalSub?.propertyType) ||
+      (finalEditSub.meterType && finalEditSub.meterType !== originalSub?.meterType)
 
     if (isPricingChanged) {
       setBilling((prev) => {
@@ -3727,35 +3736,82 @@ export default function MainApp() {
                 </select>
               </div>
 
-              {/* نوع العقار وحجم المتر */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* نوع العقار ونوع العداد */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold text-slate-700">نوع العقار</label>
                   <select
                     value={newSub.propertyType}
                     onChange={(e) => {
                       const propertyType = e.target.value as PropertyType
-                      setNewSub((p) => ({ ...p, propertyType, meterType: metersForProperty(propertyType)[0] }))
+                      setNewSub((p) => ({
+                        ...p,
+                        propertyType,
+                        meterType: propertyType === 'سكني' ? '4 متر' : p.meterType || '10 متر'
+                      }))
                     }}
-                    className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white"
+                    className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white font-medium"
                   >
                     <option value="سكني">سكني</option>
                     <option value="تجاري">تجاري</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700">حجم المتر</label>
-                  <select
-                    value={newSub.meterType}
-                    onChange={(e) => setNewSub((p) => ({ ...p, meterType: e.target.value as MeterType }))}
-                    className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white"
-                  >
-                    {metersForProperty(newSub.propertyType).map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="text-[11px] font-bold text-slate-700">
+                    نوع العداد <span className="text-[10px] text-slate-400 font-normal mr-1">(اكتب الرقم بالمتر)</span>
+                  </label>
+                  <div className="relative mt-1.5 flex items-center">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={newSub.meterType ? newSub.meterType.replace(/[^\d]/g, '') : ''}
+                      onChange={(e) => {
+                        const num = e.target.value.replace(/[^\d]/g, '')
+                        setNewSub((p) => ({ ...p, meterType: num ? `${num} متر` : '' }))
+                      }}
+                      placeholder="اكتب رقم المتر (مثال: 4 أو 75 أو 100)"
+                      className="w-full h-11 pr-3 pl-12 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
+                    />
+                    <span className="absolute left-3 text-[11px] font-bold text-slate-500 pointer-events-none select-none">
+                      متر
+                    </span>
+                  </div>
+                  {/* أزرار اختيار سريعة */}
+                  {newSub.propertyType === 'سكني' ? (
+                    <div className="flex gap-1.5 mt-1.5">
+                      {['3 متر', '4 متر'].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setNewSub((p) => ({ ...p, meterType: m }))}
+                          className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold transition-all ${
+                            newSub.meterType === m
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {['1 متر', '2 متر', '3 متر', '4 متر', '10 متر', '50 متر', '70 متر'].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setNewSub((p) => ({ ...p, meterType: m }))}
+                          className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all ${
+                            newSub.meterType === m
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3909,34 +3965,81 @@ export default function MainApp() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-slate-600 font-medium">نوع العقار</label>
                   <select
                     value={editSub.propertyType || 'سكني'}
                     onChange={(e) => {
                       const propertyType = e.target.value as PropertyType
-                      setEditSub((p) => ({ ...p, propertyType, meterType: metersForProperty(propertyType)[0] }))
+                      setEditSub((p) => ({
+                        ...p,
+                        propertyType,
+                        meterType: propertyType === 'سكني' ? '4 متر' : p.meterType || '10 متر'
+                      }))
                     }}
-                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
+                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white font-medium"
                   >
                     <option value="سكني">سكني</option>
                     <option value="تجاري">تجاري</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-600 font-medium">نوع المتر</label>
-                  <select
-                    value={editSub.meterType || '4 متر'}
-                    onChange={(e) => setEditSub((p) => ({ ...p, meterType: e.target.value as MeterType }))}
-                    className="mt-1.5 w-full h-10 px-3 border border-sky-100 rounded-2xl text-[12px] bg-white"
-                  >
-                    {metersForProperty(editSub.propertyType || 'سكني').map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="text-[11px] text-slate-600 font-medium">
+                    نوع العداد <span className="text-[10px] text-slate-400 font-normal mr-1">(اكتب الرقم بالمتر)</span>
+                  </label>
+                  <div className="relative mt-1.5 flex items-center">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editSub.meterType ? editSub.meterType.replace(/[^\d]/g, '') : ''}
+                      onChange={(e) => {
+                        const num = e.target.value.replace(/[^\d]/g, '')
+                        setEditSub((p) => ({ ...p, meterType: num ? `${num} متر` : '' }))
+                      }}
+                      placeholder="اكتب رقم المتر (مثال: 4 أو 75 أو 100)"
+                      className="w-full h-10 pr-3 pl-12 border border-sky-100 rounded-2xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
+                    />
+                    <span className="absolute left-3 text-[11px] font-bold text-slate-500 pointer-events-none select-none">
+                      متر
+                    </span>
+                  </div>
+                  {/* أزرار اختيار سريعة */}
+                  {(editSub.propertyType || 'سكني') === 'سكني' ? (
+                    <div className="flex gap-1.5 mt-1.5">
+                      {['3 متر', '4 متر'].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setEditSub((p) => ({ ...p, meterType: m }))}
+                          className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold transition-all ${
+                            editSub.meterType === m
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                              : 'bg-sky-50/50 border-sky-100 text-slate-600 hover:bg-sky-100'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {['1 متر', '2 متر', '3 متر', '4 متر', '10 متر', '50 متر', '70 متر'].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setEditSub((p) => ({ ...p, meterType: m }))}
+                          className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all ${
+                            editSub.meterType === m
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                              : 'bg-sky-50/50 border-sky-100 text-slate-600 hover:bg-sky-100'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
