@@ -3251,7 +3251,7 @@ export default function MainApp() {
           القاعدة 9: بعرض 100%، 4 أعمدة: 20% | 27% | 26% | 27%، ارتفاع 36px، بدون سكرول جانبي
       ========================== */}
       {activeSubscriber && activeBilling && (
-        <div className="subscriber-scene fixed inset-x-0 bottom-0 top-[62px] sm:top-0 sm:inset-0 z-[10000] bg-slate-900/25 backdrop-blur-[1px] flex flex-col">
+        <div className="subscriber-scene fixed inset-0 pt-14 sm:pt-0 z-[10000] bg-slate-900/25 backdrop-blur-[1px] flex flex-col">
           <div className="subscriber-orbit subscriber-orbit-one" />
           <div className="subscriber-orbit subscriber-orbit-two" />
           <div className="subscriber-card bg-[#f0f9ff] w-full h-full sm:max-w-[740px] sm:mx-auto sm:my-4 rounded-t-2xl sm:rounded-2xl border-t sm:border border-sky-100 sm:h-[calc(100%-32px)] flex flex-col overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
