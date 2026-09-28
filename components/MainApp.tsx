@@ -464,6 +464,7 @@ export default function MainApp() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState<boolean>(false)
   const [filterTypes, setFilterTypes] = useState<{ سكني: boolean; تجاري: boolean }>({ سكني: true, تجاري: true })
   const [filterMeters, setFilterMeters] = useState<string[]>([])
+  const [filterCustomMeter, setFilterCustomMeter] = useState<string>('')
   const [filterMeterSearch, setFilterMeterSearch] = useState<string>('')
   const [filterAreas, setFilterAreas] = useState<string[]>([])
   const [filterBranches, setFilterBranches] = useState<string[]>([])
@@ -810,11 +811,24 @@ export default function MainApp() {
     return map
   }, [availableMeterTypes, typeFiltered])
 
-  // فلترة حسب نوع المتر المختار
+  // فلترة حسب نوع المتر المختار أو المكتوب يدوياً
   const meterFiltered = useMemo(() => {
-    if (filterMeters.length === 0) return typeFiltered
-    return typeFiltered.filter((s) => filterMeters.includes(s.meterType))
-  }, [typeFiltered, filterMeters])
+    const hasCustom = filterCustomMeter.trim() !== ''
+    const hasSelected = filterMeters.length > 0
+    if (!hasCustom && !hasSelected) return typeFiltered
+
+    const customNum = hasCustom ? parseInt(filterCustomMeter, 10) : NaN
+
+    return typeFiltered.filter((s) => {
+      if (hasCustom) {
+        const subNum = parseInt(s.meterType, 10)
+        if (!isNaN(customNum) && !isNaN(subNum) && subNum === customNum) return true
+        if (s.meterType.includes(filterCustomMeter.trim())) return true
+      }
+      if (hasSelected && filterMeters.includes(s.meterType)) return true
+      return false
+    })
+  }, [typeFiltered, filterMeters, filterCustomMeter])
 
   // عدد المشتركين لكل منطقة بناءً على نوع العقار ونوع المتر المختار
   const areaCounts = useMemo(() => {
@@ -879,12 +893,12 @@ export default function MainApp() {
   const activeFiltersBadge = useMemo(() => {
     let count = 0
     if (filterTypes.سكني !== filterTypes.تجاري) count++
-    if (filterMeters.length > 0) count++
+    if (filterMeters.length > 0 || filterCustomMeter.trim() !== '') count++
     if (filterAreas.length > 0) count++
     if (filterBranches.length > 0) count++
     if (filterStatuses.length > 0) count++
     return count
-  }, [filterTypes, filterMeters, filterAreas, filterBranches, filterStatuses])
+  }, [filterTypes, filterMeters, filterCustomMeter, filterAreas, filterBranches, filterStatuses])
 
   // القائمة المعروضة في الصفحة الرئيسية
   const displayedSubscribers = useMemo(() => {
@@ -913,9 +927,21 @@ export default function MainApp() {
       else list = list.filter((s) => s.propertyType === 'تجاري')
     }
 
-    // فلتر نوع المتر
-    if (filterMeters.length > 0) {
-      list = list.filter((s) => filterMeters.includes(s.meterType))
+    // فلتر نوع المتر (مختار أو مكتوب يدوياً)
+    if (filterMeters.length > 0 || filterCustomMeter.trim() !== '') {
+      const hasCustom = filterCustomMeter.trim() !== ''
+      const hasSelected = filterMeters.length > 0
+      const customNum = hasCustom ? parseInt(filterCustomMeter, 10) : NaN
+
+      list = list.filter((s) => {
+        if (hasCustom) {
+          const subNum = parseInt(s.meterType, 10)
+          if (!isNaN(customNum) && !isNaN(subNum) && subNum === customNum) return true
+          if (s.meterType.includes(filterCustomMeter.trim())) return true
+        }
+        if (hasSelected && filterMeters.includes(s.meterType)) return true
+        return false
+      })
     }
 
     // المنطقة المحددة من التبويبات العلوية أو الفلتر
@@ -948,6 +974,7 @@ export default function MainApp() {
     searchQuery,
     filterTypes,
     filterMeters,
+    filterCustomMeter,
     selectedAreaId,
     activeBranchId,
     filterAreas,
@@ -959,6 +986,7 @@ export default function MainApp() {
   const clearAllFilters = () => {
     setFilterTypes({ سكني: true, تجاري: true })
     setFilterMeters([])
+    setFilterCustomMeter('')
     setFilterAreas([])
     setFilterBranches([])
     setFilterStatuses([])
@@ -1812,9 +1840,9 @@ export default function MainApp() {
                     }`}
                   >
                     <span>{label}</span>
-                    {panel === 'meter' && filterMeters.length > 0 && (
+                    {panel === 'meter' && (filterMeters.length > 0 || filterCustomMeter.trim() !== '') && (
                       <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] flex items-center justify-center font-mono">
-                        {formatNumber(filterMeters.length)}
+                        {formatNumber(filterMeters.length + (filterCustomMeter.trim() !== '' ? 1 : 0))}
                       </span>
                     )}
                     {panel === 'areas' && (filterAreas.length > 0 || filterBranches.length > 0) && (
@@ -1884,84 +1912,103 @@ export default function MainApp() {
                         <span className="w-1 h-4 rounded-full bg-emerald-500"></span> نوع المتر
                       </span>
                       <div className="flex items-center gap-2">
-                        {filterMeters.length > 0 && (
+                        {(filterMeters.length > 0 || filterCustomMeter.trim() !== '') && (
                           <button
                             type="button"
-                            onClick={() => setFilterMeters([])}
+                            onClick={() => {
+                              setFilterMeters([])
+                              setFilterCustomMeter('')
+                            }}
                             className="text-[10px] text-red-500 hover:underline font-medium"
                           >
                             إلغاء التحديد
                           </button>
                         )}
                         <span className="text-[9px] bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 text-emerald-700 font-bold">
-                          {filterMeters.length > 0 ? `${formatNumber(filterMeters.length)} محدد` : 'الكل'}
+                          {filterMeters.length > 0 || filterCustomMeter.trim() !== ''
+                            ? `${formatNumber(filterMeters.length + (filterCustomMeter.trim() !== '' ? 1 : 0))} محدد`
+                            : 'الكل'}
                         </span>
                       </div>
                     </div>
 
-                    {availableMeterTypes.length > 4 && (
-                      <div className="relative mb-2.5">
+                    {/* خانة كتابة رقم المتر يدوياً - ظاهرة دائماً وواضحة */}
+                    <div className="mb-3 p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-200">
+                      <label className="text-[11px] font-bold text-emerald-900 block mb-1.5">
+                        كتابة رقم المتر يدوياً:
+                      </label>
+                      <div className="relative flex items-center">
                         <input
-                          value={filterMeterSearch}
-                          onChange={(e) => setFilterMeterSearch(e.target.value)}
-                          placeholder="بحث في نوع المتر..."
-                          className="w-full h-8 pr-3 pl-14 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                          type="text"
+                          inputMode="numeric"
+                          value={filterCustomMeter}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^\d]/g, '')
+                            setFilterCustomMeter(val)
+                          }}
+                          placeholder="اكتب رقم المتر (مثال: 70 أو 75 أو 80 أو 100)..."
+                          className="w-full h-10 pr-3 pl-16 border border-emerald-300 rounded-xl text-[13px] font-mono focus:outline-none focus:border-emerald-600 bg-white"
                         />
-                        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          {Boolean(filterMeterSearch) && (
+                        <div className="absolute left-2.5 flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-slate-500 select-none">
+                            متر
+                          </span>
+                          {Boolean(filterCustomMeter) && (
                             <button
                               type="button"
-                              onClick={() => setFilterMeterSearch('')}
-                              className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[10px] font-bold"
+                              onClick={() => setFilterCustomMeter('')}
+                              className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] font-bold"
                               title="مسح"
                             >
                               ✕
                             </button>
                           )}
-                          <span className="text-slate-400 text-[12px]">⌕</span>
                         </div>
                       </div>
-                    )}
+                    </div>
 
-                    <div className="grid grid-cols-2 gap-2 max-h-[260px] overflow-y-auto pr-1">
-                      {availableMeterTypes
-                        .filter((m) => filterMeterSearch.trim() === '' || m.includes(filterMeterSearch.trim()))
-                        .map((meter) => {
-                          const count = meterCounts.get(meter) || 0
-                          const isChecked = filterMeters.includes(meter)
-                          const disabled = count === 0 && !isChecked
-                          return (
-                            <label
-                              key={meter}
-                              className={`flex items-center gap-2.5 h-10 px-3 rounded-xl border cursor-pointer transition-all ${
-                                isChecked
-                                  ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
-                                  : disabled
-                                  ? 'bg-zinc-50 border-zinc-100 text-zinc-400'
-                                  : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
+                    {/* قائمة الأمتار المتوفرة للاختيار السريع */}
+                    <div className="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center justify-between">
+                      <span>أو اختر من الأمتار المسجلة:</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                      {availableMeterTypes.map((meter) => {
+                        const count = meterCounts.get(meter) || 0
+                        const isChecked = filterMeters.includes(meter)
+                        const disabled = count === 0 && !isChecked
+                        return (
+                          <label
+                            key={meter}
+                            className={`flex items-center gap-2.5 h-10 px-3 rounded-xl border cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
+                                : disabled
+                                ? 'bg-zinc-50 border-zinc-100 text-zinc-400'
+                                : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={disabled}
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setFilterMeters((p) => [...p, meter])
+                                else setFilterMeters((p) => p.filter((x) => x !== meter))
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                            />
+                            <span className="text-[12px] font-medium flex-1 truncate">{meter}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                                isChecked ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-600'
                               }`}
                             >
-                              <input
-                                type="checkbox"
-                                disabled={disabled}
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) setFilterMeters((p) => [...p, meter])
-                                  else setFilterMeters((p) => p.filter((x) => x !== meter))
-                                }}
-                                className="w-4 h-4 rounded border-slate-300 accent-slate-900"
-                              />
-                              <span className="text-[12px] font-medium flex-1 truncate">{meter}</span>
-                              <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                                  isChecked ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-600'
-                                }`}
-                              >
-                                {formatNumber(count)}
-                              </span>
-                            </label>
-                          )
-                        })}
+                              {formatNumber(count)}
+                            </span>
+                          </label>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -2229,7 +2276,8 @@ export default function MainApp() {
                   <div>
                     <div className="text-[12px] font-bold">يوجد {formatNumber(matchingFilterCount)} مشترك يطابق الفلتر</div>
                     <div className="text-[10px] text-white/60 mt-0.5">
-                      {filterMeters.length > 0 && `${formatNumber(filterMeters.length)} أمتار • `}
+                      {filterCustomMeter.trim() !== '' && `${formatNumber(Number(filterCustomMeter))} متر • `}
+                      {filterMeters.length > 0 && `${formatNumber(filterMeters.length)} أمتار مسجلة • `}
                       {filterAreas.length > 0 && `${formatNumber(filterAreas.length)} مناطق • `}
                       {filterBranches.length > 0 && `${formatNumber(filterBranches.length)} أفرع • `}
                       {formatNumber(subscribersInRange.length)} الكل
