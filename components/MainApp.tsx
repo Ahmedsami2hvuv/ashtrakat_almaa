@@ -542,6 +542,10 @@ export default function MainApp() {
   // مرجع التركيز التلقائي على الديون السابقة
   const shouldFocusOldDebtRef = useRef<boolean>(false)
 
+  // مراجع إدارة زر الرجوع في الهاتف لإغلاق نافذة المشترك بدلاً من الخروج من الموقع
+  const isSubModalHistoryPushedRef = useRef<boolean>(false)
+  const isSubModalClosingFromPopstateRef = useRef<boolean>(false)
+
   const focusOldDebtInput = useCallback(() => {
     const tryFocus = () => {
       const el = document.getElementById('first-old-debt-input') as HTMLInputElement | null
@@ -590,6 +594,46 @@ export default function MainApp() {
       return () => clearTimeout(timer)
     }
   }, [selectedSubId, focusOldDebtInput])
+
+  // ربط زر الرجوع في الهاتف والمتصفح بإغلاق نافذة حساب المشترك دون الخروج من الموقع
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (selectedSubId !== null) {
+      if (!isSubModalHistoryPushedRef.current) {
+        window.history.pushState({ modal: 'subscriber_details', subId: selectedSubId }, '')
+        isSubModalHistoryPushedRef.current = true
+      } else {
+        window.history.replaceState({ modal: 'subscriber_details', subId: selectedSubId }, '')
+      }
+    } else {
+      if (isSubModalClosingFromPopstateRef.current) {
+        isSubModalClosingFromPopstateRef.current = false
+      } else if (isSubModalHistoryPushedRef.current) {
+        isSubModalHistoryPushedRef.current = false
+        window.history.back()
+      }
+    }
+  }, [selectedSubId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handlePopState = () => {
+      if (selectedSubId !== null) {
+        isSubModalClosingFromPopstateRef.current = true
+        isSubModalHistoryPushedRef.current = false
+        setShowContactModal(false)
+        setShowEditModal(false)
+        setSelectedSubId(null)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [selectedSubId])
 
   // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط
   useEffect(() => {
