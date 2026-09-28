@@ -1105,6 +1105,54 @@ export default function MainApp() {
     })
   }
 
+  // تصفير حساب المشترك بالكامل وإعادته لوضعه الأصلي وجعل الدين السابق لأول شهرين 0
+  const handleResetSubscriberAccount = (subId: number) => {
+    const sub = subscribers.find((s) => s.id === subId)
+    const subName = sub ? sub.name : `رقم ${subId}`
+    if (!window.confirm(`هل أنت متأكد من تصفير حساب المشترك (${subName}) بالكامل وإعادة الدين السابق لأول شهرين إلى 0؟`)) {
+      return
+    }
+
+    // 1. تصفير الدين السابق في بيانات المشترك
+    setSubscribers((prevSubs) => {
+      return prevSubs.map((s) => {
+        if (s.id !== subId) return s
+        const updated = { ...s, remainingPrev: 0 }
+        const newStatuses = computeSubscriberStatuses(updated, billing, prevSubs, pricing)
+        return { ...updated, statuses: newStatuses }
+      })
+    })
+
+    // 2. تصفير كافة السجلات والمدفوعات لجميع السنوات وجعلها فارغة ونظيفة
+    setBilling((prev) => {
+      const copy = { ...prev }
+      copy[subId] = {
+        2026: PERIODS.map(() => ({
+          oldDebtManual: null,
+          paid: 0,
+          totalManual: null,
+          remainingManual: null
+        })),
+        2027: PERIODS.map(() => ({
+          oldDebtManual: null,
+          paid: 0,
+          totalManual: null,
+          remainingManual: null
+        })),
+        2028: PERIODS.map(() => ({
+          oldDebtManual: null,
+          paid: 0,
+          totalManual: null,
+          remainingManual: null
+        }))
+      }
+      return copy
+    })
+
+    // 3. مسح أي خلية تحرير نشطة
+    setEditingCell(null)
+  }
+
   // إضافة مشترك
   const handleAddSubscriberSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -3289,6 +3337,18 @@ export default function MainApp() {
                   >
                     التواصل والموقع والصور
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => handleResetSubscriberAccount(activeSubscriber.id)}
+                    className="inline-flex items-center gap-1 border border-rose-200 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1 text-[12px] font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                    title="تصفير حساب المشترك وإعادة الدين السابق إلى 0"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                    <span>تصفير الحساب</span>
+                  </button>
                   <div className="text-[12px] text-slate-600 font-mono font-bold bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1">
                     المستحق: {formatNumber(activeBilling.due)}
                   </div>
@@ -4158,6 +4218,25 @@ export default function MainApp() {
               >
                 حفظ التعديلات
               </button>
+
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editSub.id) {
+                      handleResetSubscriberAccount(editSub.id)
+                      setShowEditModal(false)
+                    }
+                  }}
+                  className="w-full h-10 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-2xl text-[12px] font-bold flex items-center justify-center gap-2 transition-all active:scale-98"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  <span>تصفير حساب المشترك (إعادة الدين السابق إلى 0)</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
