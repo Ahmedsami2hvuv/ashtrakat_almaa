@@ -463,13 +463,15 @@ export default function MainApp() {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [filterDrawerOpen, setFilterDrawerOpen] = useState<boolean>(false)
   const [filterTypes, setFilterTypes] = useState<{ سكني: boolean; تجاري: boolean }>({ سكني: true, تجاري: true })
+  const [filterMeters, setFilterMeters] = useState<string[]>([])
+  const [filterMeterSearch, setFilterMeterSearch] = useState<string>('')
   const [filterAreas, setFilterAreas] = useState<string[]>([])
   const [filterBranches, setFilterBranches] = useState<string[]>([])
   const [filterStatuses, setFilterStatuses] = useState<string[]>([])
   const [filterAreaSearch, setFilterAreaSearch] = useState<string>('')
   const [filterBranchSearch, setFilterBranchSearch] = useState<string>('')
   const [openFilterAreaId, setOpenFilterAreaId] = useState<string | null>(null)
-  const [filterPanel, setFilterPanel] = useState<'type' | 'areas' | 'statuses' | null>(null)
+  const [filterPanel, setFilterPanel] = useState<'type' | 'meter' | 'areas' | 'statuses' | null>(null)
 
   // الاختيار الحالي
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
@@ -766,21 +768,69 @@ export default function MainApp() {
     return subscribersInRange.filter((s) => s.propertyType === 'تجاري')
   }, [subscribersInRange, filterTypes])
 
-  // عدد المشتركين لكل منطقة بناءً على نوع العقار المختار
+  // أنواع المتر المتوفرة بناءً على نوع العقار ونطاق المشتركين
+  const availableMeterTypes = useMemo(() => {
+    const set = new Set<string>()
+    const isOnlyResidential = filterTypes.سكني && !filterTypes.تجاري
+    const isOnlyCommercial = !filterTypes.سكني && filterTypes.تجاري
+
+    if (isOnlyResidential) {
+      RESIDENTIAL_METERS.forEach((m) => set.add(m))
+    } else if (isOnlyCommercial) {
+      subscribersInRange
+        .filter((s) => s.propertyType === 'تجاري' && s.meterType)
+        .forEach((s) => set.add(s.meterType))
+      if (set.size === 0) {
+        COMMERCIAL_METERS.slice(0, 10).forEach((m) => set.add(m))
+      }
+    } else {
+      RESIDENTIAL_METERS.forEach((m) => set.add(m))
+      subscribersInRange.forEach((s) => {
+        if (s.meterType) set.add(s.meterType)
+      })
+    }
+
+    return Array.from(set).sort((a, b) => {
+      const numA = parseInt(a, 10) || 0
+      const numB = parseInt(b, 10) || 0
+      if (numA !== numB) return numA - numB
+      return a.localeCompare(b, 'ar')
+    })
+  }, [subscribersInRange, filterTypes])
+
+  // عدد المشتركين لكل نوع متر بناءً على نوع العقار المختار
+  const meterCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    availableMeterTypes.forEach((m) => map.set(m, 0))
+    typeFiltered.forEach((s) => {
+      if (s.meterType) {
+        map.set(s.meterType, (map.get(s.meterType) || 0) + 1)
+      }
+    })
+    return map
+  }, [availableMeterTypes, typeFiltered])
+
+  // فلترة حسب نوع المتر المختار
+  const meterFiltered = useMemo(() => {
+    if (filterMeters.length === 0) return typeFiltered
+    return typeFiltered.filter((s) => filterMeters.includes(s.meterType))
+  }, [typeFiltered, filterMeters])
+
+  // عدد المشتركين لكل منطقة بناءً على نوع العقار ونوع المتر المختار
   const areaCounts = useMemo(() => {
     const map = new Map<string, number>()
     areas.forEach((a) => map.set(a.id, 0))
-    typeFiltered.forEach((s) => {
+    meterFiltered.forEach((s) => {
       map.set(s.areaId, (map.get(s.areaId) || 0) + 1)
     })
     return map
-  }, [typeFiltered, areas])
+  }, [meterFiltered, areas])
 
   // فلترة حسب المناطق المختارة
   const areaFiltered = useMemo(() => {
-    if (filterAreas.length === 0) return typeFiltered
-    return typeFiltered.filter((s) => filterAreas.includes(s.areaId))
-  }, [typeFiltered, filterAreas])
+    if (filterAreas.length === 0) return meterFiltered
+    return meterFiltered.filter((s) => filterAreas.includes(s.areaId))
+  }, [meterFiltered, filterAreas])
 
   // عدد المشتركين لكل فرع بناءً على المناطق المختارة
   const branchCounts = useMemo(() => {
@@ -829,11 +879,12 @@ export default function MainApp() {
   const activeFiltersBadge = useMemo(() => {
     let count = 0
     if (filterTypes.سكني !== filterTypes.تجاري) count++
+    if (filterMeters.length > 0) count++
     if (filterAreas.length > 0) count++
     if (filterBranches.length > 0) count++
     if (filterStatuses.length > 0) count++
     return count
-  }, [filterTypes, filterAreas, filterBranches, filterStatuses])
+  }, [filterTypes, filterMeters, filterAreas, filterBranches, filterStatuses])
 
   // القائمة المعروضة في الصفحة الرئيسية
   const displayedSubscribers = useMemo(() => {
@@ -860,6 +911,11 @@ export default function MainApp() {
     if (filterTypes.سكني !== filterTypes.تجاري) {
       if (filterTypes.سكني) list = list.filter((s) => s.propertyType === 'سكني')
       else list = list.filter((s) => s.propertyType === 'تجاري')
+    }
+
+    // فلتر نوع المتر
+    if (filterMeters.length > 0) {
+      list = list.filter((s) => filterMeters.includes(s.meterType))
     }
 
     // المنطقة المحددة من التبويبات العلوية أو الفلتر
@@ -891,6 +947,7 @@ export default function MainApp() {
     subscribersInRange,
     searchQuery,
     filterTypes,
+    filterMeters,
     selectedAreaId,
     activeBranchId,
     filterAreas,
@@ -901,6 +958,7 @@ export default function MainApp() {
   // مسح الفلاتر
   const clearAllFilters = () => {
     setFilterTypes({ سكني: true, تجاري: true })
+    setFilterMeters([])
     setFilterAreas([])
     setFilterBranches([])
     setFilterStatuses([])
@@ -908,6 +966,7 @@ export default function MainApp() {
     setFilterPanel(null)
     setFilterAreaSearch('')
     setFilterBranchSearch('')
+    setFilterMeterSearch('')
   }
 
   // حفظ تعديل في جدول الديون مع تسلسل الحسابات تلقائياً لكل فترات السنة
@@ -1726,9 +1785,10 @@ export default function MainApp() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 {([
                   ['type', 'نوع العقار'],
+                  ['meter', 'نوع المتر'],
                   ['areas', 'المناطق والأفرع'],
                   ['statuses', 'حالات المشترك']
                 ] as const).map(([panel, label]) => (
@@ -1736,13 +1796,28 @@ export default function MainApp() {
                     key={panel}
                     type="button"
                     onClick={() => setFilterPanel((current) => (current === panel ? null : panel))}
-                    className={`h-10 rounded-xl border text-[11px] font-bold transition-colors ${
+                    className={`h-10 rounded-xl border text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 ${
                       filterPanel === panel
-                        ? 'bg-slate-900 text-white border-slate-900'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                         : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
                     }`}
                   >
-                    {label}
+                    <span>{label}</span>
+                    {panel === 'meter' && filterMeters.length > 0 && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] flex items-center justify-center font-mono">
+                        {formatNumber(filterMeters.length)}
+                      </span>
+                    )}
+                    {panel === 'areas' && (filterAreas.length > 0 || filterBranches.length > 0) && (
+                      <span className="w-5 h-5 rounded-full bg-sky-500 text-white text-[10px] flex items-center justify-center font-mono">
+                        {formatNumber(filterAreas.length + filterBranches.length)}
+                      </span>
+                    )}
+                    {panel === 'statuses' && filterStatuses.length > 0 && (
+                      <span className="w-5 h-5 rounded-full bg-violet-500 text-white text-[10px] flex items-center justify-center font-mono">
+                        {formatNumber(filterStatuses.length)}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -1753,7 +1828,7 @@ export default function MainApp() {
                 {filterPanel === 'type' && <div className="border border-sky-100 rounded-2xl p-3 bg-sky-50/40">
                   <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-1 h-4 rounded-full bg-slate-900"></span> النوع
+                      <span className="w-1 h-4 rounded-full bg-slate-900"></span> نوع العقار
                     </span>
                     <span className="text-[9px] bg-white border border-sky-100 rounded-full px-2 py-0.5 text-slate-500">
                       الخطوة 1
@@ -1791,6 +1866,96 @@ export default function MainApp() {
                     })}
                   </div>
                 </div>}
+
+                {/* 2. نوع المتر */}
+                {filterPanel === 'meter' && (
+                  <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
+                    <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1 h-4 rounded-full bg-emerald-500"></span> نوع المتر
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {filterMeters.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setFilterMeters([])}
+                            className="text-[10px] text-red-500 hover:underline font-medium"
+                          >
+                            إلغاء التحديد
+                          </button>
+                        )}
+                        <span className="text-[9px] bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 text-emerald-700 font-bold">
+                          {filterMeters.length > 0 ? `${formatNumber(filterMeters.length)} محدد` : 'الكل'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {availableMeterTypes.length > 4 && (
+                      <div className="relative mb-2.5">
+                        <input
+                          value={filterMeterSearch}
+                          onChange={(e) => setFilterMeterSearch(e.target.value)}
+                          placeholder="بحث في نوع المتر..."
+                          className="w-full h-8 pr-3 pl-14 border border-sky-100 rounded-xl text-[11px] bg-sky-50/40 focus:bg-white focus:outline-none focus:border-slate-900"
+                        />
+                        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          {Boolean(filterMeterSearch) && (
+                            <button
+                              type="button"
+                              onClick={() => setFilterMeterSearch('')}
+                              className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[10px] font-bold"
+                              title="مسح"
+                            >
+                              ✕
+                            </button>
+                          )}
+                          <span className="text-slate-400 text-[12px]">⌕</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 max-h-[260px] overflow-y-auto pr-1">
+                      {availableMeterTypes
+                        .filter((m) => filterMeterSearch.trim() === '' || m.includes(filterMeterSearch.trim()))
+                        .map((meter) => {
+                          const count = meterCounts.get(meter) || 0
+                          const isChecked = filterMeters.includes(meter)
+                          const disabled = count === 0 && !isChecked
+                          return (
+                            <label
+                              key={meter}
+                              className={`flex items-center gap-2.5 h-10 px-3 rounded-xl border cursor-pointer transition-all ${
+                                isChecked
+                                  ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
+                                  : disabled
+                                  ? 'bg-zinc-50 border-zinc-100 text-zinc-400'
+                                  : 'bg-sky-50/60 border-sky-100 text-slate-700 hover:bg-white'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                disabled={disabled}
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) setFilterMeters((p) => [...p, meter])
+                                  else setFilterMeters((p) => p.filter((x) => x !== meter))
+                                }}
+                                className="w-4 h-4 rounded border-slate-300 accent-slate-900"
+                              />
+                              <span className="text-[12px] font-medium flex-1 truncate">{meter}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                                  isChecked ? 'bg-white/20 text-white' : 'bg-white border border-sky-100 text-slate-600'
+                                }`}
+                              >
+                                {formatNumber(count)}
+                              </span>
+                            </label>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
 
                 {/* 2. المناطق */}
                 {filterPanel === 'areas' && <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
@@ -2055,6 +2220,7 @@ export default function MainApp() {
                   <div>
                     <div className="text-[12px] font-bold">يوجد {formatNumber(matchingFilterCount)} مشترك يطابق الفلتر</div>
                     <div className="text-[10px] text-white/60 mt-0.5">
+                      {filterMeters.length > 0 && `${formatNumber(filterMeters.length)} أمتار • `}
                       {filterAreas.length > 0 && `${formatNumber(filterAreas.length)} مناطق • `}
                       {filterBranches.length > 0 && `${formatNumber(filterBranches.length)} أفرع • `}
                       {formatNumber(subscribersInRange.length)} الكل
