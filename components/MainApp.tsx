@@ -347,88 +347,81 @@ function calculateBilling(
   }
 }
 
+// دالة تحديد حالات المشترك الواحد تلقائياً:
+// 1. إزالة "لا ينظف" نهائياً
+// 2. إذا كان الحساب مصفراً (مفلش، لا ينظم) -> إزالة "يدفع باستمرار"
+// 3. فحص حساب سنة 2026: إذا كان يزيد عن 50,000 د.ع -> إزالة "يدفع باستمرار" تلقائياً
+//    إذا كان 50,000 د.ع أو أقل -> إضافة "يدفع باستمرار" تلقائياً
+export function computeSubscriberStatuses(
+  sub: Subscriber,
+  billingRecords: BillingRecords,
+  allSubs: Subscriber[],
+  pricing: Pricing
+): string[] {
+  let statuses = Array.isArray(sub.statuses) ? [...sub.statuses] : []
+
+  // 1. إزالة "لا ينظف" أو "لاينظف" نهائياً
+  statuses = statuses.filter((st) => {
+    if (!st) return false
+    const trimmed = st.trim()
+    return (
+      trimmed !== 'لا ينظف' &&
+      trimmed !== 'لاينظف' &&
+      !trimmed.includes('لا ينظف') &&
+      !trimmed.includes('لاينظف')
+    )
+  })
+
+  // 2. فحص هل المشترك مصفّر الحساب (مفلش، لا ينظم)
+  const isZero = isZeroAccountSubscriber({ ...sub, statuses })
+  if (isZero) {
+    return statuses.filter((s) => s !== 'يدفع باستمرار')
+  }
+
+  // 3. فحص رصيد / حساب المشترك في سنة 2026 (السنة الحالية)
+  const pIdx = Math.floor(new Date().getMonth() / 2)
+  let currentDue = 0
+  try {
+    const b = calculateBilling(sub.id, 2026, billingRecords, allSubs, pricing)
+    currentDue = b.rows.length > pIdx ? b.rows[pIdx].remaining : b.totalRemaining
+  } catch {
+    currentDue = sub.remainingPrev ?? 0
+  }
+
+  // إذا زاد حسابه عن 50,000 د.ع في سنة 2026 -> يُزال عنه خيار "يدفع باستمرار" تلقائياً
+  if (currentDue > 50000) {
+    statuses = statuses.filter((s) => s !== 'يدفع باستمرار')
+  } else {
+    // حسابه 50,000 د.ع أو أقل -> يُعيّن له "يدفع باستمرار" تلقائياً
+    if (!statuses.includes('يدفع باستمرار')) {
+      statuses.push('يدفع باستمرار')
+    }
+  }
+
+  return statuses
+}
+
 // دالة التحقق وتعيين حالات المشتركين تلقائياً:
-// 1. إزالة حالة "لا ينظف" بالكامل من أي مشترك
-// 2. تعيين حالة "يدفع باستمرار" لكل مشترك لديه مدفوعات مسجلة أو مبلغه أقل من 500,000 دينار (ما لم يكن مصفراً)
 export function applyAutoStatuses(
   subs: Subscriber[],
   billingRecords: BillingRecords,
   pricing: Pricing
 ): { updatedSubscribers: Subscriber[]; hasChanges: boolean } {
   let hasChanges = false
-  const pIdx = Math.floor(new Date().getMonth() / 2)
 
   const updatedSubscribers = subs.map((sub) => {
-    let statuses = Array.isArray(sub.statuses) ? [...sub.statuses] : []
-    const originalLen = statuses.length
+    const originalStatuses = Array.isArray(sub.statuses) ? sub.statuses : []
+    const newStatuses = computeSubscriberStatuses(sub, billingRecords, subs, pricing)
 
-    // 1. إزالة "لا ينظف" أو "لاينظف" نهائياً
-    const cleaned = statuses.filter((st) => {
-      if (!st) return false
-      const trimmed = st.trim()
-      return (
-        trimmed !== 'لا ينظف' &&
-        trimmed !== 'لاينظف' &&
-        !trimmed.includes('لا ينظف') &&
-        !trimmed.includes('لاينظف')
-      )
-    })
-    if (cleaned.length !== originalLen) {
+    const changed =
+      originalStatuses.length !== newStatuses.length ||
+      originalStatuses.some((st, idx) => st !== newStatuses[idx])
+
+    if (changed) {
       hasChanges = true
-      statuses = cleaned
+      return { ...sub, statuses: newStatuses }
     }
-
-    // 2. فحص هل المشترك مصفّر الحساب (مفلش، لا ينظم)
-    const isZero = isZeroAccountSubscriber({ ...sub, statuses })
-    if (isZero) {
-      if (statuses.includes('يدفع باستمرار')) {
-        statuses = statuses.filter((s) => s !== 'يدفع باستمرار')
-        hasChanges = true
-      }
-      return { ...sub, statuses }
-    }
-
-    // 3. فحص هل لدى المشترك أي مدفوعات مسجلة في أي سنة أو فترة
-    let hasPayments = false
-    const subBilling = billingRecords[sub.id]
-    if (subBilling) {
-      for (const y in subBilling) {
-        const rows = subBilling[y]
-        if (Array.isArray(rows)) {
-          for (const r of rows) {
-            if (r && typeof r.paid === 'number' && r.paid > 0) {
-              hasPayments = true
-              break
-            }
-          }
-        }
-        if (hasPayments) break
-      }
-    }
-
-    // 4. فحص هل عليه مبلغ أقل من 500,000 دينار
-    let isUnder500k = false
-    try {
-      const b = calculateBilling(sub.id, 2026, billingRecords, subs, pricing)
-      const currentDue = b.rows.length > pIdx ? b.rows[pIdx].remaining : b.totalRemaining
-      if (currentDue < 500000) {
-        isUnder500k = true
-      }
-    } catch {
-      if ((sub.remainingPrev ?? 0) < 500000) {
-        isUnder500k = true
-      }
-    }
-
-    // 5. إذا كان عنده مدفوعات أو عليه أقل من 500 ألف -> يُضاف له "يدفع باستمرار"
-    if (hasPayments || isUnder500k) {
-      if (!statuses.includes('يدفع باستمرار')) {
-        statuses.push('يدفع باستمرار')
-        hasChanges = true
-      }
-    }
-
-    return { ...sub, statuses }
+    return sub
   })
 
   return { updatedSubscribers, hasChanges }
@@ -922,12 +915,6 @@ export default function MainApp() {
     const cleanVal = sanitizeNumberInput(value, field === 'rem')
     const num = cleanVal === '' || cleanVal === '-' ? 0 : Number(cleanVal)
 
-    // إذا تم تعديل الديون السابقة (الفترة الأولى في 2026): نحدث أيضاً remainingPrev للمشترك
-    if (field === 'old' && periodIdx === 0 && year === 2026) {
-      setSubscribers((prev) =>
-        prev.map((s) => (s.id === subId ? { ...s, remainingPrev: num } : s))
-      )
-    }
 
     setBilling((prev) => {
       const copy = { ...prev }
@@ -996,6 +983,31 @@ export default function MainApp() {
       }
 
       copy[subId][year] = yearRecords
+
+      // تحديث حالة المشترك (يدفع باستمرار) فوراً ولحظياً بناءً على الحساب الجديد
+      setSubscribers((prevSubs) => {
+        let anyChange = false
+        const nextSubs = prevSubs.map((s) => {
+          if (s.id !== subId) return s
+          const updatedSub = field === 'old' && periodIdx === 0 && year === 2026
+            ? { ...s, remainingPrev: num }
+            : s
+          const newStatuses = computeSubscriberStatuses(updatedSub, copy, prevSubs, pricing)
+          const oldStatuses = Array.isArray(s.statuses) ? s.statuses : []
+          const isDiff =
+            oldStatuses.length !== newStatuses.length ||
+            oldStatuses.some((st, i) => st !== newStatuses[i]) ||
+            (field === 'old' && periodIdx === 0 && year === 2026 && s.remainingPrev !== num)
+
+          if (isDiff) {
+            anyChange = true
+            return { ...updatedSub, statuses: newStatuses }
+          }
+          return s
+        })
+        return anyChange ? nextSubs : prevSubs
+      })
+
       return copy
     })
 
@@ -1081,17 +1093,25 @@ export default function MainApp() {
       prev.map((s) => (s.id === editSub.id ? { ...s, ...editSub } as Subscriber : s))
     )
 
-    // إذا تغير نوع العقار أو حجم المتر للمشترك، نضمن تدفق الديون في كل الأشهر بمسح أي تجميد يدوي للأشهر التالية
-    if (editSub.propertyType || editSub.meterType) {
+    // إذا تغير نوع العقار أو حجم المتر للمشترك، نضمن إعادة احتساب الفواتير بالسعر الجديد وتدفق الديون بمسح أي تجميد يدوي سابق
+    const originalSub = subscribers.find((s) => s.id === editSub.id)
+    const isPricingChanged =
+      (editSub.propertyType && editSub.propertyType !== originalSub?.propertyType) ||
+      (editSub.meterType && editSub.meterType !== originalSub?.meterType)
+
+    if (isPricingChanged) {
       setBilling((prev) => {
         const copy = { ...prev }
         if (copy[editSub.id!]) {
           const subBilling = { ...copy[editSub.id!] }
           YEARS.forEach((y) => {
             if (subBilling[y]) {
-              subBilling[y] = subBilling[y].map((rec, idx) =>
-                idx === 0 ? rec : { ...rec, oldDebtManual: null }
-              )
+              subBilling[y] = subBilling[y].map((rec, idx) => ({
+                ...rec,
+                totalManual: null,
+                remainingManual: null,
+                oldDebtManual: idx === 0 ? rec.oldDebtManual : null
+              }))
             }
           })
           copy[editSub.id!] = subBilling
