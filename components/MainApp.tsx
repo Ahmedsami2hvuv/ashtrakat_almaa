@@ -531,8 +531,8 @@ export default function MainApp() {
   const [importDuplicates, setImportDuplicates] = useState<number>(0)
   const [importOverwrite, setImportOverwrite] = useState<boolean>(false)
 
-  // تعديل الدفعات اللحظي
-  const [pendingEdits, setPendingEdits] = useState<Record<string, string>>({})
+  // تعديل الدفعات اللحظي النشط حالياً فقط
+  const [editingCell, setEditingCell] = useState<{ key: string; value: string } | null>(null)
 
   // مراجع السحب
   const swipeStartX = useRef<number>(0)
@@ -1103,12 +1103,14 @@ export default function MainApp() {
         }
       }
 
-      // مسح أي تجميد يدوي (oldDebtManual) في كل الفترات اللاحقة لكي تتسلسل وتتحدث تلقائياً
+      // مسح أي تجميد يدوي في كل الفترات اللاحقة لكي تتسلسل وتتحدث تلقائياً
       for (let nextP = periodIdx + 1; nextP < 6; nextP++) {
         if (yearRecords[nextP]) {
           yearRecords[nextP] = {
             ...yearRecords[nextP],
-            oldDebtManual: null
+            oldDebtManual: null,
+            totalManual: null,
+            remainingManual: null
           }
         }
       }
@@ -1140,13 +1142,6 @@ export default function MainApp() {
       })
 
       return copy
-    })
-
-    const key = `${subId}_${year}_${periodIdx}_${field}`
-    setPendingEdits((prev) => {
-      const next = { ...prev }
-      delete next[key]
-      return next
     })
   }
 
@@ -3486,7 +3481,24 @@ export default function MainApp() {
                     {activeBilling.rows.map((row, idx) => {
                       // الشهر الحالي يبين بحد أحمر فقط، لا تكتب كلمة "الحالي"
                       const isCurrentPeriod = selectedYear === 2026 && idx === currentPeriodIndex
-                      const editKey = (f: string) => `${activeSubscriber.id}_${selectedYear}_${idx}_${f}`
+                      const oldKey = `${activeSubscriber.id}_${selectedYear}_${idx}_old`
+                      const totalKey = `${activeSubscriber.id}_${selectedYear}_${idx}_total`
+                      const paidKey = `${activeSubscriber.id}_${selectedYear}_${idx}_paid`
+                      const remKey = `${activeSubscriber.id}_${selectedYear}_${idx}_rem`
+
+                      const isEditingOld = editingCell?.key === oldKey
+                      const isEditingTotal = editingCell?.key === totalKey
+                      const isEditingPaid = editingCell?.key === paidKey
+                      const isEditingRem = editingCell?.key === remKey
+
+                      const oldDisplay = isEditingOld ? editingCell.value : formatInputDisplay(row.old)
+                      const totalDisplay = isEditingTotal ? editingCell.value : formatInputDisplay(row.total)
+                      const paidDisplay = isEditingPaid
+                        ? editingCell.value
+                        : row.paid === 0
+                        ? ''
+                        : formatInputDisplay(row.paid)
+                      const remDisplay = isEditingRem ? editingCell.value : formatInputDisplay(row.remaining)
 
                       return (
                         <div
@@ -3504,22 +3516,27 @@ export default function MainApp() {
                           <div className="px-0.5 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
-                              value={pendingEdits[editKey('old')] !== undefined ? pendingEdits[editKey('old')] : formatInputDisplay(row.old)}
+                              value={oldDisplay}
                               onChange={(e) => {
                                 const formatted = formatInputDisplay(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('old')]: formatted }))
+                                setEditingCell({ key: oldKey, value: formatted })
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', formatted)
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
                                   const formatted = formatInputDisplay(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('old')]: formatted }))
+                                  setEditingCell({ key: oldKey, value: formatted })
+                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', formatted)
                                 }
                               }}
-                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', e.target.value)}
+                              onBlur={(e) => {
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', e.target.value)
+                                setEditingCell(null)
+                              }}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('old')]: formatInputDisplay(row.old) }))
+                                setEditingCell({ key: oldKey, value: formatInputDisplay(row.old) })
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
@@ -3537,26 +3554,27 @@ export default function MainApp() {
                           {/* 2. المجموع */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
-                              value={
-                                pendingEdits[editKey('total')] !== undefined
-                                  ? pendingEdits[editKey('total')]
-                                  : formatInputDisplay(row.total)
-                              }
+                              value={totalDisplay}
                               onChange={(e) => {
                                 const formatted = formatInputDisplay(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('total')]: formatted }))
+                                setEditingCell({ key: totalKey, value: formatted })
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', formatted)
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
                                   const formatted = formatInputDisplay(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('total')]: formatted }))
+                                  setEditingCell({ key: totalKey, value: formatted })
+                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', formatted)
                                 }
                               }}
-                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', e.target.value)}
+                              onBlur={(e) => {
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', e.target.value)
+                                setEditingCell(null)
+                              }}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('total')]: formatInputDisplay(row.total) }))
+                                setEditingCell({ key: totalKey, value: formatInputDisplay(row.total) })
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
@@ -3576,31 +3594,30 @@ export default function MainApp() {
                           {/* 3. المدفوع */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
-                              value={
-                                pendingEdits[editKey('paid')] !== undefined
-                                  ? pendingEdits[editKey('paid')]
-                                  : row.paid === 0
-                                  ? ''
-                                  : formatInputDisplay(row.paid)
-                              }
+                              value={paidDisplay}
                               onChange={(e) => {
                                 const formatted = formatInputDisplay(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('paid')]: formatted }))
+                                setEditingCell({ key: paidKey, value: formatted })
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', formatted)
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
                                   const formatted = formatInputDisplay(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('paid')]: formatted }))
+                                  setEditingCell({ key: paidKey, value: formatted })
+                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', formatted)
                                 }
                               }}
-                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', e.target.value)}
+                              onBlur={(e) => {
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', e.target.value)
+                                setEditingCell(null)
+                              }}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({
-                                  ...p,
-                                  [editKey('paid')]: row.paid === 0 ? '' : formatInputDisplay(row.paid)
-                                }))
+                                setEditingCell({
+                                  key: paidKey,
+                                  value: row.paid === 0 ? '' : formatInputDisplay(row.paid)
+                                })
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               placeholder="0"
@@ -3618,22 +3635,27 @@ export default function MainApp() {
                           {/* 4. المجموع الكلي */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
-                              value={pendingEdits[editKey('rem')] !== undefined ? pendingEdits[editKey('rem')] : formatInputDisplay(row.remaining)}
+                              value={remDisplay}
                               onChange={(e) => {
                                 const formatted = formatInputDisplay(e.target.value)
-                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: formatted }))
+                                setEditingCell({ key: remKey, value: formatted })
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', formatted)
                               }}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
                                   const formatted = formatInputDisplay(text)
-                                  setPendingEdits((p) => ({ ...p, [editKey('rem')]: formatted }))
+                                  setEditingCell({ key: remKey, value: formatted })
+                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', formatted)
                                 }
                               }}
-                              onBlur={(e) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', e.target.value)}
+                              onBlur={(e) => {
+                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', e.target.value)
+                                setEditingCell(null)
+                              }}
                               onFocus={(e) => {
-                                setPendingEdits((p) => ({ ...p, [editKey('rem')]: formatInputDisplay(row.remaining) }))
+                                setEditingCell({ key: remKey, value: formatInputDisplay(row.remaining) })
                                 setTimeout(() => e.target.select(), 0)
                               }}
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center ${
