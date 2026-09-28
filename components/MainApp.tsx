@@ -593,7 +593,45 @@ export default function MainApp() {
     }
   }, [selectedSubId, focusOldDebtInput])
 
+  // إغلاق نافذة حساب المشترك وتحديث تاريخ المتصفح
+  const handleCloseSubscriberModal = useCallback(() => {
+    setSelectedSubId(null)
+    setEditingCell(null)
+    setShowContactModal(false)
+    setShowEditModal(false)
+    if (typeof window !== 'undefined' && window.location.hash === '#sub') {
+      window.history.back()
+    }
+  }, [])
 
+  // ربط زر الرجوع في الهاتف بإغلاق نافذة حساب المشترك دون الخروج من الموقع
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (selectedSubId !== null) {
+      if (window.location.hash !== '#sub') {
+        window.location.hash = 'sub'
+      }
+    } else {
+      if (window.location.hash === '#sub') {
+        window.history.replaceState(null, '', window.location.pathname)
+      }
+    }
+
+    const handleHashChange = () => {
+      if (window.location.hash !== '#sub') {
+        setSelectedSubId(null)
+        setEditingCell(null)
+        setShowContactModal(false)
+        setShowEditModal(false)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+    }
+  }, [selectedSubId])
 
   // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط
   useEffect(() => {
@@ -3343,7 +3381,7 @@ export default function MainApp() {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedSubId(null)}
+                onClick={handleCloseSubscriberModal}
                 className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 shrink-0"
               >
                 ✕
