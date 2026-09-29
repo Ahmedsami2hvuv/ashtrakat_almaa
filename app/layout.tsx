@@ -1,10 +1,25 @@
 import type { Metadata, Viewport } from 'next'
+import { Tajawal } from 'next/font/google'
 import './globals.css'
+
+const tajawal = Tajawal({
+  subsets: ['arabic'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+  variable: '--font-tajawal',
+})
 
 export const metadata: Metadata = {
   title: 'نظام اشتراكات الماء',
   description: 'نظام إدارة اشتراكات الماء للمحصلين',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icons/water-logo.jpg' },
+    ],
+    apple: '/icons/water-logo.jpg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -15,8 +30,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: '#0f172a',
 }
 
@@ -26,15 +39,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ar" dir="rtl">
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="اشتراكات الماء" />
-        <link rel="apple-touch-icon" href="/icons/water-logo.jpg" />
-      </head>
-      <body>{children}</body>
+    <html lang="ar" dir="rtl" className={tajawal.variable}>
+      <body className={tajawal.className}>{children}</body>
     </html>
   )
 }

@@ -1747,9 +1747,8 @@ export default function MainApp() {
     <div
       dir="rtl"
       className="min-h-screen text-slate-800 bg-[#f0f9ff]"
-      style={{ fontFamily: 'Tajawal, Inter, system-ui, -apple-system, sans-serif' }}
+      style={{ fontFamily: 'var(--font-tajawal), Tajawal, Inter, system-ui, -apple-system, sans-serif' }}
     >
-      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
 
       {/* الهيدر الرئيسي - الحفاظ على شكل ومقاس الأزرار 100% */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
