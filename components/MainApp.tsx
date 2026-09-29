@@ -633,8 +633,10 @@ export default function MainApp() {
     }
   }, [selectedSubId])
 
-  // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط
+  // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط (يتم فقط بعد تسجيل الدخول)
   useEffect(() => {
+    if (!isAuthenticated) return
+
     const applyData = (data: Record<string, unknown>) => {
       const rawSubs = (data.subscribers as Subscriber[]) || []
       const rawBill = (data.billing as BillingRecords) || {}
@@ -671,23 +673,23 @@ export default function MainApp() {
       setDataLoaded(true)
     }
     init()
-  }, [])
+  }, [isAuthenticated])
 
   // مراقبة تحديثات الفواتير والمدفوعات لتحديث الحالات تلقائياً
   useEffect(() => {
-    if (!dataLoaded || subscribers.length === 0) return
+    if (!isAuthenticated || !dataLoaded || subscribers.length === 0) return
     const { updatedSubscribers, hasChanges } = applyAutoStatuses(subscribers, billing, pricing)
     if (hasChanges) {
       setSubscribers(updatedSubscribers)
     }
-  }, [billing, dataLoaded])
+  }, [billing, dataLoaded, isAuthenticated])
 
   // المزامنة اللحظية الحية الفورية (Realtime Broadcast + Database Changes)
   const isIncomingSyncRef = useRef<boolean>(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
-    if (!dataLoaded) return
+    if (!isAuthenticated || !dataLoaded) return
 
     const applyIncomingData = (data: Record<string, unknown>) => {
       isIncomingSyncRef.current = true
@@ -733,11 +735,11 @@ export default function MainApp() {
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [dataLoaded])
+  }, [dataLoaded, isAuthenticated])
 
   // الحفظ التلقائي المحلي + البث اللحظي السريع + الحفظ السحابي
   useEffect(() => {
-    if (!dataLoaded) return
+    if (!isAuthenticated || !dataLoaded) return
     if (isIncomingSyncRef.current) return
 
     const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems }
@@ -761,7 +763,7 @@ export default function MainApp() {
       await saveToCloud(data as Record<string, unknown>)
       setIsSyncing(false)
     }, 500)
-  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, dataLoaded])
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, dataLoaded, isAuthenticated])
 
   // تسجيل الدخول
   const handleLogin = (e: React.FormEvent) => {
@@ -1685,7 +1687,7 @@ export default function MainApp() {
 
           <div className="text-center mb-6">
             <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">نظام اشتراكات الماء</h2>
-            <p className="text-[12px] text-slate-500 mt-1">يرجى إدخال رمز الدخول للمتابعة</p>
+            <p className="text-[12px] text-slate-600 font-medium mt-1">يرجى إدخال رمز الدخول للمتابعة</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -1728,7 +1730,7 @@ export default function MainApp() {
             </button>
           </form>
 
-          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-medium">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               النظام متصل
@@ -1762,18 +1764,18 @@ export default function MainApp() {
             <h1 className="text-[15px] font-bold tracking-tight text-slate-900">نظام الاشتراكات</h1>
             {/* مؤشر المزامنة السحابية */}
             {isSyncing ? (
-              <span className="flex items-center gap-1 text-[10px] text-sky-500 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+              <span className="flex items-center gap-1 text-[11px] text-sky-700 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
                 حفظ...
               </span>
             ) : isLoadingCloud ? (
-              <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-pulse"></span>
+              <span className="flex items-center gap-1 text-[11px] text-slate-700 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
                 تحميل...
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                 متزامن
               </span>
             )}
