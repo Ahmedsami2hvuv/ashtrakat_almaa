@@ -715,8 +715,9 @@ export default function MainApp() {
     })
 
     channel
-      .on('broadcast', { event: 'instant_sync' }, ({ payload }) => {
-        if (payload) applyIncomingData(payload as Record<string, unknown>)
+      .on('broadcast', { event: 'instant_sync_ping' }, async () => {
+        const latest = await loadFromCloud()
+        if (latest) applyIncomingData(latest)
       })
       .on(
         'postgres_changes',
@@ -747,13 +748,15 @@ export default function MainApp() {
     // 1. حفظ محلي فوري
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
 
-    // 2. بث مباشر فوري لحظي للأجهزة الأخرى كدام العين (أقل من 50 ميلي ثانية)
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'instant_sync',
-        payload: data
-      })
+    // 2. بث مباشر فوري خفيف للأجهزة الأخرى (إشعار خفيف لتفادي خطأ 422 وتجاوز سعة سوبابيس)
+    if (channelRef.current && (channelRef.current as unknown as { state?: string }).state === 'joined') {
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'instant_sync_ping',
+          payload: { t: Date.now() }
+        })
+      } catch {}
     }
 
     // 3. حفظ سحابي دائم بدليل سوبابيس (خلال 500 ميلي ثانية)

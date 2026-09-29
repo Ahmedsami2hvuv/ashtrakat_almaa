@@ -25,6 +25,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'اشتراكات الماء',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export const viewport: Viewport = {
