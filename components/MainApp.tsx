@@ -3351,24 +3351,6 @@ export default function MainApp() {
             {/* رأس النافذة */}
             <div className="subscriber-hero border-b border-sky-100 px-4 py-3 flex justify-between items-start gap-3 bg-white">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditSub({ ...activeSubscriber })
-                      setShowEditModal(true)
-                    }}
-                    className="text-right text-[16px] sm:text-[17px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
-                    title="انقر لتعديل بيانات المشترك"
-                  >
-                    <span className="font-mono font-extrabold">{formatNumber(activeSubscriber.id)}</span> - <span>{activeSubscriber.name}</span>
-                  </button>
-                  <span className="text-[12px] text-slate-500 font-medium">
-                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                    {' - '}
-                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
-                  </span>
-                </div>
                 <div className="mt-2.5 flex gap-2 items-center flex-wrap">
                   <div className="inline-flex border border-sky-100 rounded-lg bg-sky-50 px-3 py-1 text-[12px] font-semibold text-slate-700">
                     {activeSubscriber.propertyType} - {activeSubscriber.meterType}
@@ -3443,6 +3425,28 @@ export default function MainApp() {
                     </span>
                   </div>
                 )}
+              </div>
+
+              {/* اسم ورقم المشترك فوق أزرار التنقل مباشرة */}
+              <div className="subscriber-content px-4 pt-2.5 pb-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditSub({ ...activeSubscriber })
+                      setShowEditModal(true)
+                    }}
+                    className="text-right text-[16px] sm:text-[17px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
+                    title="انقر لتعديل بيانات المشترك"
+                  >
+                    <span className="font-mono font-extrabold">{formatNumber(activeSubscriber.id)}</span> - <span>{activeSubscriber.name}</span>
+                  </button>
+                  <span className="text-[12px] text-slate-500 font-medium">
+                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                    {' - '}
+                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
+                  </span>
+                </div>
               </div>
 
               {/* أزرار التالي والسابق للتنقل بين المشتركين (تعمل دائماً حتى عند البحث) */}
@@ -4132,7 +4136,7 @@ export default function MainApp() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-slate-600 font-medium">نوع العقار</label>
                   <select
