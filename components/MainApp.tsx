@@ -3806,6 +3806,47 @@ export default function MainApp() {
                   </span>
                 </div>
 
+                {/* ملخص مدة الدين المتراكم */}
+                {(() => {
+                  const debtSummary = calculateDebtSummary(activeSubscriber.id, billing, subscribers, pricing)
+                  if (debtSummary.debt <= 0) {
+                    return (
+                      <div className="mt-3 w-full rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
+                        <div className="text-[12px] font-bold text-emerald-700">لا توجد ديون متراكمة حالياً</div>
+                      </div>
+                    )
+                  }
+
+                  const durationParts: string[] = []
+                  if (debtSummary.years > 0) {
+                    durationParts.push(`${formatNumber(debtSummary.years)} ${debtSummary.years === 1 ? 'سنة' : 'سنوات'}`)
+                  }
+                  if (debtSummary.remainingMonths > 0 || debtSummary.years === 0) {
+                    durationParts.push(`${formatNumber(debtSummary.remainingMonths)} ${debtSummary.remainingMonths === 1 ? 'شهر' : 'أشهر'}`)
+                  }
+
+                  return (
+                    <div className="mt-3 w-full rounded-2xl border border-red-200 bg-red-50/70 px-4 py-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[12.5px] font-bold text-red-800">عليه دين {durationParts.join(' و ')}</div>
+                          <div className="text-[11px] text-red-700 mt-1 leading-relaxed">منذ {debtSummary.startDate}</div>
+                        </div>
+                        <div className="shrink-0 text-left">
+                          <div className="text-[15px] font-bold text-red-700 font-mono">{formatNumber(debtSummary.debt)} د.ع</div>
+                          <div className="text-[9.5px] text-red-500 mt-0.5">يعادل {formatNumber(debtSummary.months)} شهر</div>
+                        </div>
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-red-100 text-[10.5px] text-red-700 leading-relaxed">
+                        {formatNumber(debtSummary.monthlyDue)} د.ع لكل شهر
+                        {debtSummary.remainder > 0
+                          ? ` • المبلغ المتبقي بعد احتساب الأشهر الكاملة: ${formatNumber(debtSummary.remainder)} د.ع`
+                          : ' • الحساب متطابق مع عدد الأشهر المستحقة'}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* زر رفع أو فتح لكيشن ملحق بالسجل مباشرة لتقليص الفراغ */}
                 {(() => {
                   const hasLocation = Boolean(
