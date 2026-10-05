@@ -41,6 +41,9 @@ export interface Subscriber {
   payments: PaymentRow[]
   remainingPrev?: number
   fee?: number
+  order?: number
+  statuses?: string[]
+  createdAt?: string
 }
 
 // نوع البيانات كما تُخزَّن في سوبا بيس

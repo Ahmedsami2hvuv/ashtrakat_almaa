@@ -33,6 +33,7 @@ export interface Subscriber {
   statuses?: string[]
   remainingPrev?: number
   fee?: number
+  createdAt?: string
 }
 
 export type Pricing = Record<PropertyType, Record<MeterType, number>>
@@ -142,6 +143,15 @@ export function isZeroAccountSubscriber(sub: Subscriber | null | undefined): boo
       s.includes('لا ينظم')
     )
   })
+}
+
+// دالة فحص ما إذا كان المشترك مضافاً حديثاً (خلال آخر 1 ساعة) ليبقى في مقدمة القائمة
+export function isRecentlyAddedSubscriber(sub: Subscriber | null | undefined): boolean {
+  if (!sub || !sub.createdAt) return false
+  const time = new Date(sub.createdAt).getTime()
+  if (isNaN(time)) return false
+  const oneHour = 60 * 60 * 1000 // 60 دقيقة
+  return (Date.now() - time) < oneHour
 }
 
 const DEFAULT_AREAS: Area[] = [
@@ -635,6 +645,11 @@ export default function MainApp() {
   })
   const [editSub, setEditSub] = useState<Partial<Subscriber>>({})
   const [formError, setFormError] = useState<string>('')
+  const [showInlineAddArea, setShowInlineAddArea] = useState<boolean>(false)
+  const [inlineAreaName, setInlineAreaName] = useState<string>('')
+  const [showInlineAddBranch, setShowInlineAddBranch] = useState<boolean>(false)
+  const [inlineBranchName, setInlineBranchName] = useState<string>('')
+  const [addSuccessMsg, setAddSuccessMsg] = useState<string>('')
 
   // إدارة المناطق والتسعير
   const [newAreaName, setNewAreaName] = useState<string>('')
@@ -925,9 +940,9 @@ export default function MainApp() {
     [billing, subscribers, pricing, currentPeriodIndex]
   )
 
-  // المشتركون ضمن نطاق المحصل
+  // المشتركون ضمن نطاق المحصل (بالإضافة إلى أي مشترك مضاف حديثاً خلال آخر ساعة ليبقى ظاهراً في المقدمة)
   const subscribersInRange = useMemo(() => {
-    return subscribers.filter((s) => s.id >= rangeFrom && s.id <= rangeTo)
+    return subscribers.filter((s) => (s.id >= rangeFrom && s.id <= rangeTo) || isRecentlyAddedSubscriber(s))
   }, [subscribers, rangeFrom, rangeTo])
 
   // فلترة المشتركين حسب النوع
@@ -1137,7 +1152,26 @@ export default function MainApp() {
       })
     }
 
-    return list
+    // وضع المشتركين المضافين حديثاً (خلال آخر 1 ساعة) في المقدمة دائماً
+    const recentList: Subscriber[] = []
+    const normalList: Subscriber[] = []
+
+    for (const sub of list) {
+      if (isRecentlyAddedSubscriber(sub)) {
+        recentList.push(sub)
+      } else {
+        normalList.push(sub)
+      }
+    }
+
+    // ترتيب المشتركين الجدد من الأحدث إضافة إلى الأقدم
+    recentList.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return timeB - timeA
+    })
+
+    return [...recentList, ...normalList]
   }, [
     subscribersInRange,
     searchQuery,
@@ -1318,6 +1352,72 @@ export default function MainApp() {
     setEditingCell(null)
   }
 
+  // فتح نافذة إضافة مشترك وتجهيز الخيارات تلقائياً
+  const openAddModal = () => {
+    setFormError('')
+    const defaultArea = areas[0]?.id || ''
+    const defaultBranch = areas[0]?.branches[0]?.id || ''
+    setNewSub({
+      idStr: '',
+      name: '',
+      areaId: defaultArea,
+      branchId: defaultBranch,
+      phone: '',
+      propertyType: 'سكني',
+      meterType: '4 متر',
+      statuses: []
+    })
+    setShowInlineAddArea(false)
+    setShowInlineAddBranch(false)
+    setInlineAreaName('')
+    setInlineBranchName('')
+    setShowAddModal(true)
+  }
+
+  // إضافة سريعة لمنطقة من داخل فورم إضافة المشترك
+  const handleQuickAddArea = () => {
+    if (!inlineAreaName.trim()) return
+    const newAreaId = `area_${Date.now()}`
+    const newBranchId = `b_${Date.now()}`
+    const newArea: Area = {
+      id: newAreaId,
+      name: inlineAreaName.trim(),
+      branches: [{ id: newBranchId, name: 'الرئيسي' }]
+    }
+    setAreas((prev) => [...prev, newArea])
+    setNewSub((p) => ({
+      ...p,
+      areaId: newAreaId,
+      branchId: newBranchId
+    }))
+    setInlineAreaName('')
+    setShowInlineAddArea(false)
+  }
+
+  // إضافة سريعة لفرع من داخل فورم إضافة المشترك
+  const handleQuickAddBranch = () => {
+    if (!inlineBranchName.trim()) return
+    if (!newSub.areaId) {
+      setFormError('يرجى اختيار المنطقة أولاً لإضافة فرع لها')
+      return
+    }
+    const newBranchId = `b_${Date.now()}`
+    const branchName = inlineBranchName.trim()
+    setAreas((prev) =>
+      prev.map((a) =>
+        a.id === newSub.areaId
+          ? { ...a, branches: [...a.branches, { id: newBranchId, name: branchName }] }
+          : a
+      )
+    )
+    setNewSub((p) => ({
+      ...p,
+      branchId: newBranchId
+    }))
+    setInlineBranchName('')
+    setShowInlineAddBranch(false)
+  }
+
   // إضافة مشترك
   const handleAddSubscriberSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -1337,7 +1437,7 @@ export default function MainApp() {
       return
     }
     if (!newSub.areaId) {
-      setFormError('يرجى اختيار المنطقة')
+      setFormError('يرجى اختيار المنطقة أو إضافة منطقة جديدة')
       return
     }
 
@@ -1359,10 +1459,11 @@ export default function MainApp() {
       meterType,
       detailedAddress: `قرب ${area?.name || ''}`,
       order: maxOrder + 1,
-      statuses: newSub.statuses
+      statuses: newSub.statuses,
+      createdAt: new Date().toISOString()
     }
 
-    setSubscribers((prev) => [...prev, created])
+    setSubscribers((prev) => [created, ...prev])
 
     // إنشاء سجلات الديون للسنوات 2026، 2027، 2028
     setBilling((prev) => {
@@ -1385,6 +1486,10 @@ export default function MainApp() {
       meterType: '4 متر',
       statuses: []
     })
+    setAddSuccessMsg(`تمت إضافة المشترك (${formatNumber(id)} - ${created.name}) بنجاح! وسيبقى في أعلى القائمة لمدة ساعة.`)
+    setTimeout(() => {
+      setAddSuccessMsg('')
+    }, 6000)
   }
 
   // حفظ تعديل مشترك
@@ -2633,6 +2738,23 @@ export default function MainApp() {
               )}
             </div>
 
+            {/* إشعار نجاح إضافة مشترك */}
+            {addSuccessMsg && (
+              <div className="bg-emerald-600 text-white px-4 py-3 rounded-2xl font-bold text-[12.5px] flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-[16px]">✓</span>
+                  <span>{addSuccessMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAddSuccessMsg('')}
+                  className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* قائمة المشتركين الرئيسية */}
             <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center gap-2 bg-sky-50/40">
@@ -2668,7 +2790,13 @@ export default function MainApp() {
                       >
                         {/* الاسم والرقم على اليمين */}
                         <div className="min-w-0 flex-1 text-right">
-                          <div className="text-[15px] sm:text-[16px] font-bold truncate text-slate-900 leading-snug">
+                          <div className="text-[15px] sm:text-[16px] font-bold truncate text-slate-900 leading-snug flex items-center gap-2">
+                            {isRecentlyAddedSubscriber(sub) && (
+                              <span className="shrink-0 px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1 shadow-xs animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                جديد
+                              </span>
+                            )}
                             <span className="font-mono text-slate-900 font-extrabold">{formatNumber(sub.id)}</span> - <span>{sub.name}</span>
                           </div>
                           <div className="text-[11.5px] text-slate-600 mt-1.5 flex items-center gap-1.5 flex-wrap">
@@ -4010,105 +4138,198 @@ export default function MainApp() {
           فورم إضافة مشترك (A)
       ========================== */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[440px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-2xl">
-            <div className="px-5 py-4 border-b border-sky-50 flex justify-between items-center bg-white">
-              <h3 className="font-bold text-[14px] text-slate-900">إضافة مشترك جديد</h3>
+        <div className="fixed inset-0 z-[10050] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white w-full max-w-[460px] rounded-2xl border border-sky-100 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* رأس النافذة */}
+            <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <h3 className="font-bold text-[14px] text-slate-900">إضافة مشترك جديد</h3>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 border rounded-lg flex items-center justify-center bg-white border-slate-200 text-slate-600"
+                className="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors text-sm"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAddSubscriberSubmit} className="p-5 space-y-4 overflow-y-auto">
-              {/* رقم المشترك * إجباري */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-700">
-                  رقم المشترك <span className="text-red-500">*</span>
-                </label>
-                <input
-                  value={newSub.idStr}
-                  onChange={(e) => setNewSub((p) => ({ ...p, idStr: sanitizeNumberInput(e.target.value) }))}
-                  placeholder="مثال: 5205"
-                  className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
-                  inputMode="numeric"
-                />
+            <form onSubmit={handleAddSubscriberSubmit} className="p-4 space-y-3 overflow-y-auto">
+              {/* السطر الأول: رقم المشترك على اليمين صغير جداً، واسم المشترك على اليسار كبير */}
+              <div className="flex gap-2 items-start">
+                {/* رقم المشترك (على اليمين، حجم صغير جداً) */}
+                <div className="w-[105px] shrink-0">
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    رقم المشترك <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={newSub.idStr}
+                    onChange={(e) => setNewSub((p) => ({ ...p, idStr: sanitizeNumberInput(e.target.value) }))}
+                    placeholder="مثال: 5205"
+                    className="w-full h-10 px-2.5 border border-slate-200 rounded-xl text-[13px] font-mono text-center focus:outline-none focus:border-slate-900 bg-white shadow-xs"
+                    inputMode="numeric"
+                    autoFocus
+                  />
+                </div>
+
+                {/* اسم المشترك (على اليسار، حجم كبير يأخذ باقي السطر) */}
+                <div className="flex-1 min-w-0">
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    اسم المشترك <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      value={newSub.name}
+                      onChange={(e) => setNewSub((p) => ({ ...p, name: e.target.value }))}
+                      placeholder="الاسم الثلاثي للمشترك..."
+                      className="w-full h-10 pr-3 pl-8 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:border-slate-900 bg-white shadow-xs"
+                    />
+                    {Boolean(newSub.name) && (
+                      <button
+                        type="button"
+                        onClick={() => setNewSub((p) => ({ ...p, name: '' }))}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] font-bold transition-all"
+                        title="مسح الاسم"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* اسم المشترك * إجباري */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-700">
-                  اسم المشترك <span className="text-red-500">*</span>
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    value={newSub.name}
-                    onChange={(e) => setNewSub((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="الاسم الثلاثي..."
-                    className="w-full h-11 pr-4 pl-10 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:border-slate-900 bg-white"
-                  />
-                  {Boolean(newSub.name) && (
+              {/* السطر الثاني: المنطقة والفرع كلاهما بجانب بعضهما، مع إضافة منطقة وإضافة فرع */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* المنطقة */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-slate-700">
+                      المنطقة <span className="text-red-500">*</span>
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setNewSub((p) => ({ ...p, name: '' }))}
-                      className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
-                      title="مسح الاسم"
+                      onClick={() => {
+                        setShowInlineAddArea((p) => !p)
+                        setShowInlineAddBranch(false)
+                      }}
+                      className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-1.5 py-0.5 rounded border border-sky-200 transition-colors"
+                      title="إضافة منطقة جديدة"
                     >
-                      ✕
+                      + إضافة منطقة
                     </button>
+                  </div>
+                  {showInlineAddArea ? (
+                    <div className="flex gap-1">
+                      <input
+                        value={inlineAreaName}
+                        onChange={(e) => setInlineAreaName(e.target.value)}
+                        placeholder="اسم المنطقة..."
+                        className="w-full h-10 px-2 border border-sky-400 rounded-xl text-[11px] focus:outline-none bg-sky-50/40"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleQuickAddArea()
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleQuickAddArea}
+                        className="px-2.5 h-10 bg-slate-900 text-white rounded-xl text-[11px] font-bold shrink-0"
+                      >
+                        حفظ
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={newSub.areaId}
+                      onChange={(e) => {
+                        const aId = e.target.value
+                        const targetArea = areas.find((a) => a.id === aId)
+                        setNewSub((p) => ({
+                          ...p,
+                          areaId: aId,
+                          branchId: targetArea?.branches[0]?.id || ''
+                        }))
+                      }}
+                      className="w-full h-10 px-2.5 border border-slate-200 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900 shadow-xs"
+                    >
+                      <option value="">اختر المنطقة</option>
+                      {areas.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* الفرع */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-slate-700">الفرع</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newSub.areaId) {
+                          setFormError('يرجى اختيار المنطقة أولاً لإضافة فرع جديد لها')
+                          return
+                        }
+                        setShowInlineAddBranch((p) => !p)
+                        setShowInlineAddArea(false)
+                      }}
+                      className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-1.5 py-0.5 rounded border border-sky-200 transition-colors"
+                      title="إضافة فرع جديد"
+                    >
+                      + إضافة فرع
+                    </button>
+                  </div>
+                  {showInlineAddBranch ? (
+                    <div className="flex gap-1">
+                      <input
+                        value={inlineBranchName}
+                        onChange={(e) => setInlineBranchName(e.target.value)}
+                        placeholder="اسم الفرع..."
+                        className="w-full h-10 px-2 border border-sky-400 rounded-xl text-[11px] focus:outline-none bg-sky-50/40"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleQuickAddBranch()
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleQuickAddBranch}
+                        className="px-2.5 h-10 bg-slate-900 text-white rounded-xl text-[11px] font-bold shrink-0"
+                      >
+                        حفظ
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={newSub.branchId}
+                      onChange={(e) => setNewSub((p) => ({ ...p, branchId: e.target.value }))}
+                      className="w-full h-10 px-2.5 border border-slate-200 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900 shadow-xs"
+                    >
+                      {(areas.find((a) => a.id === newSub.areaId)?.branches || []).map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
                   )}
                 </div>
               </div>
 
-              {/* المنطقة * إجباري */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-700">
-                  المنطقة <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={newSub.areaId}
-                  onChange={(e) => {
-                    const aId = e.target.value
-                    const targetArea = areas.find((a) => a.id === aId)
-                    setNewSub((p) => ({
-                      ...p,
-                      areaId: aId,
-                      branchId: targetArea?.branches[0]?.id || ''
-                    }))
-                  }}
-                  className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900"
-                >
-                  <option value="">اختر المنطقة</option>
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* الفرع (تفاعلي يظهر أفرع المنطقة فقط) */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-700">الفرع</label>
-                <select
-                  value={newSub.branchId}
-                  onChange={(e) => setNewSub((p) => ({ ...p, branchId: e.target.value }))}
-                  className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[12px] bg-white focus:outline-none focus:border-slate-900"
-                >
-                  {(areas.find((a) => a.id === newSub.areaId)?.branches || []).map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* نوع العقار ونوع العداد */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* السطر الثالث: نوع العقار ورقم المتر (نوع العداد) بجانب بعضهما */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* نوع العقار */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700">نوع العقار</label>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">نوع العقار</label>
                   <select
                     value={newSub.propertyType}
                     onChange={(e) => {
@@ -4119,17 +4340,19 @@ export default function MainApp() {
                         meterType: propertyType === 'سكني' ? '4 متر' : p.meterType || '10 متر'
                       }))
                     }}
-                    className="mt-1.5 w-full h-11 px-3 border border-slate-200 rounded-xl text-[12px] bg-white font-medium"
+                    className="w-full h-10 px-2.5 border border-slate-200 rounded-xl text-[12px] bg-white font-medium focus:outline-none focus:border-slate-900 shadow-xs"
                   >
                     <option value="سكني">سكني</option>
                     <option value="تجاري">تجاري</option>
                   </select>
                 </div>
+
+                {/* رقم المتر (نوع العداد) */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700">
-                    نوع العداد <span className="text-[10px] text-slate-400 font-normal mr-1">(اكتب الرقم بالمتر)</span>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    رقم المتر <span className="text-[10px] text-slate-400 font-normal">(العداد)</span>
                   </label>
-                  <div className="relative mt-1.5 flex items-center">
+                  <div className="relative flex items-center">
                     <input
                       type="text"
                       inputMode="numeric"
@@ -4138,109 +4361,97 @@ export default function MainApp() {
                         const num = e.target.value.replace(/[^\d]/g, '')
                         setNewSub((p) => ({ ...p, meterType: num ? `${num} متر` : '' }))
                       }}
-                      placeholder="اكتب رقم المتر (مثال: 4 أو 75 أو 100)"
-                      className="w-full h-11 pr-3 pl-12 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
+                      placeholder="4"
+                      className="w-full h-10 pr-3 pl-10 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white shadow-xs"
                     />
-                    <span className="absolute left-3 text-[11px] font-bold text-slate-500 pointer-events-none select-none">
+                    <span className="absolute left-2.5 text-[11px] font-bold text-slate-500 pointer-events-none select-none">
                       متر
                     </span>
                   </div>
-                  {/* أزرار اختيار سريعة */}
-                  {newSub.propertyType === 'سكني' ? (
-                    <div className="flex gap-1.5 mt-1.5">
-                      {['3 متر', '4 متر'].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setNewSub((p) => ({ ...p, meterType: m }))}
-                          className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold transition-all ${
-                            newSub.meterType === m
-                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {['1 متر', '2 متر', '3 متر', '4 متر', '10 متر', '50 متر', '70 متر'].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setNewSub((p) => ({ ...p, meterType: m }))}
-                          className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all ${
-                            newSub.meterType === m
-                              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
+              </div>
+
+              {/* أزرار سريعة لاختيار المتر بشكل أنيق ومدمج */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] text-slate-400 font-medium">سريع:</span>
+                {(newSub.propertyType === 'سكني'
+                  ? ['3 متر', '4 متر']
+                  : ['1 متر', '2 متر', '3 متر', '4 متر', '10 متر', '50 متر', '70 متر']
+                ).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setNewSub((p) => ({ ...p, meterType: m }))}
+                    className={`text-[10.5px] px-2 py-0.5 rounded-lg border font-bold transition-all ${
+                      newSub.meterType === m
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
               </div>
 
               {/* الهاتف */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700">
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
                   رقم الهاتف <span className="text-[10px] text-slate-400 font-normal mr-1">(اختياري)</span>
                 </label>
                 <input
                   value={newSub.phone}
                   onChange={(e) => setNewSub((p) => ({ ...p, phone: e.target.value }))}
                   placeholder="07xxxxxxxxx"
-                  className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
+                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-[12.5px] font-mono focus:outline-none focus:border-slate-900 bg-white shadow-xs"
                   dir="ltr"
-                />              </div>
+                />
+              </div>
 
-              {/* حالات المشترك المتعددة */}
+              {/* حالات المشترك المتعددة (مدمجة وأنيقة بدون إطالة اللوحة) */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-2">حالات المشترك</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="text-[11px] font-bold text-slate-700 block mb-1.5">حالات المشترك (اختياري):</label>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-slate-50 rounded-xl border border-slate-200/80">
                   {STATUS_OPTIONS.map((st) => {
                     const checked = newSub.statuses.includes(st)
                     return (
-                      <label
+                      <button
                         key={st}
-                        className={`flex items-center gap-2 p-2 rounded-xl border text-[11px] cursor-pointer transition-all ${
-                          checked ? 'bg-slate-900 text-white border-slate-900' : 'bg-sky-50/50 border-sky-100 text-slate-700'
+                        type="button"
+                        onClick={() => {
+                          setNewSub((p) => ({
+                            ...p,
+                            statuses: checked ? p.statuses.filter((x) => x !== st) : [...p.statuses, st]
+                          }))
+                        }}
+                        className={`text-[10.5px] px-2 py-1 rounded-lg border font-semibold transition-all ${
+                          checked
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewSub((p) => ({ ...p, statuses: [...p.statuses, st] }))
-                            } else {
-                              setNewSub((p) => ({ ...p, statuses: p.statuses.filter((x) => x !== st) }))
-                            }
-                          }}
-                          className="w-3.5 h-3.5 rounded border-slate-300 accent-slate-900"
-                        />
-                        <span className="truncate">{st}</span>
-                      </label>
+                        {checked ? '✓ ' : ''}{st}
+                      </button>
                     )
                   })}
                 </div>
               </div>
 
               {formError && (
-                <div className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl p-3">
-                  {formError}
+                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-2.5 font-bold">
+                  ⚠️ {formError}
                 </div>
               )}
 
-              <button
-                type="submit"
-                className="w-full h-11 bg-slate-900 text-white rounded-xl text-[13px] font-bold hover:bg-black transition-colors mt-2"
-              >
-                حفظ المشترك
-              </button>
+              {/* زر الحفظ واضح وبارز في الأسفل */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full h-11 bg-slate-900 hover:bg-black text-white rounded-xl text-[13px] font-bold transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="text-[16px] leading-none">+</span>
+                  <span>حفظ وإضافة المشترك</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -4610,8 +4821,7 @@ export default function MainApp() {
                     <button
                       onClick={() => {
                         setShowSettingsModal(false)
-                        setFormError('')
-                        setShowAddModal(true)
+                        openAddModal()
                       }}
                       className="h-12 bg-slate-900 text-white rounded-2xl text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-black transition-colors"
                     >
@@ -5055,13 +5265,10 @@ export default function MainApp() {
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
       {/* ========================================================= */}
-      {bottomNavTab === 'subscribers' && !activeSubscriber && (
+      {bottomNavTab === 'subscribers' && !activeSubscriber && !showAddModal && !showEditModal && (
         <button
           type="button"
-          onClick={() => {
-            setFormError('')
-            setShowAddModal(true)
-          }}
+          onClick={openAddModal}
           style={{ position: 'fixed', bottom: '68px', left: '16px', zIndex: 9998 }}
           className="h-11 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.35)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700/80"
           title="إضافة مشترك جديد"
