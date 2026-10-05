@@ -439,7 +439,7 @@ function calculateDebtSummary(
 ) {
   const sub = subscribers.find((s) => s.id === subId)
   if (!sub || isZeroAccountSubscriber(sub)) {
-    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0 }
+    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0, remainder: 0 }
   }
 
   const now = new Date()
@@ -462,7 +462,7 @@ function calculateDebtSummary(
   const monthlyDue = periodDue / 2
 
   if (!Number.isFinite(monthlyDue) || monthlyDue <= 0) {
-    return { debt, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0 }
+    return { debt, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0, remainder: 0 }
   }
 
   const months = Math.floor(debt / monthlyDue)
