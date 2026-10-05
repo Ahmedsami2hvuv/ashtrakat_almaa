@@ -428,62 +428,125 @@ export function applyAutoStatuses(
 }
 
 
-// حساب ملخص الدين المتراكم للمشترك حتى الفترة الحالية.
-// يعتمد على آخر رصيد مستحق في الفترة الحالية، ثم يحوله إلى عدد أشهر/سنوات
-// انطلاقاً من قيمة الاشتراك لكل شهر، ويحدد تاريخ بداية التراكم على حدود بداية الشهر.
+// حساب ملخص مدة وتاريخ الدين المتراكم للمشترك
 function calculateDebtSummary(
   subId: number,
   billingRecords: BillingRecords,
   subscribers: Subscriber[],
-  pricing: Pricing
+  pricing: Pricing,
+  selectedYear = 2026,
+  activeRows?: Array<{ remaining: number; periodLabel?: string }>
 ) {
   const sub = subscribers.find((s) => s.id === subId)
   if (!sub || isZeroAccountSubscriber(sub)) {
-    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0, remainder: 0 }
+    return {
+      debt: 0,
+      months: 0,
+      years: 0,
+      remainingMonths: 0,
+      startDate: '',
+      startPeriod: '',
+      startYear: selectedYear,
+      monthlyDue: 0,
+      periodDue: 0,
+      remainder: 0,
+      durationText: '',
+      isZeroAccount: Boolean(sub && isZeroAccountSubscriber(sub))
+    }
   }
 
+  // نعتمد السنة المختارة أو 2026 كأساس
+  const baseYear = YEARS.includes(selectedYear) ? selectedYear : 2026
   const now = new Date()
-  const currentYear = now.getFullYear()
-  const supportedYear = YEARS.includes(currentYear) ? currentYear : Math.max(...YEARS)
-  const currentPeriodIndex = Math.min(5, Math.floor(now.getMonth() / 2))
-  const billingResult = calculateBilling(subId, supportedYear, billingRecords, subscribers, pricing)
-  const currentRow = billingResult.rows[currentPeriodIndex]
-  const debt = Math.max(0, Math.round(Number(currentRow?.remaining ?? billingResult.totalRemaining ?? 0)))
+  const currentPeriodIndex = Math.min(5, Math.max(0, Math.floor(now.getMonth() / 2)))
 
-  if (debt <= 0) {
-    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0, remainder: 0 }
+  // أسطر السجل للمشترك
+  const rows = activeRows || calculateBilling(subId, baseYear, billingRecords, subscribers, pricing).rows
+
+  // استخراج الدين المتبقي في الفترة الحالية؛ وإن كانت 0 نأخذ آخر فترة متبقية
+  const currentRow = rows[currentPeriodIndex]
+  let debt = 0
+  if (currentRow && Number.isFinite(Number(currentRow.remaining))) {
+    debt = Math.max(0, Math.round(Number(currentRow.remaining)))
+  } else if (rows.length > 0) {
+    const lastRow = rows[rows.length - 1]
+    debt = Math.max(0, Math.round(Number(lastRow.remaining)))
   }
 
+  // قيمة الاستحقاق لكل شهرين حسب نوع المشترك والعداد
   const meterAmount = Number.parseInt(sub.meterType, 10)
   const periodDue =
     sub.propertyType === 'تجاري'
       ? (Number.isFinite(meterAmount) && meterAmount > 0 ? meterAmount * 60 * 200 : 0)
       : pricing[sub.propertyType]?.[sub.meterType] ?? 24600
-  const monthlyDue = periodDue / 2
 
-  if (!Number.isFinite(monthlyDue) || monthlyDue <= 0) {
-    return { debt, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0, remainder: 0 }
+  // قيمة الاستحقاق للشهر الواحد
+  const monthlyDue = periodDue > 0 ? periodDue / 2 : 12300
+
+  if (debt <= 0) {
+    return {
+      debt: 0,
+      months: 0,
+      years: 0,
+      remainingMonths: 0,
+      startDate: '',
+      startPeriod: '',
+      startYear: baseYear,
+      monthlyDue,
+      periodDue,
+      remainder: 0,
+      durationText: 'مسدد بالكامل',
+      isZeroAccount: false
+    }
   }
 
-  const months = Math.floor(debt / monthlyDue)
-  const years = Math.floor(months / 12)
-  const remainingMonths = months % 12
-  const remainder = Math.max(0, debt - months * monthlyDue)
+  // حساب عدد الأشهر (تقريب لأقرب شهر)
+  const totalMonths = Math.max(1, Math.round(debt / monthlyDue))
+  const years = Math.floor(totalMonths / 12)
+  const remainingMonths = totalMonths % 12
+  const remainder = Math.max(0, debt - totalMonths * monthlyDue)
 
-  // الاستحقاق الحالي يقع ضمن زوج الأشهر الحالي؛ بداية الدين تُحسب رجوعاً من بداية
-  // الشهر الذي يلي الفترة الحالية، بحيث 49200 لعداد 4 متر في 5/10/2026 = 4 أشهر منذ 1/7/2026.
-  const endDate = new Date(currentYear, currentPeriodIndex * 2 + 2, 1)
-  endDate.setMonth(endDate.getMonth() - months)
-  const startDate = `${endDate.getFullYear()}/${String(endDate.getMonth() + 1).padStart(2, '0')}/01`
+  // صياغة المدة بالعربي البسيط
+  let durationText = ''
+  if (years > 0 && remainingMonths > 0) {
+    const yStr = years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : `${years} سنوات`
+    const mStr = remainingMonths === 1 ? 'شهر واحد' : remainingMonths === 2 ? 'شهران' : `${remainingMonths} أشهر`
+    durationText = `${yStr} و ${mStr}`
+  } else if (years > 0 && remainingMonths === 0) {
+    const yStr = years === 1 ? 'سنة كاملة' : years === 2 ? 'سنتان' : `${years} سنوات`
+    durationText = yStr
+  } else {
+    const mStr = totalMonths === 1 ? 'شهر واحد' : totalMonths === 2 ? 'شهران' : `${totalMonths} أشهر`
+    durationText = mStr
+  }
+
+  // حساب تاريخ بداية تراكم الدين رجوعاً من نهاية الفترة الحالية
+  const endMonth = (currentPeriodIndex + 1) * 2 // شهر 10 مثلاً
+  const startMonthRaw = endMonth - totalMonths + 1 // مثلاً 10 - 4 + 1 = 7
+  let startYear = baseYear
+  let startMonth = startMonthRaw
+  while (startMonth <= 0) {
+    startMonth += 12
+    startYear -= 1
+  }
+
+  const startDate = `${startYear}/${String(startMonth).padStart(2, '0')}/01`
+  const startPeriodIdx = Math.floor((startMonth - 1) / 2)
+  const startPeriod = PERIODS[startPeriodIdx] || ''
 
   return {
     debt,
-    months,
+    months: totalMonths,
     years,
     remainingMonths,
     startDate,
+    startPeriod,
+    startYear,
     monthlyDue,
-    remainder
+    periodDue,
+    remainder,
+    durationText,
+    isZeroAccount: false
   }
 }
 
@@ -3806,42 +3869,79 @@ export default function MainApp() {
                   </span>
                 </div>
 
-                {/* ملخص مدة الدين المتراكم */}
+                {/* ملخص مدة وتاريخ الدين المتراكم أسفل السجل */}
                 {(() => {
-                  const debtSummary = calculateDebtSummary(activeSubscriber.id, billing, subscribers, pricing)
-                  if (debtSummary.debt <= 0) {
+                  const debtSummary = calculateDebtSummary(
+                    activeSubscriber.id,
+                    billing,
+                    subscribers,
+                    pricing,
+                    selectedYear,
+                    activeBilling.rows
+                  )
+
+                  if (debtSummary.isZeroAccount) {
                     return (
-                      <div className="mt-3 w-full rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
-                        <div className="text-[12px] font-bold text-emerald-700">لا توجد ديون متراكمة حالياً</div>
+                      <div className="mt-3 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-center shadow-sm">
+                        <div className="text-[12px] font-bold text-zinc-600">الحساب مصفّر كلياً (0 د.ع) ولا توجد مطالبات</div>
                       </div>
                     )
                   }
 
-                  const durationParts: string[] = []
-                  if (debtSummary.years > 0) {
-                    durationParts.push(`${formatNumber(debtSummary.years)} ${debtSummary.years === 1 ? 'سنة' : 'سنوات'}`)
-                  }
-                  if (debtSummary.remainingMonths > 0 || debtSummary.years === 0) {
-                    durationParts.push(`${formatNumber(debtSummary.remainingMonths)} ${debtSummary.remainingMonths === 1 ? 'شهر' : 'أشهر'}`)
+                  if (debtSummary.debt <= 0) {
+                    return (
+                      <div className="mt-3 w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center shadow-sm">
+                        <div className="text-[12.5px] font-bold text-emerald-800 flex items-center justify-center gap-1.5">
+                          <span>✓</span>
+                          <span>الحساب مسدد بالكامل - لا توجد ديون متراكمة (0 د.ع)</span>
+                        </div>
+                      </div>
+                    )
                   }
 
                   return (
-                    <div className="mt-3 w-full rounded-2xl border border-red-200 bg-red-50/70 px-4 py-3 shadow-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-[12.5px] font-bold text-red-800">عليه دين {durationParts.join(' و ')}</div>
-                          <div className="text-[11px] text-red-700 mt-1 leading-relaxed">منذ {debtSummary.startDate}</div>
+                    <div className="mt-3 w-full rounded-2xl border-2 border-red-300 bg-gradient-to-b from-red-50 to-red-100/60 p-4 shadow-md transition-all">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white text-[12px] font-bold">!</span>
+                            <span className="text-[14px] font-black text-red-900">
+                              عليه دين: {debtSummary.durationText}
+                            </span>
+                          </div>
+                          <div className="text-[12px] font-bold text-red-800 mt-1.5 flex items-center gap-1.5 flex-wrap">
+                            <span>📅 منذ:</span>
+                            <span className="font-mono bg-white/80 px-2 py-0.5 rounded-lg border border-red-200 text-red-950 font-black">
+                              {debtSummary.startDate}
+                            </span>
+                            {debtSummary.startPeriod && (
+                              <span className="text-red-700 font-semibold text-[11px]">
+                                (فترة {debtSummary.startPeriod})
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="shrink-0 text-left">
-                          <div className="text-[15px] font-bold text-red-700 font-mono">{formatNumber(debtSummary.debt)} د.ع</div>
-                          <div className="text-[9.5px] text-red-500 mt-0.5">يعادل {formatNumber(debtSummary.months)} شهر</div>
+
+                        <div className="shrink-0 text-left bg-white/90 px-3 py-2 rounded-xl border border-red-200 shadow-sm">
+                          <div className="text-[10px] text-red-600 font-bold">المبلغ المتراكم</div>
+                          <div className="text-[16px] font-black text-red-700 font-mono leading-tight">
+                            {formatNumber(debtSummary.debt)} <span className="text-[10px] font-sans">د.ع</span>
+                          </div>
+                          <div className="text-[10px] font-bold text-red-500 mt-0.5">
+                            يعادل {formatNumber(debtSummary.months)} {debtSummary.months === 1 ? 'شهر' : 'أشهر'}
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-2.5 pt-2 border-t border-red-100 text-[10.5px] text-red-700 leading-relaxed">
-                        {formatNumber(debtSummary.monthlyDue)} د.ع لكل شهر
-                        {debtSummary.remainder > 0
-                          ? ` • المبلغ المتبقي بعد احتساب الأشهر الكاملة: ${formatNumber(debtSummary.remainder)} د.ع`
-                          : ' • الحساب متطابق مع عدد الأشهر المستحقة'}
+
+                      <div className="mt-3 pt-2.5 border-t border-red-200/80 flex items-center justify-between text-[11px] text-red-800 font-medium flex-wrap gap-2">
+                        <div>
+                          الاشتراك: <span className="font-bold">{formatNumber(debtSummary.periodDue)} د.ع</span> كل شهرين ({formatNumber(debtSummary.monthlyDue)} د.ع شهرياً)
+                        </div>
+                        {debtSummary.remainder > 0 && (
+                          <div className="text-red-700 font-bold bg-white/60 px-2 py-0.5 rounded-md">
+                            متبقي إضافي: {formatNumber(debtSummary.remainder)} د.ع
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
