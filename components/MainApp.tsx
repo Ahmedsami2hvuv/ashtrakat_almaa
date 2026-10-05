@@ -4158,22 +4158,22 @@ export default function MainApp() {
             <form onSubmit={handleAddSubscriberSubmit} className="p-4 space-y-3 overflow-y-auto">
               {/* السطر الأول: رقم المشترك على اليمين صغير جداً، واسم المشترك على اليسار كبير */}
               <div className="flex gap-2 items-start">
-                {/* رقم المشترك (على اليمين، حجم صغير جداً) */}
-                <div className="w-[105px] shrink-0">
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    رقم المشترك <span className="text-red-500">*</span>
+                {/* رقم المشترك (على اليمين، حجم صغير جداً ومضغوط) */}
+                <div className="w-[76px] shrink-0">
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1 text-center truncate">
+                    الرقم <span className="text-red-500">*</span>
                   </label>
                   <input
                     value={newSub.idStr}
                     onChange={(e) => setNewSub((p) => ({ ...p, idStr: sanitizeNumberInput(e.target.value) }))}
-                    placeholder="مثال: 5205"
-                    className="w-full h-10 px-2.5 border border-slate-200 rounded-xl text-[13px] font-mono text-center focus:outline-none focus:border-slate-900 bg-white shadow-xs"
+                    placeholder="5205"
+                    className="w-full h-10 px-1 border border-slate-200 rounded-xl text-[13px] font-mono font-bold text-center focus:outline-none focus:border-slate-900 bg-white shadow-xs"
                     inputMode="numeric"
                     autoFocus
                   />
                 </div>
 
-                {/* اسم المشترك (على اليسار، حجم كبير يأخذ باقي السطر) */}
+                {/* اسم المشترك (على اليسار، حجم كبير وواسع يأخذ أغلب السطر) */}
                 <div className="flex-1 min-w-0">
                   <label className="text-[11px] font-bold text-slate-700 block mb-1">
                     اسم المشترك <span className="text-red-500">*</span>
@@ -4182,7 +4182,7 @@ export default function MainApp() {
                     <input
                       value={newSub.name}
                       onChange={(e) => setNewSub((p) => ({ ...p, name: e.target.value }))}
-                      placeholder="الاسم الثلاثي للمشترك..."
+                      placeholder="الاسم الثلاثي أو الرباعي للمشترك..."
                       className="w-full h-10 pr-3 pl-8 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:border-slate-900 bg-white shadow-xs"
                     />
                     {Boolean(newSub.name) && (
