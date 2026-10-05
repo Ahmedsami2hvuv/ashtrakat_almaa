@@ -650,6 +650,7 @@ export default function MainApp() {
   const [showInlineAddBranch, setShowInlineAddBranch] = useState<boolean>(false)
   const [inlineBranchName, setInlineBranchName] = useState<string>('')
   const [addSuccessMsg, setAddSuccessMsg] = useState<string>('')
+  const [duplicateSubId, setDuplicateSubId] = useState<number | null>(null)
 
   // إدارة المناطق والتسعير
   const [newAreaName, setNewAreaName] = useState<string>('')
@@ -940,9 +941,13 @@ export default function MainApp() {
     [billing, subscribers, pricing, currentPeriodIndex]
   )
 
-  // المشتركون ضمن نطاق المحصل (بالإضافة إلى أي مشترك مضاف حديثاً خلال آخر ساعة ليبقى ظاهراً في المقدمة)
+  // المشتركون ضمن نطاق المحصل (بالإضافة إلى أي مشترك مضاف حديثاً أو مسجل باسمه حتى لو كان رقمه خارج النطاق)
   const subscribersInRange = useMemo(() => {
-    return subscribers.filter((s) => (s.id >= rangeFrom && s.id <= rangeTo) || isRecentlyAddedSubscriber(s))
+    return subscribers.filter((s) => 
+      (s.id >= rangeFrom && s.id <= rangeTo) || 
+      isRecentlyAddedSubscriber(s) || 
+      (Boolean(s.name) && s.name.trim() !== '' && s.name !== 'رقم شاغر')
+    )
   }, [subscribers, rangeFrom, rangeTo])
 
   // فلترة المشتركين حسب النوع
@@ -1087,10 +1092,10 @@ export default function MainApp() {
 
   // القائمة المعروضة في الصفحة الرئيسية
   const displayedSubscribers = useMemo(() => {
-    let list = subscribersInRange
-
-    // البحث مع الترتيب حسب الاسم الأول فالثاني فالثالث
     const q = searchQuery.trim()
+    // إذا كان هناك بحث نشط، نبحث في كل المشتركين بلا استثناء لضمان إيجاد أي مشترك مسجل
+    let list = q ? subscribers : subscribersInRange
+
     if (q) {
       list = list.filter(
         (s) =>
@@ -1173,6 +1178,7 @@ export default function MainApp() {
 
     return [...recentList, ...normalList]
   }, [
+    subscribers,
     subscribersInRange,
     searchQuery,
     filterTypes,
@@ -1371,6 +1377,7 @@ export default function MainApp() {
     setShowInlineAddBranch(false)
     setInlineAreaName('')
     setInlineBranchName('')
+    setDuplicateSubId(null)
     setShowAddModal(true)
   }
 
@@ -1422,15 +1429,47 @@ export default function MainApp() {
   const handleAddSubscriberSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    setDuplicateSubId(null)
 
     const id = Number(newSub.idStr.replace(/[^0-9]/g, ''))
     if (!newSub.idStr.trim() || isNaN(id) || id <= 0) {
       setFormError('رقم المشترك إجباري ويجب أن يكون رقماً صحيحاً')
       return
     }
-    if (subscribers.some((s) => s.id === id)) {
-      setFormError(`رقم المشترك ${formatNumber(id)} موجود مسبقاً!`)
-      return
+
+    const existing = subscribers.find((s) => s.id === id)
+    if (existing) {
+      // إذا كان الرقم مسجلاً كـ "رقم شاغر"، نملؤه فوراً باسم المشترك الجديد
+      if (!existing.name || existing.name === 'رقم شاغر' || existing.name.trim() === '') {
+        const area = areas.find((a) => a.id === newSub.areaId)
+        const branchId = newSub.branchId || area?.branches[0]?.id || ''
+        const rawMeter = newSub.meterType?.trim()
+        const meterDigits = rawMeter ? rawMeter.replace(/[^\d]/g, '') : ''
+        const meterType = meterDigits ? `${meterDigits} متر` : (newSub.propertyType === 'تجاري' ? '10 متر' : '4 متر')
+
+        const updated: Subscriber = {
+          ...existing,
+          name: newSub.name.trim(),
+          phone: newSub.phone.trim(),
+          areaId: newSub.areaId,
+          branchId,
+          propertyType: newSub.propertyType,
+          meterType,
+          detailedAddress: `قرب ${area?.name || ''}`,
+          statuses: newSub.statuses,
+          createdAt: new Date().toISOString()
+        }
+
+        setSubscribers((prev) => prev.map((s) => (s.id === id ? updated : s)))
+        setShowAddModal(false)
+        setAddSuccessMsg(`تم تحديث المشترك (${formatNumber(id)} - ${updated.name}) بنجاح! وسيبقى في أعلى القائمة لمدة ساعة.`)
+        setTimeout(() => setAddSuccessMsg(''), 6000)
+        return
+      } else {
+        setFormError(`رقم المشترك ${formatNumber(id)} مسجل مسبقاً باسم: ${existing.name}`)
+        setDuplicateSubId(id)
+        return
+      }
     }
     if (!newSub.name.trim() || newSub.name.trim().length < 2) {
       setFormError('اسم المشترك إجباري')
@@ -4437,8 +4476,22 @@ export default function MainApp() {
               </div>
 
               {formError && (
-                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-2.5 font-bold">
-                  ⚠️ {formError}
+                <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-2.5 font-bold space-y-1.5">
+                  <div>⚠️ {formError}</div>
+                  {duplicateSubId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false)
+                        setSelectedSubId(duplicateSubId)
+                        setSelectedYear(2026)
+                      }}
+                      className="w-full h-8 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                    >
+                      <span>🔍</span>
+                      <span>فتح ملف المشترك #{formatNumber(duplicateSubId)} وتعديله فوراً</span>
+                    </button>
+                  )}
                 </div>
               )}
 
