@@ -427,6 +427,66 @@ export function applyAutoStatuses(
   return { updatedSubscribers, hasChanges }
 }
 
+
+// حساب ملخص الدين المتراكم للمشترك حتى الفترة الحالية.
+// يعتمد على آخر رصيد مستحق في الفترة الحالية، ثم يحوله إلى عدد أشهر/سنوات
+// انطلاقاً من قيمة الاشتراك لكل شهر، ويحدد تاريخ بداية التراكم على حدود بداية الشهر.
+function calculateDebtSummary(
+  subId: number,
+  billingRecords: BillingRecords,
+  subscribers: Subscriber[],
+  pricing: Pricing
+) {
+  const sub = subscribers.find((s) => s.id === subId)
+  if (!sub || isZeroAccountSubscriber(sub)) {
+    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0 }
+  }
+
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const supportedYear = YEARS.includes(currentYear) ? currentYear : Math.max(...YEARS)
+  const currentPeriodIndex = Math.min(5, Math.floor(now.getMonth() / 2))
+  const billingResult = calculateBilling(subId, supportedYear, billingRecords, subscribers, pricing)
+  const currentRow = billingResult.rows[currentPeriodIndex]
+  const debt = Math.max(0, Math.round(Number(currentRow?.remaining ?? billingResult.totalRemaining ?? 0)))
+
+  if (debt <= 0) {
+    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0 }
+  }
+
+  const meterAmount = Number.parseInt(sub.meterType, 10)
+  const periodDue =
+    sub.propertyType === 'تجاري'
+      ? (Number.isFinite(meterAmount) && meterAmount > 0 ? meterAmount * 60 * 200 : 0)
+      : pricing[sub.propertyType]?.[sub.meterType] ?? 24600
+  const monthlyDue = periodDue / 2
+
+  if (!Number.isFinite(monthlyDue) || monthlyDue <= 0) {
+    return { debt, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0 }
+  }
+
+  const months = Math.floor(debt / monthlyDue)
+  const years = Math.floor(months / 12)
+  const remainingMonths = months % 12
+  const remainder = Math.max(0, debt - months * monthlyDue)
+
+  // الاستحقاق الحالي يقع ضمن زوج الأشهر الحالي؛ بداية الدين تُحسب رجوعاً من بداية
+  // الشهر الذي يلي الفترة الحالية، بحيث 49200 لعداد 4 متر في 5/10/2026 = 4 أشهر منذ 1/7/2026.
+  const endDate = new Date(currentYear, currentPeriodIndex * 2 + 2, 1)
+  endDate.setMonth(endDate.getMonth() - months)
+  const startDate = `${endDate.getFullYear()}/${String(endDate.getMonth() + 1).padStart(2, '0')}/01`
+
+  return {
+    debt,
+    months,
+    years,
+    remainingMonths,
+    startDate,
+    monthlyDue,
+    remainder
+  }
+}
+
 // دالة ترتيب البحث حسب الاسم الأول ثم الثاني ثم الثالث
 function searchRank(name: string, query: string): number {
   const words = name.trim().split(/\s+/)
@@ -997,8 +1057,7 @@ export default function MainApp() {
       if (activeBranchId) {
         list = list.filter((s) => s.branchId === activeBranchId)
       } else if (filterBranches.length > 0) {
-        list = list.filter((s) => filterBranches.includes(s.branchId))
-      }
+        list = list.filter((s) => filterBranches.includes(s.branchId))      }
     } else {
       if (filterAreas.length > 0) list = list.filter((s) => filterAreas.includes(s.areaId))
       if (filterBranches.length > 0) list = list.filter((s) => filterBranches.includes(s.branchId))
@@ -1997,8 +2056,7 @@ export default function MainApp() {
                 {filterPanel === 'meter' && (
                   <div className="border border-sky-100 rounded-2xl p-3 bg-white flex flex-col">
                     <div className="text-[11px] font-bold text-slate-800 mb-2.5 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1 h-4 rounded-full bg-emerald-500"></span> نوع المتر
+                      <span className="flex items-center gap-1.5">                        <span className="w-1 h-4 rounded-full bg-emerald-500"></span> نوع المتر
                       </span>
                       <div className="flex items-center gap-2">
                         {(filterMeters.length > 0 || filterCustomMeter.trim() !== '') && (
@@ -2997,8 +3055,7 @@ export default function MainApp() {
                 </div>
                 <div className="text-[11px] text-slate-600 mb-2.5">
                   هؤلاء المشتركون محددون بحالة «يدفع بالدائرة» أو «يجب فحص حسابه» في جدول المشتركين، يمكنك إضافتهم لقائمة المراجعة بنقرة واحدة:
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                </div>                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
                   {officeStatusSubscribers.slice(0, 10).map((sub) => {
                     const isAlreadyAdded = reviewItems.some((r) => r.subscriberId === sub.id)
                     return (
@@ -3997,8 +4054,7 @@ export default function MainApp() {
                   placeholder="07xxxxxxxxx"
                   className="mt-1.5 w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-white"
                   dir="ltr"
-                />
-              </div>
+                />              </div>
 
               {/* حالات المشترك المتعددة */}
               <div>
@@ -4997,8 +5053,7 @@ export default function MainApp() {
                 transition: 'all 0.2s ease'
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'areas' ? 2.2 : 1.8}>
-                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'areas' ? 2.2 : 1.8}>                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
                 <line x1="8" y1="2" x2="8" y2="18" />
                 <line x1="16" y1="6" x2="16" y2="22" />
               </svg>
