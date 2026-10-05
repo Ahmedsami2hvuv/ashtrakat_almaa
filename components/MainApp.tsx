@@ -451,7 +451,7 @@ function calculateDebtSummary(
   const debt = Math.max(0, Math.round(Number(currentRow?.remaining ?? billingResult.totalRemaining ?? 0)))
 
   if (debt <= 0) {
-    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0 }
+    return { debt: 0, months: 0, years: 0, remainingMonths: 0, startDate: '', monthlyDue: 0, remainder: 0 }
   }
 
   const meterAmount = Number.parseInt(sub.meterType, 10)
