@@ -454,8 +454,8 @@ export default function InstallmentsPage({
                     {idx + 1}
                   </span>
 
-                  {/* 1. خلية رقم المشترك (محددة الحجم لـ 4 إلى 5 أرقام فقط) */}
-                  <div className="w-24 sm:w-28 shrink-0">
+                  {/* 1. خلية رقم المشترك (صغيرة ومحددة لحجم 4 إلى 5 أرقام فقط: 72 بكسل) */}
+                  <div style={{ width: '72px', minWidth: '72px', maxWidth: '72px' }} className="shrink-0">
                     <input
                       ref={(el) => {
                         numberInputsRef.current[row.id] = el
@@ -463,24 +463,25 @@ export default function InstallmentsPage({
                       type="text"
                       inputMode="numeric"
                       value={row.subNumber}
-                      placeholder="الرقم..."
+                      placeholder="الرقم"
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '')
                         checkSubscriber(row.id, val)
                       }}
                       onKeyDown={(e) => handleNumberKeyDown(e, row, idx)}
-                      className={`w-full h-11 px-2 text-center rounded-xl border text-base font-bold outline-none transition-all ${
+                      style={{ width: '72px' }}
+                      className={`h-11 text-center rounded-xl border text-base font-black outline-none transition-all ${
                         row.isFound
-                          ? 'border-emerald-400 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-400'
+                          ? 'border-emerald-500 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-400'
                           : row.isNew
-                          ? 'border-amber-400 bg-white text-amber-950 focus:ring-2 focus:ring-amber-400'
+                          ? 'border-amber-500 bg-white text-amber-950 focus:ring-2 focus:ring-amber-400'
                           : 'border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-sky-400'
                       }`}
                     />
                   </div>
 
-                  {/* 2. خلية المبلغ المدفوع (كبيرة وواسعة تأخذ باقي المساحة كلها) */}
-                  <div className="flex-1 relative">
+                  {/* 2. خلية المبلغ المدفوع (كبيرة وواسعة جداً تأخذ باقي الشاشة بالكامل) */}
+                  <div className="flex-1 relative" style={{ minWidth: 0 }}>
                     <input
                       ref={(el) => {
                         amountInputsRef.current[row.id] = el
@@ -488,7 +489,7 @@ export default function InstallmentsPage({
                       type="text"
                       inputMode="numeric"
                       value={row.amount}
-                      placeholder="المبلغ المدفوع..."
+                      placeholder="المبلغ المدفوع (د.ع)..."
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '')
                         setRows((prev) =>
@@ -498,9 +499,9 @@ export default function InstallmentsPage({
                         )
                       }}
                       onKeyDown={(e) => handleAmountKeyDown(e, row, idx)}
-                      className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition-all placeholder:text-slate-300"
+                      className="w-full h-11 pl-10 pr-3 rounded-xl border-2 border-slate-300 focus:border-emerald-500 bg-white text-base sm:text-lg font-black text-slate-950 outline-none focus:ring-2 focus:ring-emerald-400 shadow-2xs transition-all placeholder:text-slate-400"
                     />
-                    <span className="absolute left-2.5 top-3 text-[11px] font-bold text-slate-400 select-none">
+                    <span className="absolute left-2.5 top-3 text-xs font-black text-slate-500 select-none">
                       د.ع
                     </span>
                   </div>
@@ -519,13 +520,13 @@ export default function InstallmentsPage({
                   </button>
                 </div>
 
-                {/* الصف الثاني: اسم المشترك بالكامل تحت الخليتين دون أي اقتصاص */}
-                <div className="mt-2 pr-7">
+                {/* الصف الثاني: اسم المشترك بالكامل تحت الخليتين ممتداً على كامل العرض */}
+                <div className="mt-2 w-full">
                   {row.isFound ? (
-                    <div className="min-h-[32px] px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm font-bold flex flex-wrap items-center justify-between gap-1 shadow-2xs">
+                    <div className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs sm:text-sm font-black flex items-center justify-between gap-1 shadow-2xs">
                       <span className="flex items-center gap-1.5 break-words">
-                        <span className="text-emerald-600 text-sm">👤</span>
-                        <span>{row.name}</span>
+                        <span className="text-emerald-700 text-base">👤</span>
+                        <span className="text-emerald-950 font-black">{row.name}</span>
                       </span>
                       <span className="text-[11px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
                         {row.existingSub?.meterType || 'مسجل'}
