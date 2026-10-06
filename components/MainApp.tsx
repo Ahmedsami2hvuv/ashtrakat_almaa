@@ -2417,21 +2417,6 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
               </svg>
             </button>
 
-            {/* زر تنزيل إرساليات (الصفحة الجديدة) */}
-            <button
-              type="button"
-              aria-label="تنزيل إرساليات"
-              onClick={() => {
-                setShowInstallmentsPage(true)
-                setSearchOpen(false)
-                setFilterDrawerOpen(false)
-              }}
-              className="h-8 px-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center gap-1.5 transition-all text-[11px] font-bold shadow-2xs cursor-pointer active:scale-95"
-              title="تنزيل إرساليات دفع سريع"
-            >
-              <span className="text-[13px] leading-none">📥</span>
-              <span className="inline">تنزيل إرساليات</span>
-            </button>
 
             {/* زر ماسح الوصولات بالذكاء الاصطناعي */}
             <button

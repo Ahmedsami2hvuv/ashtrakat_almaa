@@ -368,9 +368,6 @@ export default function InstallmentsPage({
                 <span className="p-1 rounded-lg bg-emerald-100 text-emerald-800 text-sm">📥</span>
                 <span>تنزيل إرساليات</span>
               </h1>
-              <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-                إدخال سريع للدفعات بالإنتر مع إنشاء المشتركين غير المسجلين تلقائياً
-              </p>
             </div>
           </div>
 
@@ -466,24 +463,6 @@ export default function InstallmentsPage({
               <span>{formatNum(newSubscribersCount)}</span>
               <span className="text-[10px] font-bold text-amber-700">حساب جديد</span>
             </div>
-          </div>
-        </div>
-
-        {/* شريط الإرشادات السريعة */}
-        <div className="bg-sky-50/70 border border-sky-200/80 rounded-xl p-3 mb-4 flex items-start gap-2.5 text-xs text-sky-900">
-          <span className="text-base shrink-0">💡</span>
-          <div className="leading-relaxed">
-            <strong className="font-bold">طريقة الإدخال السريع عبر زر الإنتر (Enter):</strong> اكتب{' '}
-            <span className="font-bold text-sky-800 underline">رقم المشترك</span> واضغط{' '}
-            <kbd className="px-1.5 py-0.5 rounded bg-white border border-sky-300 font-sans text-[10px] font-bold shadow-2xs">
-              Enter
-            </kbd>{' '}
-            لينقلك فوراً لخانة{' '}
-            <span className="font-bold text-sky-800 underline">المبلغ المدفوع</span>. اكتب المبلغ واضغط{' '}
-            <kbd className="px-1.5 py-0.5 rounded bg-white border border-sky-300 font-sans text-[10px] font-bold shadow-2xs">
-              Enter
-            </kbd>{' '}
-            ليفتح سطراً جديداً فوراً. إذا كان المشترك غير موجود، سيُطلب منك كتابة اسمه لإنشاء حساب له تلقائياً.
           </div>
         </div>
 
@@ -668,21 +647,20 @@ export default function InstallmentsPage({
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>إضافة سطر جديد (أو اضغط Enter)</span>
+              <span>إضافة سطر جديد</span>
             </button>
 
             <span className="text-[11px] text-slate-500 font-medium">
-              إجمالي الأسطر الحالية: {rows.length}
+              الأسطر: {rows.length}
             </span>
           </div>
         </div>
 
-        {/* زر الحفظ الكبير في الأسفل */}
+        {/* زر الحفظ في الأسفل */}
         <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div>
-            <div className="text-xs text-slate-500 font-bold">جاهز لحفظ البيانات في النظام؟</div>
-            <div className="text-sm font-black text-slate-900 mt-0.5">
-              سيتم تنزيل الدفعات في فترة شهر {PERIODS[selectedPeriodIdx]} لسنة {selectedYear}
+            <div className="text-sm font-black text-slate-900">
+              تنزيل الدفعات في فترة شهر {PERIODS[selectedPeriodIdx]} لسنة {selectedYear}
             </div>
           </div>
 
