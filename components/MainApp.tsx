@@ -5916,7 +5916,7 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
           style={{ position: 'fixed', bottom: '68px', left: '16px', zIndex: 9998 }}
           className="flex items-center gap-2"
         >
-          {/* زر تنزيل إرساليات */}
+          {/* زر تنزيل إرساليات - بلون أخضر زمردي داكن وصلب 100% وكتابة بيضاء ناصعة */}
           <button
             type="button"
             onClick={() => {
@@ -5924,11 +5924,24 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
               setSearchOpen(false)
               setFilterDrawerOpen(false)
             }}
-            className="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-[0_8px_25px_rgba(5,150,105,0.4)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-emerald-500 font-bold text-[12px]"
+            style={{
+              height: '44px',
+              padding: '0 16px',
+              backgroundColor: '#047857',
+              color: '#ffffff',
+              borderRadius: '9999px',
+              boxShadow: '0 8px 25px rgba(4, 120, 87, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              border: '1.5px solid #059669',
+              cursor: 'pointer',
+              opacity: 1
+            }}
             title="تنزيل إرساليات الدفع"
           >
-            <span className="text-[15px] leading-none">📥</span>
-            <span>تنزيل إرساليات</span>
+            <span style={{ fontSize: '15px', lineHeight: 1 }}>📥</span>
+            <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '12.5px' }}>تنزيل إرساليات</span>
           </button>
 
           {/* زر إضافة مشترك */}
