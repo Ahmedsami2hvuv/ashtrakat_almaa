@@ -1427,15 +1427,35 @@ export default function MainApp() {
     }
   }
 
-  // تنزيل وتطبيق الدفعات المستخرجة من وصولات الذكاء الاصطناعي
+  // تعديل اسم المشترك مباشرة في النظام
+  const handleUpdateSubscriberName = (subId: number, newName: string) => {
+    setSubscribers((prev) => prev.map((s) => (s.id === subId ? { ...s, name: newName.trim() } : s)))
+  }
+
+  // تنزيل وتطبيق الدفعات المستخرجة من وصولات الذكاء الاصطناعي مع إمكانية تحديث الأسماء
   const handleApplyScannedPayments = (
     paymentsToApply: Array<{
       subId: number
       year: number
       periodIdx: number
       amount: number
-    }>
+    }>,
+    nameUpdates?: Array<{ subId: number; newName: string }>
   ) => {
+    // 1. تحديث الأسماء في قائمة المشتركين إذا تم تعديلها
+    if (nameUpdates && nameUpdates.length > 0) {
+      setSubscribers((prevSubs) => {
+        return prevSubs.map((s) => {
+          const update = nameUpdates.find((u) => u.subId === s.id)
+          if (update && update.newName) {
+            return { ...s, name: update.newName }
+          }
+          return s
+        })
+      })
+    }
+
+    // 2. تحديث جدول الفواتير والمدفوعات
     setBilling((prev) => {
       const copy = { ...prev }
       paymentsToApply.forEach(({ subId, year, periodIdx, amount }) => {
@@ -2198,6 +2218,7 @@ export default function MainApp() {
         billing={billing}
         pricing={pricing}
         onApplyPayments={handleApplyScannedPayments}
+        onUpdateSubscriberName={handleUpdateSubscriberName}
         onOpenSettings={() => {
           setShowReceiptScannerModal(false)
           setShowSettingsModal(true)
