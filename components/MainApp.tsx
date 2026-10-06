@@ -5678,7 +5678,7 @@ export default function MainApp() {
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
       {/* ========================================================= */}
-      {bottomNavTab === 'subscribers' && !activeSubscriber && !showAddModal && !showEditModal && (
+      {bottomNavTab === 'subscribers' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && (
         <button
           type="button"
           onClick={openAddModal}
@@ -5707,7 +5707,7 @@ export default function MainApp() {
           backgroundColor: '#ffffff',
           borderTop: '1px solid #e2e8f0',
           boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.06)',
-          display: activeSubscriber ? 'none' : 'flex',
+          display: (activeSubscriber || showReceiptScannerModal) ? 'none' : 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
