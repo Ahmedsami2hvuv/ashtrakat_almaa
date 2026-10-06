@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import ReceiptScannerModal from './ReceiptScannerModal'
+import InstallmentsPage from './InstallmentsPage'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 
 // أنواع البيانات
@@ -642,7 +643,7 @@ ${sub.name}
   return { message, url, endDate, totalAmount }
 }
 
-export default function MainApp() {
+export default function MainApp({ initialShowInstallments = false }: { initialShowInstallments?: boolean } = {}) {
   // رمز الدخول المطلوب
   const REQUIRED_PIN = process.env.NEXT_PUBLIC_APP_PIN || 'AHMEDHLAWAADAHAM'
 
@@ -702,7 +703,8 @@ export default function MainApp() {
   const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import' | 'ai'>('collector')
   const [isLocating, setIsLocating] = useState<boolean>(false)
 
-  // الذكاء الاصطناعي وتنزيل الإرساليات
+  // صفحة تنزيل الإرساليات والذكاء الاصطناعي
+  const [showInstallmentsPage, setShowInstallmentsPage] = useState<boolean>(initialShowInstallments)
   const [showReceiptScannerModal, setShowReceiptScannerModal] = useState<boolean>(false)
   const [aiApiKeys, setAiApiKeys] = useState<string[]>([])
   const [newAiKeyInput, setNewAiKeyInput] = useState<string>('')
@@ -1504,6 +1506,114 @@ export default function MainApp() {
     })
   }
 
+  // حفظ وتنزيل الإرساليات (إنشاء حسابات المشتركين الجدد وتنزيل دفعات الشهرين الحاليين)
+  const handleSaveConsignments = async (
+    newSubsToAdd: Subscriber[],
+    paymentsToApply: Array<{
+      subId: number
+      year: number
+      periodIdx: number
+      amount: number
+    }>
+  ) => {
+    // 1. إضافة المشتركين الجدد إلى قائمة المشتركين
+    let nextSubscribers = [...subscribers]
+    if (newSubsToAdd.length > 0) {
+      const existingIds = new Set(nextSubscribers.map((s) => s.id))
+      const trulyNew = newSubsToAdd.filter((ns) => !existingIds.has(ns.id))
+      nextSubscribers = [...trulyNew, ...nextSubscribers]
+      setSubscribers(nextSubscribers)
+    }
+
+    // 2. تحديث جدول الفواتير والمدفوعات
+    const copyBilling: BillingRecords = { ...billing }
+
+    // تجهيز سجلات الفواتير للمشتركين الجدد
+    newSubsToAdd.forEach((ns) => {
+      if (!copyBilling[ns.id]) {
+        copyBilling[ns.id] = {}
+        YEARS.forEach((y) => {
+          copyBilling[ns.id][y] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+        })
+      }
+    })
+
+    // تطبيق وتنزيل مبالغ الدفعات في الشهرين المحددين
+    paymentsToApply.forEach(({ subId, year, periodIdx, amount }) => {
+      if (!copyBilling[subId]) copyBilling[subId] = {}
+      if (!copyBilling[subId][year]) {
+        copyBilling[subId][year] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+      }
+      const yearRecords = [...copyBilling[subId][year]]
+      const existingRec = yearRecords[periodIdx] || { oldDebtManual: null, paid: 0 }
+      const currentPaid = existingRec.paid || 0
+
+      // إضافة المبلغ المدفوع الجديد إلى المدفوع سابقاً
+      yearRecords[periodIdx] = {
+        ...existingRec,
+        paid: currentPaid + amount,
+        remainingManual: null
+      }
+
+      // مسح أي تجميد يدوي في الفترات اللاحقة لتسلسل الحسابات تلقائياً
+      for (let nextP = periodIdx + 1; nextP < 6; nextP++) {
+        if (yearRecords[nextP]) {
+          yearRecords[nextP] = {
+            ...yearRecords[nextP],
+            oldDebtManual: null,
+            totalManual: null,
+            remainingManual: null
+          }
+        }
+      }
+      copyBilling[subId][year] = yearRecords
+    })
+
+    // 3. تحديث الحالات المالية لجميع المشتركين المتأثرين
+    const updatedSubsWithStatus = nextSubscribers.map((s) => {
+      const wasModified = paymentsToApply.some((p) => p.subId === s.id)
+      if (!wasModified) return s
+      const newStatuses = computeSubscriberStatuses(s, copyBilling, nextSubscribers, pricing)
+      return { ...s, statuses: newStatuses }
+    })
+
+    setSubscribers(updatedSubsWithStatus)
+    setBilling(copyBilling)
+
+    // 4. حفظ سحابي ومحلي فوري في سوبابيس
+    const syncData = {
+      areas,
+      pricing,
+      subscribers: updatedSubsWithStatus,
+      billing: copyBilling,
+      collectorName,
+      collectorPhone,
+      rangeFrom,
+      rangeTo,
+      reviewItems,
+      aiApiKeys
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(syncData))
+    } catch {}
+
+    await saveToCloud(syncData)
+
+    // 5. إرسال بث فوري للأجهزة الأخرى المفتوحة
+    if (channelRef.current && (channelRef.current as unknown as { state?: string }).state === 'joined') {
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'instant_sync_ping',
+          payload: { t: Date.now() }
+        })
+      } catch {}
+    }
+
+    return true
+  }
+
   // تصفير حساب المشترك بالكامل وإعادته لوضعه الأصلي وجعل الدين السابق لأول شهرين 0
   const handleResetSubscriberAccount = (subId: number) => {
     const sub = subscribers.find((s) => s.id === subId)
@@ -2212,6 +2322,22 @@ export default function MainApp() {
   }
 
   // ==========================
+  // صفحة تنزيل الإرساليات (صفحة مستقلة كاملة)
+  // ==========================
+  if (showInstallmentsPage) {
+    return (
+      <InstallmentsPage
+        subscribers={subscribers}
+        billing={billing}
+        areas={areas}
+        pricing={pricing}
+        onClose={() => setShowInstallmentsPage(false)}
+        onSaveConsignments={handleSaveConsignments}
+      />
+    )
+  }
+
+  // ==========================
   // صفحة تنزيل الإرساليات بالذكاء الاصطناعي (صفحة مستقلة كاملة منفصلة)
   // ==========================
   if (showReceiptScannerModal) {
@@ -2291,20 +2417,36 @@ export default function MainApp() {
               </svg>
             </button>
 
-            {/* زر تنزيل إرساليات بالذكاء الاصطناعي */}
+            {/* زر تنزيل إرساليات (الصفحة الجديدة) */}
             <button
               type="button"
               aria-label="تنزيل إرساليات"
+              onClick={() => {
+                setShowInstallmentsPage(true)
+                setSearchOpen(false)
+                setFilterDrawerOpen(false)
+              }}
+              className="h-8 px-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center gap-1.5 transition-all text-[11px] font-bold shadow-2xs cursor-pointer active:scale-95"
+              title="تنزيل إرساليات دفع سريع"
+            >
+              <span className="text-[13px] leading-none">📥</span>
+              <span className="inline">تنزيل إرساليات</span>
+            </button>
+
+            {/* زر ماسح الوصولات بالذكاء الاصطناعي */}
+            <button
+              type="button"
+              aria-label="ماسح الوصولات"
               onClick={() => {
                 setShowReceiptScannerModal(true)
                 setSearchOpen(false)
                 setFilterDrawerOpen(false)
               }}
-              className="h-8 px-2.5 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center gap-1.5 transition-all text-[11px] font-bold shadow-sm"
-              title="تنزيل إرساليات بالذكاء الاصطناعي"
+              className="h-8 px-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center gap-1 transition-all text-[11px] font-medium shadow-2xs"
+              title="ماسح الوصولات بالذكاء الاصطناعي"
             >
-              <span className="text-[13px] leading-none">✨</span>
-              <span className="hidden sm:inline">تنزيل إرساليات</span>
+              <span className="text-[12px] leading-none">✨</span>
+              <span className="hidden md:inline text-[10px]">ماسح الوصولات</span>
             </button>
 
             {/* زر الفلتر */}
