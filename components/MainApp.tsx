@@ -5320,24 +5320,36 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
               {/* تبويب المحصل */}
               {settingsTab === 'collector' && (
                 <div className="space-y-4">
-                  {/* زر إضافة مشترك وزر تسجيل الخروج */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* زر إضافة مشترك وزر تنزيل إرساليات وزر تسجيل الخروج */}
+                  <div className="grid grid-cols-2 gap-2.5">
                     <button
                       onClick={() => {
                         setShowSettingsModal(false)
                         openAddModal()
                       }}
-                      className="h-12 bg-slate-900 text-white rounded-2xl text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-black transition-colors"
+                      className="h-12 bg-slate-900 text-white rounded-2xl text-[12.5px] font-bold flex items-center justify-center gap-1.5 hover:bg-black transition-colors"
                     >
-                      <span className="text-[18px] leading-none">+</span>
+                      <span className="text-[17px] leading-none">+</span>
                       <span>إضافة مشترك</span>
                     </button>
                     <button
                       onClick={() => {
                         setShowSettingsModal(false)
+                        setShowInstallmentsPage(true)
+                      }}
+                      className="h-12 bg-emerald-600 text-white rounded-2xl text-[12.5px] font-bold flex items-center justify-center gap-1.5 hover:bg-emerald-700 transition-colors shadow-2xs"
+                    >
+                      <span className="text-[15px] leading-none">📥</span>
+                      <span>تنزيل إرساليات</span>
+                    </button>
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(false)
                         handleLogout()
                       }}
-                      className="h-12 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                      className="w-full h-11 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-[12.5px] font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -5914,17 +5926,37 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
       {/* ========================================================= */}
-      {bottomNavTab === 'subscribers' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && (
-        <button
-          type="button"
-          onClick={openAddModal}
+      {bottomNavTab === 'subscribers' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && !showInstallmentsPage && (
+        <div
           style={{ position: 'fixed', bottom: '68px', left: '16px', zIndex: 9998 }}
-          className="h-11 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.35)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700/80"
-          title="إضافة مشترك جديد"
+          className="flex items-center gap-2"
         >
-          <span className="text-[18px] font-bold leading-none">+</span>
-          <span className="text-[12px] font-bold">إضافة مشترك</span>
-        </button>
+          {/* زر تنزيل إرساليات */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowInstallmentsPage(true)
+              setSearchOpen(false)
+              setFilterDrawerOpen(false)
+            }}
+            className="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-[0_8px_25px_rgba(5,150,105,0.4)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-emerald-500 font-bold text-[12px]"
+            title="تنزيل إرساليات الدفع"
+          >
+            <span className="text-[15px] leading-none">📥</span>
+            <span>تنزيل إرساليات</span>
+          </button>
+
+          {/* زر إضافة مشترك */}
+          <button
+            type="button"
+            onClick={openAddModal}
+            className="h-11 px-4 bg-slate-900 hover:bg-black text-white rounded-full shadow-[0_8px_25px_rgba(15,23,42,0.35)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-slate-700/80 font-bold text-[12px]"
+            title="إضافة مشترك جديد"
+          >
+            <span className="text-[18px] font-bold leading-none">+</span>
+            <span>إضافة مشترك</span>
+          </button>
+        </div>
       )}
 
       {/* ========================================================= */}
