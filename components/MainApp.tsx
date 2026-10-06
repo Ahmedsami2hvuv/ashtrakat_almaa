@@ -2187,6 +2187,27 @@ export default function MainApp() {
   }
 
   // ==========================
+  // صفحة تنزيل الإرساليات بالذكاء الاصطناعي (صفحة مستقلة كاملة منفصلة)
+  // ==========================
+  if (showReceiptScannerModal) {
+    return (
+      <ReceiptScannerModal
+        onClose={() => setShowReceiptScannerModal(false)}
+        apiKeys={aiApiKeys}
+        subscribers={subscribers}
+        billing={billing}
+        pricing={pricing}
+        onApplyPayments={handleApplyScannedPayments}
+        onOpenSettings={() => {
+          setShowReceiptScannerModal(false)
+          setShowSettingsModal(true)
+          setSettingsTab('ai')
+        }}
+      />
+    )
+  }
+
+  // ==========================
   // واجهة التطبيق الرئيسية
   // ==========================
   return (
@@ -5962,21 +5983,6 @@ export default function MainApp() {
           </button>
         </div>
       </nav>
-
-      {/* نافذة تنزيل الإرساليات بالذكاء الاصطناعي */}
-      <ReceiptScannerModal
-        isOpen={showReceiptScannerModal}
-        onClose={() => setShowReceiptScannerModal(false)}
-        apiKeys={aiApiKeys}
-        subscribers={subscribers}
-        billing={billing}
-        pricing={pricing}
-        onApplyPayments={handleApplyScannedPayments}
-        onOpenSettings={() => {
-          setShowSettingsModal(true)
-          setSettingsTab('ai')
-        }}
-      />
     </div>
   )
 }

@@ -5,7 +5,6 @@ import { Subscriber, Pricing, BillingRecords, PERIODS } from './MainApp'
 import { analyzeReceiptImage, ScannedReceipt, getPeriodIndexFromMonth } from '@/lib/aiReceiptScanner'
 
 interface ReceiptScannerModalProps {
-  isOpen: boolean
   onClose: () => void
   apiKeys: string[]
   subscribers: Subscriber[]
@@ -21,7 +20,6 @@ interface ReceiptScannerModalProps {
 }
 
 export default function ReceiptScannerModal({
-  isOpen,
   onClose,
   apiKeys,
   subscribers,
@@ -37,8 +35,6 @@ export default function ReceiptScannerModal({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  if (!isOpen) return null
 
   // ضغط وتصغير حجم الصورة للمتصفح وسرعة الإرسال
   const compressImage = (file: File): Promise<{ base64: string; mimeType: string }> => {
@@ -218,384 +214,376 @@ export default function ReceiptScannerModal({
     setSuccessMessage(`تم بنجاح تنزيل ${validToApply.length} وصل في حسابات المشتركين!`)
     setTimeout(() => {
       onClose()
-    }, 1500)
+    }, 1200)
   }
 
   const successCount = receipts.filter((r) => r.status === 'success').length
 
   return (
-    <>
-      {/* صفحة مستقلة كاملة ملء الشاشة مع تمرير طبيعي 100% */}
-      <div
-        dir="rtl"
-        className="fixed inset-0 z-[10050] bg-[#f0f9ff] flex flex-col overflow-hidden"
-        style={{ fontFamily: 'var(--font-tajawal), Tajawal, Inter, system-ui, sans-serif' }}
-      >
-        {/* شريط العنوان العلوي الثابت مع زر الرجوع السريع */}
-        <header className="sticky top-0 z-20 bg-slate-900 text-white border-b border-slate-800 shadow-md flex-shrink-0">
-          <div className="max-w-4xl mx-auto px-3 sm:px-4 h-[56px] flex items-center justify-between gap-2">
-            
-            {/* زر الرجوع للرئيسية */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center gap-1.5 transition-all text-xs font-bold"
-              title="الرجوع للرئيسية"
-            >
-              <span className="text-sm">←</span>
-              <span>رجوع</span>
-            </button>
+    <div
+      dir="rtl"
+      className="min-h-screen bg-[#f0f9ff] text-slate-800 flex flex-col justify-between"
+      style={{ fontFamily: 'var(--font-tajawal), Tajawal, Inter, system-ui, -apple-system, sans-serif' }}
+    >
+      {/* 1. الشريط العلوي الرئيسي للصفحة المستقلة */}
+      <header className="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          {/* زر الرجوع الواضح */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center gap-1.5 transition-all text-xs font-bold"
+          >
+            <span className="text-base font-bold">←</span>
+            <span>الرجوع للرئيسية</span>
+          </button>
 
-            {/* عنوان الصفحة */}
-            <div className="flex items-center gap-2 text-center">
-              <span className="text-base">✨</span>
-              <h2 className="font-bold text-[14px] sm:text-base tracking-tight">
-                تنزيل إرساليات بالذكاء الاصطناعي
-              </h2>
-            </div>
+          {/* عنوان الصفحة */}
+          <div className="flex items-center gap-2">
+            <span className="text-base">✨</span>
+            <h1 className="font-bold text-sm sm:text-base tracking-tight text-white">
+              تنزيل إرساليات بالذكاء الاصطناعي
+            </h1>
+          </div>
 
-            {/* مساحة توازن */}
-            <div className="w-16 flex justify-end">
+          {/* زر إغلاق دائري */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center justify-center font-bold text-base transition-colors"
+            title="إغلاق والرجوع"
+          >
+            ✕
+          </button>
+        </div>
+      </header>
+
+      {/* 2. شريط أدوات إضافة الصور وقراءة الكل (ثابت تحت الهيدر) */}
+      <div className="sticky top-14 z-20 bg-white border-b border-sky-100 shadow-xs">
+        <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between gap-2 flex-wrap">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleSelectFiles}
+            multiple
+            accept="image/*"
+            className="hidden"
+            id="standalone-receipt-files-input"
+          />
+
+          {/* زر إضافة صور الوصولات */}
+          <label
+            htmlFor="standalone-receipt-files-input"
+            className="cursor-pointer h-10 px-4 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+          >
+            <span className="text-base">📷</span>
+            <span>إضافة صور الوصولات</span>
+          </label>
+
+          {/* أزرار مسح وقراءة الكل */}
+          {receipts.length > 0 && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center font-bold text-sm"
-                title="إغلاق الصفحة"
+                onClick={() => setReceipts([])}
+                disabled={isProcessing}
+                className="h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
               >
-                ✕
+                مسح الكل
+              </button>
+              <button
+                type="button"
+                onClick={handleStartAnalysis}
+                disabled={isProcessing}
+                className="h-10 px-4 bg-[#0e7490] hover:bg-[#085a70] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>
+                      جاري القراءة ({currentProcessingIdx !== null ? currentProcessingIdx + 1 : 0}/{receipts.length})
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔍</span>
+                    <span>قراءة الكل بالذكاء الاصطناعي</span>
+                  </>
+                )}
               </button>
             </div>
-          </div>
-        </header>
+          )}
+        </div>
+      </div>
 
-        {/* شريط الأدوات المدمج لإضافة الصور وقراءة الكل */}
-        <div className="bg-white border-b border-sky-100 shadow-xs flex-shrink-0">
-          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleSelectFiles}
-              multiple
-              accept="image/*"
-              className="hidden"
-              id="page-receipt-files-input"
-            />
-
-            {/* زر إضافة صور الوصولات (زر صغير ومباشر) */}
-            <label
-              htmlFor="page-receipt-files-input"
-              className="cursor-pointer h-10 px-4 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
-            >
-              <span className="text-sm">📷</span>
-              <span>إضافة صور الوصولات</span>
-            </label>
-
-            {/* أزرار مسح وقراءة الكل */}
-            {receipts.length > 0 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReceipts([])}
-                  disabled={isProcessing}
-                  className="h-10 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
-                >
-                  مسح
-                </button>
-                <button
-                  type="button"
-                  onClick={handleStartAnalysis}
-                  disabled={isProcessing}
-                  className="h-10 px-4 bg-[#0e7490] hover:bg-[#085a70] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      <span>
-                        جاري القراءة ({currentProcessingIdx !== null ? currentProcessingIdx + 1 : 0}/{receipts.length})
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span>🔍</span>
-                      <span>قراءة الكل</span>
-                    </>
-                  )}
-                </button>
-              </div>
+      {/* 3. شريط الإحصاء السريع */}
+      {receipts.length > 0 && (
+        <div className="bg-sky-50 border-b border-sky-100 py-2 px-4 text-xs font-bold text-slate-700">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span>إجمالي الوصولات: <strong className="text-slate-900">{receipts.length}</strong></span>
+              <span className="text-emerald-700">جاهزة للتنزيل: <strong>{successCount}</strong></span>
+            </div>
+            {receipts.some((r) => r.status === 'error') && (
+              <span className="text-red-600">
+                أخطاء: {receipts.filter((r) => r.status === 'error').length}
+              </span>
             )}
           </div>
         </div>
+      )}
 
-        {/* شريط الإحصاء المدمج */}
-        {receipts.length > 0 && (
-          <div className="bg-sky-50/70 border-b border-sky-100 py-1.5 px-4 text-xs font-bold text-slate-700 flex-shrink-0">
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span>إجمالي الوصولات: <strong className="text-slate-900">{receipts.length}</strong></span>
-                <span className="text-emerald-700">المكتملة: <strong>{successCount}</strong></span>
-              </div>
-              {receipts.some((r) => r.status === 'error') && (
-                <span className="text-red-600">
-                  أخطاء: {receipts.filter((r) => r.status === 'error').length}
-                </span>
-              )}
-            </div>
+      {/* 4. محتوى الصفحة الرئيسي (سكرول طبيعي حر بدون أي تعليق) */}
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 space-y-4 pb-36">
+        {/* تنبيه إذا لم تكن هناك مفاتيح */}
+        {apiKeys.length === 0 && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900">
+            <span className="font-semibold">⚠️ لم تقم بإضافة مفتاح الذكاء الاصطناعي بعد في الإعدادات.</span>
+            <button
+              onClick={() => {
+                onClose()
+                onOpenSettings()
+              }}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors"
+            >
+              إضافة مفتاح
+            </button>
           </div>
         )}
 
-        {/* محتوى الصفحة الرئيسي مع سكرول طبيعي وتام وسلس لأعلى ولأسفل */}
-        <main className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5 max-w-4xl w-full mx-auto pb-32">
-          
-          {/* تنبيه إذا لم تكن هناك مفاتيح */}
-          {apiKeys.length === 0 && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900">
-              <span className="font-semibold">⚠️ لم تقم بإضافة مفتاح الذكاء الاصطناعي بعد في الإعدادات.</span>
-              <button
-                onClick={() => {
-                  onClose()
-                  onOpenSettings()
-                }}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors"
+        {/* رسالة النجاح */}
+        {successMessage && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-center font-bold text-sm shadow-sm">
+            🎉 {successMessage}
+          </div>
+        )}
+
+        {/* حالة عدم وجود وصولات */}
+        {receipts.length === 0 ? (
+          <div className="my-10 p-8 text-center bg-white border border-sky-100 rounded-3xl shadow-sm space-y-3">
+            <div className="text-5xl">🧾</div>
+            <h3 className="text-base font-bold text-slate-800">
+              لا توجد وصولات مضافة حالياً
+            </h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              اضغط على زر <strong className="text-sky-700">"📷 إضافة صور الوصولات"</strong> في الأعلى لاختيار صور الوصولات من جهازك، وسيقوم الذكاء الاصطناعي بقراءة أسماء وأرقام المشتركين والمبالغ والفترات وتنزيلها تلقائياً.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h4 className="font-bold text-xs text-slate-700">قائمة الوصولات ({receipts.length}):</h4>
+              <span className="text-[11px] text-slate-500">يمكنك مراجعة وتعديل أي حقل قبل الحفظ</span>
+            </div>
+
+            {receipts.map((rc, idx) => (
+              <div
+                key={rc.id}
+                className={`p-3.5 rounded-2xl border transition-all ${
+                  rc.status === 'processing'
+                    ? 'border-sky-400 bg-sky-50/50 ring-2 ring-sky-200'
+                    : rc.status === 'error'
+                    ? 'border-red-200 bg-red-50/40'
+                    : rc.status === 'success'
+                    ? 'border-emerald-200 bg-white shadow-sm'
+                    : 'border-slate-200 bg-white shadow-xs'
+                }`}
               >
-                إضافة مفتاح
-              </button>
-            </div>
-          )}
-
-          {/* رسالة النجاح */}
-          {successMessage && (
-            <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-center font-bold text-sm shadow-sm">
-              🎉 {successMessage}
-            </div>
-          )}
-
-          {/* حالة عدم وجود وصولات */}
-          {receipts.length === 0 ? (
-            <div className="my-10 p-8 text-center bg-white border border-sky-100 rounded-3xl shadow-sm space-y-3">
-              <div className="text-4xl">🧾</div>
-              <h3 className="text-base font-bold text-slate-800">
-                لا توجد وصولات مضافة حالياً
-              </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                اضغط على زر <strong className="text-sky-700">"📷 إضافة صور الوصولات"</strong> في الأعلى لاختيار صور الوصولات من هاتفك، وسيقوم الذكاء الاصطناعي بقراءة أرقام المشتركين والمبالغ والفترات وتنزيلها تلقائياً.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <h4 className="font-bold text-xs text-slate-700">قائمة الوصولات ({receipts.length}):</h4>
-                <span className="text-[11px] text-slate-500">يمكنك مراجعة وتعديل أي حقل قبل الحفظ</span>
-              </div>
-
-              {receipts.map((rc, idx) => (
-                <div
-                  key={rc.id}
-                  className={`p-3.5 rounded-2xl border transition-all ${
-                    rc.status === 'processing'
-                      ? 'border-sky-400 bg-sky-50/50 ring-2 ring-sky-200'
-                      : rc.status === 'error'
-                      ? 'border-red-200 bg-red-50/40'
-                      : rc.status === 'success'
-                      ? 'border-emerald-200 bg-white shadow-sm'
-                      : 'border-slate-200 bg-white shadow-xs'
-                  }`}
-                >
-                  {/* شريط عنوان البطاقة والمصغّر */}
-                  <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-slate-100">
-                    <div className="flex items-center gap-2.5">
-                      {/* مصغر الصورة مع إمكانية التكبير */}
-                      <button
-                        type="button"
-                        onClick={() => setPreviewImage(rc.imageUrl)}
-                        className="w-12 h-12 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex-shrink-0 relative active:scale-95 transition-transform group"
-                        title="اضغط لتكبير الوصل"
-                      >
-                        <img
-                          src={rc.imageUrl}
-                          alt="وصل"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <span className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] px-1 rounded-tl font-bold">
-                          🔍
-                        </span>
-                      </button>
-
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-slate-900">
-                            وصل رقم {idx + 1}
-                          </span>
-                          {rc.receiptNumber && (
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-mono font-bold">
-                              قائمة #{rc.receiptNumber}
-                            </span>
-                          )}
-                          {rc.status === 'success' && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">
-                              ✓ مكتمل
-                            </span>
-                          )}
-                          {rc.status === 'processing' && (
-                            <span className="px-2 py-0.5 bg-sky-100 text-sky-700 rounded-md text-[10px] font-bold animate-pulse">
-                              جاري القراءة...
-                            </span>
-                          )}
-                          {rc.status === 'error' && (
-                            <span className="px-2 py-0.5 bg-red-100 text-red-600 rounded-md text-[10px] font-bold">
-                              خطأ
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-400 block truncate max-w-[200px]">
-                          {rc.fileName}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* زر حذف الوصل */}
+                {/* شريط عنوان البطاقة والمصغّر */}
+                <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    {/* مصغر الصورة مع إمكانية التكبير */}
                     <button
                       type="button"
-                      onClick={() => handleRemoveReceipt(idx)}
-                      className="w-8 h-8 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors text-sm"
-                      title="حذف هذا الوصل"
+                      onClick={() => setPreviewImage(rc.imageUrl)}
+                      className="w-12 h-12 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex-shrink-0 relative active:scale-95 transition-transform"
+                      title="اضغط لتكبير الوصل"
                     >
-                      ✕
+                      <img
+                        src={rc.imageUrl}
+                        alt="وصل"
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] px-1 rounded-tl font-bold">
+                        🔍
+                      </span>
                     </button>
-                  </div>
 
-                  {/* الحقول: السطر الأول (رقم المشترك صغير + اسم المشترك كبير وعريض) */}
-                  <div className="flex items-start gap-2 mb-2.5">
-                    {/* رقم المشترك (خلية صغيرة) */}
-                    <div className="w-24 sm:w-28 flex-shrink-0">
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">
-                        رقم المشترك
-                      </label>
-                      <input
-                        type="number"
-                        value={rc.subscriberId || ''}
-                        onChange={(e) =>
-                          handleUpdateReceipt(
-                            idx,
-                            'subscriberId',
-                            e.target.value ? parseInt(e.target.value, 10) : undefined
-                          )
-                        }
-                        placeholder="الرقم"
-                        className="w-full h-9 px-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 text-center focus:outline-none focus:border-slate-800 bg-white"
-                      />
-                    </div>
-
-                    {/* اسم المشترك (خلية عريضة وكبيرة) */}
-                    <div className="flex-1 min-w-0">
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">
-                        اسم المشترك
-                      </label>
-                      <input
-                        type="text"
-                        value={rc.subscriberName || ''}
-                        onChange={(e) => handleUpdateReceipt(idx, 'subscriberName', e.target.value)}
-                        placeholder="اسم المشترك المقروء..."
-                        className="w-full h-9 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-slate-800 bg-white"
-                      />
-                      {rc.matchedSubscriber ? (
-                        <div className="text-[10px] text-emerald-700 font-bold truncate mt-1">
-                          ✓ مطابق في النظام: {rc.matchedSubscriber.name}
-                        </div>
-                      ) : rc.subscriberId ? (
-                        <div className="text-[10px] text-amber-700 font-semibold truncate mt-1">
-                          ⚠️ غير مسجل بقائمة المشتركين
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* السطر الثاني: المبلغ المسدد + الفترة المستهدفة */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* المبلغ المسدد */}
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">
-                        المبلغ المسدد (د.ع)
-                      </label>
-                      <input
-                        type="number"
-                        value={rc.amount || ''}
-                        onChange={(e) =>
-                          handleUpdateReceipt(
-                            idx,
-                            'amount',
-                            e.target.value ? parseInt(e.target.value, 10) : undefined
-                          )
-                        }
-                        placeholder="المبلغ"
-                        className="w-full h-9 px-3 border border-slate-200 rounded-xl text-xs font-mono font-bold text-emerald-700 focus:outline-none focus:border-slate-800 bg-white"
-                      />
-                    </div>
-
-                    {/* الفترة المستهدفة */}
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">
-                        الفترة المستهدفة
-                      </label>
-                      <select
-                        value={rc.periodIndex}
-                        onChange={(e) =>
-                          handleUpdateReceipt(idx, 'periodIndex', parseInt(e.target.value, 10))
-                        }
-                        className="w-full h-9 px-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-slate-800"
-                      >
-                        {PERIODS.map((pLabel: string, pIdx: number) => (
-                          <option key={pIdx} value={pIdx}>
-                            فترة ({pLabel})
-                          </option>
-                        ))}
-                      </select>
-                      <span className="text-[10px] text-slate-500 block mt-1">
-                        سنة {rc.targetYear || 2026} {rc.paymentMonth ? `(شهر ${rc.paymentMonth})` : ''}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-slate-900">
+                          وصل رقم {idx + 1}
+                        </span>
+                        {rc.receiptNumber && (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-mono font-bold">
+                            قائمة #{rc.receiptNumber}
+                          </span>
+                        )}
+                        {rc.status === 'success' && (
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">
+                            ✓ مكتمل
+                          </span>
+                        )}
+                        {rc.status === 'processing' && (
+                          <span className="px-2 py-0.5 bg-sky-100 text-sky-700 rounded-md text-[10px] font-bold animate-pulse">
+                            جاري القراءة...
+                          </span>
+                        )}
+                        {rc.status === 'error' && (
+                          <span className="px-2 py-0.5 bg-red-100 text-red-600 rounded-md text-[10px] font-bold">
+                            خطأ
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-400 block truncate max-w-[220px]">
+                        {rc.fileName}
                       </span>
                     </div>
                   </div>
 
-                  {rc.errorMessage && (
-                    <div className="mt-2 text-[11px] text-red-600 font-medium">
-                      ⚠️ {rc.errorMessage}
-                    </div>
-                  )}
+                  {/* زر حذف الوصل */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveReceipt(idx)}
+                    className="w-8 h-8 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors text-sm"
+                    title="حذف هذا الوصل"
+                  >
+                    ✕
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </main>
 
-        {/* الشريط السفلي الثابت والواضح لحفظ المعلومات وتنزيل الإرساليات */}
-        <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-4px_25px_rgba(0,0,0,0.1)] px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-12 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-2xl text-xs font-bold transition-colors"
-            >
-              إلغاء ورجوع
-            </button>
+                {/* الحقول: السطر الأول (رقم المشترك صغير + اسم المشترك كبير وعريض) */}
+                <div className="flex items-start gap-2 mb-2.5">
+                  {/* رقم المشترك (خلية صغيرة) */}
+                  <div className="w-24 sm:w-28 flex-shrink-0">
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                      رقم المشترك
+                    </label>
+                    <input
+                      type="number"
+                      value={rc.subscriberId || ''}
+                      onChange={(e) =>
+                        handleUpdateReceipt(
+                          idx,
+                          'subscriberId',
+                          e.target.value ? parseInt(e.target.value, 10) : undefined
+                        )
+                      }
+                      placeholder="الرقم"
+                      className="w-full h-9 px-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 text-center focus:outline-none focus:border-slate-800 bg-white"
+                    />
+                  </div>
 
-            {/* زر حفظ وتنزيل الإرساليات الكبير والواضح */}
-            <button
-              type="button"
-              onClick={handleConfirmAndApply}
-              disabled={successCount === 0 || isProcessing}
-              className="flex-1 h-12 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl text-sm font-bold shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-            >
-              <span className="text-base">💾</span>
-              <span>تنزيل وحفظ جميع الإرساليات بالحسابات ({successCount})</span>
-            </button>
+                  {/* اسم المشترك (خلية عريضة وكبيرة) */}
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                      اسم المشترك
+                    </label>
+                    <input
+                      type="text"
+                      value={rc.subscriberName || ''}
+                      onChange={(e) => handleUpdateReceipt(idx, 'subscriberName', e.target.value)}
+                      placeholder="اسم المشترك المقروء..."
+                      className="w-full h-9 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-slate-800 bg-white"
+                    />
+                    {rc.matchedSubscriber ? (
+                      <div className="text-[10px] text-emerald-700 font-bold truncate mt-1">
+                        ✓ مطابق في النظام: {rc.matchedSubscriber.name}
+                      </div>
+                    ) : rc.subscriberId ? (
+                      <div className="text-[10px] text-amber-700 font-semibold truncate mt-1">
+                        ⚠️ غير مسجل بقائمة المشتركين
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* السطر الثاني: المبلغ المسدد + الفترة المستهدفة */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* المبلغ المسدد */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                      المبلغ المسدد (د.ع)
+                    </label>
+                    <input
+                      type="number"
+                      value={rc.amount || ''}
+                      onChange={(e) =>
+                        handleUpdateReceipt(
+                          idx,
+                          'amount',
+                          e.target.value ? parseInt(e.target.value, 10) : undefined
+                        )
+                      }
+                      placeholder="المبلغ"
+                      className="w-full h-9 px-3 border border-slate-200 rounded-xl text-xs font-mono font-bold text-emerald-700 focus:outline-none focus:border-slate-800 bg-white"
+                    />
+                  </div>
+
+                  {/* الفترة المستهدفة */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                      الفترة المستهدفة
+                    </label>
+                    <select
+                      value={rc.periodIndex}
+                      onChange={(e) =>
+                        handleUpdateReceipt(idx, 'periodIndex', parseInt(e.target.value, 10))
+                      }
+                      className="w-full h-9 px-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-slate-800"
+                    >
+                      {PERIODS.map((pLabel: string, pIdx: number) => (
+                        <option key={pIdx} value={pIdx}>
+                          فترة ({pLabel})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      سنة {rc.targetYear || 2026} {rc.paymentMonth ? `(شهر ${rc.paymentMonth})` : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {rc.errorMessage && (
+                  <div className="mt-2 text-[11px] text-red-600 font-medium">
+                    ⚠️ {rc.errorMessage}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </footer>
-      </div>
+        )}
+      </main>
 
-      {/* نافذة تكبير الصورة النظيفة مع زر إغلاق أحمر عملاق وواضح */}
+      {/* 5. الشريط السفلي الثابت والواضح جداً (حفظ وتنزيل الإرساليات) */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-6px_25px_rgba(0,0,0,0.12)] p-3 sm:px-6">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-12 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-2xl text-xs font-bold transition-colors"
+          >
+            إلغاء ورجوع
+          </button>
+
+          {/* زر حفظ وتنزيل الإرساليات الكبير والبارز دائماً */}
+          <button
+            type="button"
+            onClick={handleConfirmAndApply}
+            disabled={successCount === 0 || isProcessing}
+            className="flex-1 h-12 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl text-sm font-bold shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">💾</span>
+            <span>تنزيل وحفظ جميع الإرساليات بالحسابات ({successCount})</span>
+          </button>
+        </div>
+      </footer>
+
+      {/* 6. نافذة تكبير الصورة النظيفة مع زر إغلاق أحمر عملاق وواضح */}
       {previewImage && (
         <div
           onClick={() => setPreviewImage(null)}
-          className="fixed inset-0 z-[100050] bg-black/95 flex flex-col items-center justify-between p-3 select-none"
+          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-3 select-none"
         >
           {/* شريط الإغلاق العلوي */}
           <div className="w-full max-w-xl flex justify-between items-center py-2 px-1 flex-shrink-0">
@@ -637,6 +625,6 @@ export default function ReceiptScannerModal({
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }
