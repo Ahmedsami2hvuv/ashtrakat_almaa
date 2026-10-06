@@ -432,155 +432,142 @@ export default function InstallmentsPage({
           </div>
         </div>
 
-        {/* 3. جدول الإدخال السريع (اسم المشترك تحت رقم المشترك مباشرة لتوفير المساحة) */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-          <table className="w-full border-collapse text-right text-xs">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-black">
-                <th className="py-2.5 px-2 text-center w-8 text-[11px]">#</th>
-                <th className="py-2.5 px-2">رقم المشترك واسمه</th>
-                <th className="py-2.5 px-2 w-32 sm:w-40">المبلغ (د.ع)</th>
-                <th className="py-2.5 px-2 text-center w-10">حذف</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((row, idx) => {
-                const isCleanId = Number(row.subNumber.replace(/[^0-9]/g, '')) > 0
-                return (
-                  <tr
-                    key={row.id}
-                    className={`transition-colors ${
-                      row.isNew
-                        ? 'bg-amber-50/40'
-                        : row.isFound
-                        ? 'bg-emerald-50/20'
-                        : 'hover:bg-slate-50/50'
-                    }`}
+        {/* 3. قائمة أسطر الإدخال السريع (مرتبة ومريحة للموبايل: رقم المشترك بحجم 4-5 أرقام، والمبلغ كبير، والاسم كامل تحتهما) */}
+        <div className="space-y-2.5">
+          {rows.map((row, idx) => {
+            const isCleanId = Number(row.subNumber.replace(/[^0-9]/g, '')) > 0
+            return (
+              <div
+                key={row.id}
+                className={`p-2.5 sm:p-3 rounded-2xl border transition-all ${
+                  row.isNew
+                    ? 'bg-amber-50/40 border-amber-300'
+                    : row.isFound
+                    ? 'bg-emerald-50/30 border-emerald-200'
+                    : 'bg-white border-slate-200 shadow-2xs'
+                }`}
+              >
+                {/* الصف الأول: التسلسل + رقم المشترك (مخصص لـ 4-5 أرقام) + المبلغ (كبير وواسع) + زر الحذف */}
+                <div className="flex items-center gap-2">
+                  {/* رقم التسلسل */}
+                  <span className="w-5 text-center text-xs font-bold text-slate-400 shrink-0">
+                    {idx + 1}
+                  </span>
+
+                  {/* 1. خلية رقم المشترك (محددة الحجم لـ 4 إلى 5 أرقام فقط) */}
+                  <div className="w-24 sm:w-28 shrink-0">
+                    <input
+                      ref={(el) => {
+                        numberInputsRef.current[row.id] = el
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      value={row.subNumber}
+                      placeholder="الرقم..."
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        checkSubscriber(row.id, val)
+                      }}
+                      onKeyDown={(e) => handleNumberKeyDown(e, row, idx)}
+                      className={`w-full h-11 px-2 text-center rounded-xl border text-base font-bold outline-none transition-all ${
+                        row.isFound
+                          ? 'border-emerald-400 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-400'
+                          : row.isNew
+                          ? 'border-amber-400 bg-white text-amber-950 focus:ring-2 focus:ring-amber-400'
+                          : 'border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-sky-400'
+                      }`}
+                    />
+                  </div>
+
+                  {/* 2. خلية المبلغ المدفوع (كبيرة وواسعة تأخذ باقي المساحة كلها) */}
+                  <div className="flex-1 relative">
+                    <input
+                      ref={(el) => {
+                        amountInputsRef.current[row.id] = el
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      value={row.amount}
+                      placeholder="المبلغ المدفوع..."
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        setRows((prev) =>
+                          prev.map((r) =>
+                            r.id === row.id ? { ...r, amount: val } : r
+                          )
+                        )
+                      }}
+                      onKeyDown={(e) => handleAmountKeyDown(e, row, idx)}
+                      className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition-all placeholder:text-slate-300"
+                    />
+                    <span className="absolute left-2.5 top-3 text-[11px] font-bold text-slate-400 select-none">
+                      د.ع
+                    </span>
+                  </div>
+
+                  {/* زر حذف السطر */}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRow(row.id)}
+                    className="w-9 h-11 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0"
+                    title="حذف هذا السطر"
                   >
-                    {/* التسلسل */}
-                    <td className="py-2.5 px-2 text-center font-bold text-slate-400 align-top pt-3">
-                      {idx + 1}
-                    </td>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
 
-                    {/* حقل رقم المشترك وتحته مباشرة اسم المشترك */}
-                    <td className="py-2.5 px-2 align-top">
-                      <div>
-                        {/* مربع رقم المشترك عريض ومريح جداً */}
-                        <input
-                          ref={(el) => {
-                            numberInputsRef.current[row.id] = el
-                          }}
-                          type="text"
-                          inputMode="numeric"
-                          value={row.subNumber}
-                          placeholder="رقم المشترك..."
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '')
-                            checkSubscriber(row.id, val)
-                          }}
-                          onKeyDown={(e) => handleNumberKeyDown(e, row, idx)}
-                          className={`w-full h-11 px-3 rounded-xl border text-sm font-bold outline-none transition-all ${
-                            row.isFound
-                              ? 'border-emerald-400 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-400 shadow-2xs'
-                              : row.isNew
-                              ? 'border-amber-400 bg-white text-amber-950 focus:ring-2 focus:ring-amber-400 shadow-2xs'
-                              : 'border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-sky-400 shadow-2xs'
-                          }`}
-                        />
-
-                        {/* اسم المشترك تحت رقم المشترك مباشرة */}
-                        <div className="mt-1.5">
-                          {row.isFound ? (
-                            <div className="h-8.5 px-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-2xs">
-                              <span className="truncate">👤 {row.name}</span>
-                              <span className="text-[10.5px] text-emerald-700 shrink-0 mr-1 font-semibold">
-                                {row.existingSub?.meterType || 'مسجل'}
-                              </span>
-                            </div>
-                          ) : row.isNew ? (
-                            <div className="space-y-1">
-                              <input
-                                ref={(el) => {
-                                  nameInputsRef.current[row.id] = el
-                                }}
-                                type="text"
-                                value={row.name}
-                                placeholder="⚠️ غير مسجل! اكتب اسمه هنا..."
-                                onChange={(e) => {
-                                  setRows((prev) =>
-                                    prev.map((r) =>
-                                      r.id === row.id ? { ...r, name: e.target.value } : r
-                                    )
-                                  )
-                                }}
-                                onKeyDown={(e) => handleNameKeyDown(e, row)}
-                                className="w-full h-10 px-2.5 rounded-xl border-2 border-amber-400 bg-amber-50 text-xs font-bold text-amber-950 outline-none focus:bg-white shadow-2xs placeholder:text-amber-700/80"
-                              />
-                            </div>
-                          ) : isCleanId ? (
-                            <div className="text-[11px] text-slate-400 px-1 py-0.5">جاري الفحص...</div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* حقل المبلغ المدفوع عريض ومريح جداً */}
-                    <td className="py-2.5 px-2 align-top">
-                      <div className="relative">
-                        <input
-                          ref={(el) => {
-                            amountInputsRef.current[row.id] = el
-                          }}
-                          type="text"
-                          inputMode="numeric"
-                          value={row.amount}
-                          placeholder="المبلغ..."
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '')
-                            setRows((prev) =>
-                              prev.map((r) =>
-                                r.id === row.id ? { ...r, amount: val } : r
-                              )
+                {/* الصف الثاني: اسم المشترك بالكامل تحت الخليتين دون أي اقتصاص */}
+                <div className="mt-2 pr-7">
+                  {row.isFound ? (
+                    <div className="min-h-[32px] px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm font-bold flex flex-wrap items-center justify-between gap-1 shadow-2xs">
+                      <span className="flex items-center gap-1.5 break-words">
+                        <span className="text-emerald-600 text-sm">👤</span>
+                        <span>{row.name}</span>
+                      </span>
+                      <span className="text-[11px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
+                        {row.existingSub?.meterType || 'مسجل'}
+                      </span>
+                    </div>
+                  ) : row.isNew ? (
+                    <div>
+                      <input
+                        ref={(el) => {
+                          nameInputsRef.current[row.id] = el
+                        }}
+                        type="text"
+                        value={row.name}
+                        placeholder="⚠️ غير مسجل! اكتب اسم المشترك بالكامل لإنشاء حسابه..."
+                        onChange={(e) => {
+                          setRows((prev) =>
+                            prev.map((r) =>
+                              r.id === row.id ? { ...r, name: e.target.value } : r
                             )
-                          }}
-                          onKeyDown={(e) => handleAmountKeyDown(e, row, idx)}
-                          className="w-full h-11 pl-8 pr-3 rounded-xl border border-slate-300 bg-white text-sm font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition-all placeholder:text-slate-300"
-                        />
-                        <span className="absolute left-2 top-3 text-[10px] font-bold text-slate-400 select-none">
-                          د.ع
-                        </span>
-                      </div>
-                    </td>
+                          )
+                        }}
+                        onKeyDown={(e) => handleNameKeyDown(e, row)}
+                        className="w-full h-10 px-3 rounded-xl border-2 border-amber-400 bg-amber-50 text-xs sm:text-sm font-bold text-amber-950 outline-none focus:bg-white shadow-2xs placeholder:text-amber-700/80"
+                      />
+                    </div>
+                  ) : isCleanId ? (
+                    <div className="text-xs text-slate-400 px-1">جاري التحقق...</div>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
 
-                    {/* زر حذف السطر */}
-                    <td className="py-2.5 px-1 text-center align-top pt-3.5">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(row.id)}
-                        className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors mx-auto"
-                        title="حذف"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-
-          {/* زر إضافة سطر أسفل الجدول */}
-          <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          {/* زر إضافة سطر أسفل الأسطر */}
+          <div className="p-2.5 bg-white rounded-2xl border border-slate-200 flex items-center justify-between shadow-2xs">
             <button
               type="button"
               onClick={() => {
                 const newId = addNewRow()
                 setTimeout(() => numberInputsRef.current[newId]?.focus(), 50)
               }}
-              className="h-9 px-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center gap-1.5 shadow-2xs active:scale-95"
+              className="h-9 px-3.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center gap-1.5 shadow-2xs active:scale-95"
             >
               <span className="text-base font-bold leading-none">+</span>
               <span>إضافة سطر جديد</span>
