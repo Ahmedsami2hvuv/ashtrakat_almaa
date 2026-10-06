@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import ReceiptScannerModal from './ReceiptScannerModal'
+import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -97,7 +99,7 @@ async function saveToCloud(data: Record<string, unknown>): Promise<void> {
 
 // السنوات المطلوبة حصراً
 const YEARS = [2026, 2027, 2028]
-const PERIODS = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
+export const PERIODS = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
 const RESIDENTIAL_METERS: MeterType[] = ['3 متر', '4 متر']
 const COMMERCIAL_METERS: MeterType[] = Array.from({ length: 70 }, (_, index) => `${index + 1} متر`)
 
@@ -692,8 +694,15 @@ export default function MainApp() {
   const [showEditModal, setShowEditModal] = useState<boolean>(false)
   const [showContactModal, setShowContactModal] = useState<boolean>(false)
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
-  const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import'>('collector')
+  const [settingsTab, setSettingsTab] = useState<'collector' | 'pricing' | 'areas' | 'import' | 'ai'>('collector')
   const [isLocating, setIsLocating] = useState<boolean>(false)
+
+  // الذكاء الاصطناعي وتنزيل الإرساليات
+  const [showReceiptScannerModal, setShowReceiptScannerModal] = useState<boolean>(false)
+  const [aiApiKeys, setAiApiKeys] = useState<string[]>([])
+  const [newAiKeyInput, setNewAiKeyInput] = useState<string>('')
+  const [aiTestingKey, setAiTestingKey] = useState<string | null>(null)
+  const [aiTestResult, setAiTestResult] = useState<{ [key: string]: { success: boolean; message: string } }>({})
 
   // فورم المشترك
   const [newSub, setNewSub] = useState({
@@ -854,10 +863,22 @@ export default function MainApp() {
       if (data.rangeFrom !== undefined) setRangeFrom(data.rangeFrom as number)
       if (data.rangeTo !== undefined) setRangeTo(data.rangeTo as number)
       if (data.reviewItems) setReviewItems(data.reviewItems as ReviewItem[])
+      if (data.aiApiKeys && Array.isArray(data.aiApiKeys)) {
+        setAiApiKeys(data.aiApiKeys as string[])
+      }
     }
 
     const init = async () => {
       setIsLoadingCloud(true)
+      // تحميل مفاتيح الذكاء الاصطناعي من التخزين المحلي
+      try {
+        const savedKeys = localStorage.getItem('AI_GEMINI_API_KEYS')
+        if (savedKeys) {
+          const parsed = JSON.parse(savedKeys)
+          if (Array.isArray(parsed) && parsed.length > 0) setAiApiKeys(parsed)
+        }
+      } catch {}
+
       // محاولة الجلب من السحابة
       const cloudData = await loadFromCloud()
       if (cloudData) {
@@ -945,7 +966,7 @@ export default function MainApp() {
     if (!isAuthenticated || !dataLoaded) return
     if (isIncomingSyncRef.current) return
 
-    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems }
+    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys }
 
     // 1. حفظ محلي فوري
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
@@ -968,7 +989,7 @@ export default function MainApp() {
       await saveToCloud(data as Record<string, unknown>)
       setIsSyncing(false)
     }, 500)
-  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, dataLoaded, isAuthenticated])
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated])
 
   // تسجيل الدخول
   const handleLogin = (e: React.FormEvent) => {
@@ -1367,6 +1388,91 @@ export default function MainApp() {
           return s
         })
         return anyChange ? nextSubs : prevSubs
+      })
+
+      return copy
+    })
+  }
+
+  // إدارة مفاتيح الذكاء الاصطناعي
+  const handleAddAiKey = () => {
+    const key = newAiKeyInput.trim()
+    if (!key) return
+    if (aiApiKeys.includes(key)) {
+      alert('هذا المفتاح مضاف مسبقاً')
+      return
+    }
+    const next = [...aiApiKeys, key]
+    setAiApiKeys(next)
+    try { localStorage.setItem('AI_GEMINI_API_KEYS', JSON.stringify(next)) } catch {}
+    setNewAiKeyInput('')
+  }
+
+  const handleRemoveAiKey = (keyToRemove: string) => {
+    const next = aiApiKeys.filter((k) => k !== keyToRemove)
+    setAiApiKeys(next)
+    try { localStorage.setItem('AI_GEMINI_API_KEYS', JSON.stringify(next)) } catch {}
+  }
+
+  const handleTestAiKey = async (key: string) => {
+    setAiTestingKey(key)
+    try {
+      const res = await testGeminiApiKey(key)
+      setAiTestResult((prev) => ({ ...prev, [key]: res }))
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'فشل الفحص'
+      setAiTestResult((prev) => ({ ...prev, [key]: { success: false, message: msg } }))
+    } finally {
+      setAiTestingKey(null)
+    }
+  }
+
+  // تنزيل وتطبيق الدفعات المستخرجة من وصولات الذكاء الاصطناعي
+  const handleApplyScannedPayments = (
+    paymentsToApply: Array<{
+      subId: number
+      year: number
+      periodIdx: number
+      amount: number
+    }>
+  ) => {
+    setBilling((prev) => {
+      const copy = { ...prev }
+      paymentsToApply.forEach(({ subId, year, periodIdx, amount }) => {
+        if (!copy[subId]) copy[subId] = {}
+        if (!copy[subId][year]) {
+          copy[subId][year] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+        }
+        const yearRecords = [...copy[subId][year]]
+        yearRecords[periodIdx] = {
+          ...yearRecords[periodIdx],
+          paid: amount,
+          remainingManual: null
+        }
+
+        // مسح أي تجميد يدوي في الفترات اللاحقة لتتسلسل الحسابات تلقائياً
+        for (let nextP = periodIdx + 1; nextP < 6; nextP++) {
+          if (yearRecords[nextP]) {
+            yearRecords[nextP] = {
+              ...yearRecords[nextP],
+              oldDebtManual: null,
+              totalManual: null,
+              remainingManual: null
+            }
+          }
+        }
+        copy[subId][year] = yearRecords
+      })
+
+      // تحديث حالات المشتركين بناءً على المبالغ الجديدة
+      setSubscribers((prevSubs) => {
+        const nextSubs = prevSubs.map((s) => {
+          const wasModified = paymentsToApply.some((p) => p.subId === s.id)
+          if (!wasModified) return s
+          const newStatuses = computeSubscriberStatuses(s, copy, prevSubs, pricing)
+          return { ...s, statuses: newStatuses }
+        })
+        return nextSubs
       })
 
       return copy
@@ -2136,6 +2242,22 @@ export default function MainApp() {
                 <circle cx="11" cy="11" r="6" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
+            </button>
+
+            {/* زر تنزيل إرساليات بالذكاء الاصطناعي */}
+            <button
+              type="button"
+              aria-label="تنزيل إرساليات"
+              onClick={() => {
+                setShowReceiptScannerModal(true)
+                setSearchOpen(false)
+                setFilterDrawerOpen(false)
+              }}
+              className="h-8 px-2.5 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center gap-1.5 transition-all text-[11px] font-bold shadow-sm"
+              title="تنزيل إرساليات بالذكاء الاصطناعي"
+            >
+              <span className="text-[13px] leading-none">✨</span>
+              <span className="hidden sm:inline">تنزيل إرساليات</span>
             </button>
 
             {/* زر الفلتر */}
@@ -4936,8 +5058,14 @@ export default function MainApp() {
             </div>
 
             <div className="px-3 py-3 border-b border-sky-50 flex gap-2 overflow-x-auto scrollbar-none bg-sky-50/30">
-              {(['collector', 'areas', 'import'] as const).map((tab) => {
-                const labels = { collector: 'المحصل', pricing: 'التسعير', areas: 'المناطق والافرع', import: 'الاستيراد' }
+              {(['collector', 'areas', 'import', 'ai'] as const).map((tab) => {
+                const labels = {
+                  collector: 'المحصل',
+                  pricing: 'التسعير',
+                  areas: 'المناطق والافرع',
+                  import: 'الاستيراد',
+                  ai: 'الذكاء الاصطناعي 🤖'
+                }
                 return (
                   <button
                     key={tab}
@@ -5394,6 +5522,151 @@ export default function MainApp() {
                   </div>
                 </div>
               )}
+
+              {/* ==========================
+                  تبويب الذكاء الاصطناعي (AI)
+              ========================== */}
+              {settingsTab === 'ai' && (
+                <div className="space-y-4">
+                  <div className="border border-sky-100 rounded-2xl p-4 bg-white shadow-sm space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🤖</span>
+                      <div>
+                        <div className="text-[13px] font-bold text-slate-800">مفاتيح الذكاء الاصطناعي (Gemini API)</div>
+                        <div className="text-[10px] text-slate-500">
+                          تُستخدم لقراءة وصولات وقوائم جباية الماء المكتوبة بخط اليد وتنزيل مبالغها تلقائياً
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-sky-50/60 rounded-xl border border-sky-100 text-[11px] text-slate-700 leading-relaxed space-y-1">
+                      <p className="font-bold text-sky-900">💡 كيفية الحصول على مفتاح مجاني:</p>
+                      <p>
+                        يمكنك إنشاء مفتاح مجاني وسريع من موقع Google AI Studio ولصقه هنا، وسيتم حفظه في نظامك فوراً.
+                      </p>
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block mt-1 font-bold text-[#0e7490] hover:underline"
+                      >
+                        اضغط هنا لفتح Google AI Studio والحصول على المفتاح ↗
+                      </a>
+                    </div>
+
+                    {/* حقل إضافة مفتاح جديد */}
+                    <div className="space-y-1.5 pt-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        إضافة مفتاح جديد (API Key):
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newAiKeyInput}
+                          onChange={(e) => setNewAiKeyInput(e.target.value)}
+                          placeholder="الصق المفتاح هنا مثل: AIzaSy..."
+                          className="flex-1 h-10 px-3 border border-sky-100 rounded-xl text-[12px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddAiKey}
+                          disabled={!newAiKeyInput.trim()}
+                          className="px-4 h-10 bg-slate-900 hover:bg-black text-white text-[12px] font-bold rounded-xl transition-colors disabled:opacity-50"
+                        >
+                          إضافة
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* قائمة المفاتيح المضافة */}
+                    <div className="pt-2 space-y-2">
+                      <div className="text-[11px] font-bold text-slate-700 flex justify-between items-center">
+                        <span>المفاتيح المحفوظة ({aiApiKeys.length}):</span>
+                        {aiApiKeys.length > 0 && (
+                          <span className="text-[10px] text-emerald-700 font-semibold">جاهز للاستخدام في النظام</span>
+                        )}
+                      </div>
+
+                      {aiApiKeys.length === 0 ? (
+                        <div className="p-4 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                          لا توجد مفاتيح مضافة حتى الآن. أضف مفتاحك لتبدأ في قراءة وتنزيل الوصولات!
+                        </div>
+                      ) : (
+                        aiApiKeys.map((k, idx) => {
+                          const testRes = aiTestResult[k]
+                          const isTesting = aiTestingKey === k
+                          const masked = k.length > 10 ? `${k.substring(0, 6)}...${k.substring(k.length - 4)}` : k
+
+                          return (
+                            <div
+                              key={idx}
+                              className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                  <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="font-mono text-xs text-slate-800 font-semibold truncate">
+                                    {masked}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTestAiKey(k)}
+                                    disabled={isTesting}
+                                    className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
+                                  >
+                                    {isTesting ? 'جاري الفحص...' : 'فحص الاتصال ⚡'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveAiKey(k)}
+                                    className="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center transition-colors text-xs"
+                                    title="حذف هذا المفتاح"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+
+                              {testRes && (
+                                <div
+                                  className={`text-[11px] p-2 rounded-lg font-medium ${
+                                    testRes.success
+                                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                      : 'bg-red-50 text-red-700 border border-red-200'
+                                  }`}
+                                >
+                                  {testRes.success ? '✓ ' : '⚠️ '}
+                                  {testRes.message}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* زر تجربة تنزيل إرساليات */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSettingsModal(false)
+                        setShowReceiptScannerModal(true)
+                      }}
+                      className="w-full h-11 bg-[#0e7490] hover:bg-[#085a70] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-colors"
+                    >
+                      <span>✨</span>
+                      <span>فتح شاشة تنزيل الإرساليات الآن</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -5689,6 +5962,21 @@ export default function MainApp() {
           </button>
         </div>
       </nav>
+
+      {/* نافذة تنزيل الإرساليات بالذكاء الاصطناعي */}
+      <ReceiptScannerModal
+        isOpen={showReceiptScannerModal}
+        onClose={() => setShowReceiptScannerModal(false)}
+        apiKeys={aiApiKeys}
+        subscribers={subscribers}
+        billing={billing}
+        pricing={pricing}
+        onApplyPayments={handleApplyScannedPayments}
+        onOpenSettings={() => {
+          setShowSettingsModal(true)
+          setSettingsTab('ai')
+        }}
+      />
     </div>
   )
 }
