@@ -341,7 +341,7 @@ export default function InstallmentsPage({
       {/* 1. الشريط العلوي الرشيق المتناسق مع الموبايل */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2.5 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-          {/* الجانب الأيمن: زر الرجوع وعنوان الصفحة */}
+          {/* الجانب الأيمن: زر الرجوع وعنوان الصفحة الهادئ الناعم */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -352,26 +352,29 @@ export default function InstallmentsPage({
               <span>رجوع</span>
             </button>
 
-            <h1 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
+            <span className="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-1">
               <span>📥</span>
               <span>تنزيل إرساليات</span>
-            </h1>
+            </span>
           </div>
 
-          {/* الجانب الأيسر: زر حفظ واضح جداً وبارز في الأعلى أيضاً */}
+          {/* الجانب الأيسر: زر حفظ واضح جداً وبارز وغير باهت إطلاقاً */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="h-8.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer border border-emerald-500"
+              style={{ backgroundColor: '#059669', color: '#ffffff', opacity: 1 }}
+              className="h-9 px-3.5 rounded-xl text-white font-black text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer border border-emerald-400"
             >
               {isSaving ? (
-                <span>جاري الحفظ...</span>
+                <span style={{ color: '#ffffff', fontWeight: 800 }}>جاري الحفظ...</span>
               ) : (
                 <>
-                  <span>✓</span>
-                  <span>حفظ ({validRows.length})</span>
+                  <span className="text-sm font-black" style={{ color: '#ffffff' }}>✓</span>
+                  <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '12px' }}>
+                    حفظ ({validRows.length})
+                  </span>
                 </>
               )}
             </button>
@@ -460,9 +463,9 @@ export default function InstallmentsPage({
                     </td>
 
                     {/* حقل رقم المشترك وتحته مباشرة اسم المشترك */}
-                    <td className="py-2 px-2 align-top">
+                    <td className="py-2.5 px-2 align-top">
                       <div>
-                        {/* مربع رقم المشترك */}
+                        {/* مربع رقم المشترك عريض ومريح جداً */}
                         <input
                           ref={(el) => {
                             numberInputsRef.current[row.id] = el
@@ -476,21 +479,21 @@ export default function InstallmentsPage({
                             checkSubscriber(row.id, val)
                           }}
                           onKeyDown={(e) => handleNumberKeyDown(e, row, idx)}
-                          className={`w-full h-8.5 px-2.5 rounded-xl border text-xs font-bold outline-none transition-all ${
+                          className={`w-full h-11 px-3 rounded-xl border text-sm font-bold outline-none transition-all ${
                             row.isFound
-                              ? 'border-emerald-300 bg-white text-emerald-900 focus:ring-2 focus:ring-emerald-400'
+                              ? 'border-emerald-400 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-400 shadow-2xs'
                               : row.isNew
-                              ? 'border-amber-300 bg-white text-amber-900 focus:ring-2 focus:ring-amber-400'
-                              : 'border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-sky-400'
+                              ? 'border-amber-400 bg-white text-amber-950 focus:ring-2 focus:ring-amber-400 shadow-2xs'
+                              : 'border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-sky-400 shadow-2xs'
                           }`}
                         />
 
                         {/* اسم المشترك تحت رقم المشترك مباشرة */}
-                        <div className="mt-1">
+                        <div className="mt-1.5">
                           {row.isFound ? (
-                            <div className="text-[11.5px] font-bold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-200/60 flex items-center justify-between">
+                            <div className="h-8.5 px-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-2xs">
                               <span className="truncate">👤 {row.name}</span>
-                              <span className="text-[10px] text-emerald-600 shrink-0 mr-1 font-normal">
+                              <span className="text-[10.5px] text-emerald-700 shrink-0 mr-1 font-semibold">
                                 {row.existingSub?.meterType || 'مسجل'}
                               </span>
                             </div>
@@ -511,18 +514,18 @@ export default function InstallmentsPage({
                                   )
                                 }}
                                 onKeyDown={(e) => handleNameKeyDown(e, row)}
-                                className="w-full h-7.5 px-2 rounded-lg border-2 border-amber-400 bg-amber-50 text-xs font-bold text-amber-950 outline-none focus:bg-white shadow-2xs placeholder:text-amber-700/70"
+                                className="w-full h-10 px-2.5 rounded-xl border-2 border-amber-400 bg-amber-50 text-xs font-bold text-amber-950 outline-none focus:bg-white shadow-2xs placeholder:text-amber-700/80"
                               />
                             </div>
                           ) : isCleanId ? (
-                            <div className="text-[10px] text-slate-400 px-1">جاري الفحص...</div>
+                            <div className="text-[11px] text-slate-400 px-1 py-0.5">جاري الفحص...</div>
                           ) : null}
                         </div>
                       </div>
                     </td>
 
-                    {/* حقل المبلغ المدفوع */}
-                    <td className="py-2 px-2 align-top">
+                    {/* حقل المبلغ المدفوع عريض ومريح جداً */}
+                    <td className="py-2.5 px-2 align-top">
                       <div className="relative">
                         <input
                           ref={(el) => {
@@ -541,23 +544,23 @@ export default function InstallmentsPage({
                             )
                           }}
                           onKeyDown={(e) => handleAmountKeyDown(e, row, idx)}
-                          className="w-full h-8.5 pl-6 pr-2 rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-300"
+                          className="w-full h-11 pl-8 pr-3 rounded-xl border border-slate-300 bg-white text-sm font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition-all placeholder:text-slate-300"
                         />
-                        <span className="absolute left-1.5 top-2.5 text-[9px] font-bold text-slate-400 select-none">
+                        <span className="absolute left-2 top-3 text-[10px] font-bold text-slate-400 select-none">
                           د.ع
                         </span>
                       </div>
                     </td>
 
                     {/* زر حذف السطر */}
-                    <td className="py-2 px-1 text-center align-top pt-2.5">
+                    <td className="py-2.5 px-1 text-center align-top pt-3.5">
                       <button
                         type="button"
                         onClick={() => handleDeleteRow(row.id)}
-                        className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors mx-auto"
+                        className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors mx-auto"
                         title="حذف"
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="3 6 5 6 21 6" />
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
@@ -570,49 +573,54 @@ export default function InstallmentsPage({
           </table>
 
           {/* زر إضافة سطر أسفل الجدول */}
-          <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
             <button
               type="button"
               onClick={() => {
                 const newId = addNewRow()
                 setTimeout(() => numberInputsRef.current[newId]?.focus(), 50)
               }}
-              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-2xs active:scale-95"
+              className="h-9 px-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center gap-1.5 shadow-2xs active:scale-95"
             >
-              <span className="text-sm font-bold leading-none">+</span>
+              <span className="text-base font-bold leading-none">+</span>
               <span>إضافة سطر جديد</span>
             </button>
 
-            <span className="text-[11px] text-slate-500 font-medium">
+            <span className="text-xs text-slate-600 font-bold">
               الأسطر: {rows.length}
             </span>
           </div>
         </div>
 
-        {/* 4. شريط الحفظ السفلي البارز والواضح جداً (واضح 100% بلون أخضر زمردي جذاب) */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-2.5 sm:p-3 shadow-lg">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+        {/* 4. شريط الحفظ السفلي البارز والواضح 100% بكتابة ساطعة غير باهتة */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-slate-200 p-2.5 sm:p-3 shadow-2xl">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="h-11 px-4 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors shrink-0"
+              className="h-12 px-4 rounded-xl border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors shrink-0"
             >
               إلغاء ورجوع
             </button>
 
-            {/* الزر الرئيسي الواضح جداً */}
+            {/* الزر الرئيسي الأخضر البارز الصريح */}
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="flex-1 h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer border border-emerald-500"
+              style={{
+                backgroundColor: '#059669',
+                color: '#ffffff',
+                opacity: 1
+              }}
+              className="flex-1 h-12 px-4 rounded-xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 cursor-pointer border-2 border-emerald-400"
             >
               {isSaving ? (
-                <span>جاري الحفظ والتنزيل...</span>
+                <span style={{ color: '#ffffff', fontWeight: 900 }}>جاري الحفظ والتنزيل...</span>
               ) : (
                 <>
                   <span className="text-base">💾</span>
-                  <span>
+                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '13.5px' }}>
                     حفظ وتنزيل الإرساليات ({validRows.length} وصل - {formatNum(totalAmount)} د.ع)
                   </span>
                 </>
