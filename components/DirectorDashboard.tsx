@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { DirectorateData, DirectorateBranch, BranchManager } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
 
@@ -19,16 +19,22 @@ export default function DirectorDashboard({
   onVisitBranchManager,
   onLogout
 }: DirectorDashboardProps) {
-  // التبويب النشط: الافتراضي هو نظرة عامة ورسمية
-  const [activeTab, setActiveTab] = useState<TabType>('overview')
-  
-  // حالة القائمة الجانبية: يمكن إغلاقها وفتحها بالكامل
+  // التبويب النشط
+  const [activeTab, setActiveTab] = useState<TabType>('branches')
+
+  // حالة القائمة الجانبية
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
-  // الفرع المختار داخل قسم الأفرع
-  const [selectedBranchId, setSelectedBranchId] = useState<string>(
-    directorateData.branches[0]?.id || ''
-  )
+  // عرض صفحة الفرع المستقلة (null تعني عرض قائمة الأفرع، وإذا تم اختيار فرع يُعرض في صفحة كاملة مستقلة)
+  const [activeBranchDetailId, setActiveBranchDetailId] = useState<string | null>(null)
+
+  // حقول البحث في كل مكان
+  const [globalSearch, setGlobalSearch] = useState('')
+  const [branchListSearch, setBranchListSearch] = useState('')
+  const [managerSearch, setManagerSearch] = useState('')
+  const [reportsSearch, setReportsSearch] = useState('')
+
+  // حالات النسخ
   const [copiedManagerId, setCopiedManagerId] = useState<string | null>(null)
 
   // حالات إضافة فرع
@@ -41,13 +47,14 @@ export default function DirectorDashboard({
   const [managerName, setManagerName] = useState('')
   const [managerPhone, setManagerPhone] = useState('')
 
-  // فلترة سنة التقرير
+  // فلترة تقارير السنوات
   const [reportYear, setReportYear] = useState<number>(2026)
 
-  // الفرع المحدد حالياً
-  const currentBranch =
-    directorateData.branches.find(b => b.id === selectedBranchId) ||
-    directorateData.branches[0]
+  // الفرع المعروض حالياً في شاشة التفاصيل المستقلة
+  const activeBranch = useMemo(() => {
+    if (!activeBranchDetailId) return null
+    return directorateData.branches.find(b => b.id === activeBranchDetailId) || null
+  }, [activeBranchDetailId, directorateData.branches])
 
   // دالة إضافة فرع جديد
   const handleAddBranch = () => {
@@ -73,9 +80,10 @@ export default function DirectorDashboard({
       branches: [...directorateData.branches, newBranch]
     }
     onUpdateDirectorate(updated)
-    setSelectedBranchId(newBranch.id)
     setNewBranchName('')
     setShowAddBranchModal(false)
+    // فتح صفحة الفرع الجديد مباشرة
+    setActiveBranchDetailId(newBranch.id)
   }
 
   // حذف فرع
@@ -91,20 +99,19 @@ export default function DirectorDashboard({
         branches: updatedBranches
       }
       onUpdateDirectorate(updated)
-      setSelectedBranchId(updatedBranches[0].id)
+      setActiveBranchDetailId(null)
     }
   }
 
-  // حفظ / إضافة مسؤول
+  // حفظ مسؤول
   const handleSaveManager = () => {
     if (!managerName.trim() || !managerPhone.trim()) {
-      alert('يرجى إدخال اسم المسؤول ورقم هاتفه')
+      alert('يرجى إدخال الاسم ورقم الهاتف للمسؤول')
       return
     }
+    if (!activeBranch) return
 
-    if (!currentBranch) return
-
-    let updatedManagers = [...(currentBranch.managers || [])]
+    let updatedManagers = [...(activeBranch.managers || [])]
     if (editingManager) {
       updatedManagers = updatedManagers.map(m =>
         m.id === editingManager.id
@@ -123,7 +130,7 @@ export default function DirectorDashboard({
     }
 
     const updatedBranches = directorateData.branches.map(b =>
-      b.id === currentBranch.id ? { ...b, managers: updatedManagers } : b
+      b.id === activeBranch.id ? { ...b, managers: updatedManagers } : b
     )
 
     onUpdateDirectorate({ ...directorateData, branches: updatedBranches })
@@ -135,21 +142,21 @@ export default function DirectorDashboard({
 
   // حذف مسؤول
   const handleDeleteManager = (managerId: string, name: string) => {
-    if (!currentBranch) return
+    if (!activeBranch) return
     if (confirm(`هل أنت متأكد من حذف المسؤول (${name})؟`)) {
-      const updatedManagers = (currentBranch.managers || []).filter(m => m.id !== managerId)
+      const updatedManagers = (activeBranch.managers || []).filter(m => m.id !== managerId)
       const updatedBranches = directorateData.branches.map(b =>
-        b.id === currentBranch.id ? { ...b, managers: updatedManagers } : b
+        b.id === activeBranch.id ? { ...b, managers: updatedManagers } : b
       )
       onUpdateDirectorate({ ...directorateData, branches: updatedBranches })
     }
   }
 
-  // إرسال الرابط عبر واتساب
+  // مشاركة رابط المسؤول بالواتساب
   const handleShareManagerWhatsApp = (manager: BranchManager, branch: DirectorateBranch) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const directLink = `${origin}/?role=manager&token=${manager.token}&branch=${branch.id}`
-    const msg = `السلام عليكم ${manager.name}\nمسؤول ${branch.name}\nرابط الدخول المباشر إلى نظام الإدارة:\n${directLink}`
+    const msg = `السلام عليكم ${manager.name}\nمسؤول ${branch.name}\nرابط الدخول المباشر إلى حسابك في النظام:\n${directLink}`
     const waUrl = generateWhatsAppLink(manager.phone, msg)
     window.open(waUrl, '_blank')
   }
@@ -171,23 +178,20 @@ export default function DirectorDashboard({
     (sum, b) => sum + (b.subscribers?.length || 0),
     0
   )
-
   const totalCollectorsAllBranches = directorateData.branches.reduce(
     (sum, b) => sum + (b.collectors?.length || 0),
     0
   )
-
   const totalManagersAllBranches = directorateData.branches.reduce(
     (sum, b) => sum + (b.managers?.length || 0),
     0
   )
-
   const totalAreasAllBranches = directorateData.branches.reduce(
     (sum, b) => sum + (b.areas?.length || 0),
     0
   )
 
-  // حساب المبالغ المستحصلة لكل فرع
+  // حساب المبالغ المستحصلة
   const branchStats = directorateData.branches.map(b => {
     let collectedAmount = 0
     if (b.billing) {
@@ -208,7 +212,6 @@ export default function DirectorDashboard({
         if (c.totalAmount) collectedAmount += c.totalAmount
       })
     }
-
     return {
       branchId: b.id,
       name: b.name,
@@ -222,40 +225,44 @@ export default function DirectorDashboard({
 
   const totalCollectedAllBranches = branchStats.reduce((s, b) => s + b.collectedAmount, 0)
 
-  // حساب فترات السنة
-  const periodNames = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
-  const monthlyStatsForYear = periodNames.map((pName, pIndex) => {
-    let periodPaid = 0
-    directorateData.branches.forEach(b => {
-      if (b.billing) {
-        Object.values(b.billing).forEach((yearObj: any) => {
-          if (yearObj && yearObj[reportYear] && Array.isArray(yearObj[reportYear])) {
-            const p = yearObj[reportYear][pIndex]
-            if (p && p.paid) periodPaid += Number(p.paid)
-          }
-        })
-      }
-    })
-    return {
-      periodLabel: `فترة ${pName}`,
-      amount: periodPaid
-    }
-  })
+  // تصفية الأفرع حسب البحث
+  const filteredBranches = useMemo(() => {
+    const q = (branchListSearch || globalSearch).trim().toLowerCase()
+    if (!q) return directorateData.branches
+    return directorateData.branches.filter(b => b.name.toLowerCase().includes(q))
+  }, [branchListSearch, globalSearch, directorateData.branches])
+
+  // تصفية المسؤولين داخل الفرع المختار
+  const filteredManagers = useMemo(() => {
+    if (!activeBranch) return []
+    const q = managerSearch.trim().toLowerCase()
+    if (!q) return activeBranch.managers || []
+    return (activeBranch.managers || []).filter(
+      m => m.name.toLowerCase().includes(q) || m.phone.includes(q)
+    )
+  }, [activeBranch, managerSearch])
+
+  // تصفية التقارير
+  const filteredReportStats = useMemo(() => {
+    const q = reportsSearch.trim().toLowerCase()
+    if (!q) return branchStats
+    return branchStats.filter(s => s.name.toLowerCase().includes(q))
+  }, [reportsSearch, branchStats])
 
   return (
     <div
-      className="min-h-screen flex flex-row font-sans"
+      className="min-h-screen flex flex-row font-sans text-slate-900"
       dir="rtl"
-      style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
+      style={{ backgroundColor: '#f1f5f9' }}
     >
       {/* ======================================================== */}
-      {/* 1. القائمة الجانبية الرسمية (قابلة للإغلاق والفتح تماماً)     */}
+      {/* 1. القائمة الجانبية (قابلة للإغلاق والفتح تماماً)             */}
       {/* ======================================================== */}
       {isSidebarOpen && (
         <aside
-          className="flex flex-col justify-between shrink-0"
+          className="flex flex-col justify-between shrink-0 shadow-lg"
           style={{
-            width: '270px',
+            width: '280px',
             backgroundColor: '#0f172a',
             color: '#f8fafc',
             borderLeft: '1px solid #1e293b',
@@ -265,81 +272,85 @@ export default function DirectorDashboard({
             zIndex: 40
           }}
         >
-          {/* رأس القائمة الجانبية */}
+          {/* الجزء العلوي */}
           <div>
+            {/* الترويسة مع زر إغلاق القائمة */}
             <div
               className="p-4 flex items-center justify-between"
               style={{ borderBottom: '1px solid #1e293b' }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className="w-9 h-9 rounded flex items-center justify-center font-bold text-sm"
-                  style={{ backgroundColor: '#1e3a8a', color: '#60a5fa' }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm text-white"
+                  style={{ backgroundColor: '#0284c7' }}
                 >
                   ماء
                 </div>
                 <div>
-                  <h1 className="text-sm font-bold tracking-tight text-white">مديرية ماء البصرة</h1>
-                  <p className="text-[11px]" style={{ color: '#94a3b8' }}>إدارة الواردات المركزية</p>
+                  <h1 className="text-sm font-black text-white">مديرية ماء البصرة</h1>
+                  <p className="text-[11px] text-sky-400 font-bold">لوحة مدير الواردات</p>
                 </div>
               </div>
 
-              {/* زر إغلاق القائمة الجانبية الصريح (X) */}
+              {/* زر الإغلاق */}
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="p-1.5 rounded transition text-slate-400 hover:text-white"
-                style={{ backgroundColor: '#1e293b' }}
-                title="إغلاق القائمة الجانبية"
+                className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                title="إغلاق القائمة"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            {/* بطاقة المستخدم الرسمية */}
+            {/* بطاقة المستخدم */}
             <div
-              className="mx-3 my-3 p-3 rounded"
+              className="mx-3 my-3 p-3 rounded-lg"
               style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
             >
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">مدير الواردات</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: '#064e3b', color: '#6ee7b7' }}>
+                <span className="font-black text-white">مدير الواردات العام</span>
+                <span className="text-[10px] px-2 py-0.5 rounded font-black bg-emerald-950 text-emerald-400 border border-emerald-800">
                   متصل
                 </span>
               </div>
-              <p className="text-[11px] mt-0.5" style={{ color: '#94a3b8' }}>محافظة البصرة - المقر العام</p>
+              <p className="text-[11px] text-slate-400 mt-1 font-medium">محافظة البصرة - المقر العام</p>
             </div>
 
-            {/* خيارات التنقل بالقائمة الجانبية */}
-            <nav className="px-2 space-y-1">
-              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>
-                أقسام النظام
+            {/* روابط التنقل */}
+            <nav className="px-2 space-y-1 mt-2">
+              <div className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                القائمة الرئيسية
               </div>
 
-              {/* 1. الرئيسية (لوحة المؤشرات) */}
+              {/* 1. الرئيسية */}
               <button
-                onClick={() => setActiveTab('overview')}
-                className="w-full text-right px-3 py-2.5 rounded text-xs font-bold flex items-center justify-between transition"
+                onClick={() => {
+                  setActiveTab('overview')
+                  setActiveBranchDetailId(null)
+                }}
+                className="w-full text-right px-3 py-2.5 rounded-lg text-xs font-black flex items-center gap-2.5 transition"
                 style={{
-                  backgroundColor: activeTab === 'overview' ? '#1e3a8a' : 'transparent',
+                  backgroundColor: activeTab === 'overview' ? '#0284c7' : 'transparent',
                   color: activeTab === 'overview' ? '#ffffff' : '#cbd5e1'
                 }}
               >
-                <div className="flex items-center gap-2.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  <span>الرئيسية (لوحة المؤشرات)</span>
-                </div>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span>الرئيسية (لوحة المؤشرات)</span>
               </button>
 
-              {/* 2. خانة الأفرع وإدارتها */}
+              {/* 2. الأفرع وإدارتها */}
               <button
-                onClick={() => setActiveTab('branches')}
-                className="w-full text-right px-3 py-2.5 rounded text-xs font-bold flex items-center justify-between transition"
+                onClick={() => {
+                  setActiveTab('branches')
+                  setActiveBranchDetailId(null)
+                }}
+                className="w-full text-right px-3 py-2.5 rounded-lg text-xs font-black flex items-center justify-between transition"
                 style={{
-                  backgroundColor: activeTab === 'branches' ? '#1e3a8a' : 'transparent',
+                  backgroundColor: activeTab === 'branches' ? '#0284c7' : 'transparent',
                   color: activeTab === 'branches' ? '#ffffff' : '#cbd5e1'
                 }}
               >
@@ -350,52 +361,48 @@ export default function DirectorDashboard({
                   <span>الأفرع وإدارتها</span>
                 </div>
                 <span
-                  className="text-[11px] px-2 py-0.2 rounded font-bold"
-                  style={{ backgroundColor: '#334155', color: '#e2e8f0' }}
+                  className="text-[11px] px-2 py-0.5 rounded font-black text-white"
+                  style={{ backgroundColor: activeTab === 'branches' ? '#0369a1' : '#334155' }}
                 >
                   {directorateData.branches.length}
                 </span>
               </button>
 
-              {/* 3. التقارير والإحصائيات */}
+              {/* 3. التقارير المالية */}
               <button
-                onClick={() => setActiveTab('reports')}
-                className="w-full text-right px-3 py-2.5 rounded text-xs font-bold flex items-center justify-between transition"
+                onClick={() => {
+                  setActiveTab('reports')
+                  setActiveBranchDetailId(null)
+                }}
+                className="w-full text-right px-3 py-2.5 rounded-lg text-xs font-black flex items-center gap-2.5 transition"
                 style={{
-                  backgroundColor: activeTab === 'reports' ? '#1e3a8a' : 'transparent',
+                  backgroundColor: activeTab === 'reports' ? '#0284c7' : 'transparent',
                   color: activeTab === 'reports' ? '#ffffff' : '#cbd5e1'
                 }}
               >
-                <div className="flex items-center gap-2.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span>التقارير والتحصيل المالي</span>
-                </div>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>التقارير والإحصائيات</span>
               </button>
             </nav>
           </div>
 
-          {/* أسفل القائمة: ملخص مالي مقتضب + تسجيل خروج */}
-          <div className="p-3 space-y-2" style={{ borderTop: '1px solid #1e293b' }}>
+          {/* الجزء السفلي */}
+          <div className="p-3 space-y-2.5" style={{ borderTop: '1px solid #1e293b' }}>
             <div
-              className="p-2.5 rounded"
+              className="p-3 rounded-lg"
               style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
             >
-              <div className="text-[10px]" style={{ color: '#94a3b8' }}>إجمالي المبالغ المستحصلة:</div>
-              <div className="text-sm font-bold mt-0.5" style={{ color: '#34d399' }}>
+              <div className="text-[10px] text-slate-400 font-bold">إجمالي المبالغ المستحصلة:</div>
+              <div className="text-sm font-black text-emerald-400 mt-0.5">
                 {totalCollectedAllBranches.toLocaleString('ar-IQ')} د.ع
               </div>
             </div>
 
             <button
               onClick={onLogout}
-              className="w-full px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center gap-2"
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                color: '#f87171',
-                border: '1px solid rgba(239, 68, 68, 0.2)'
-              }}
+              className="w-full px-3 py-2 rounded-lg text-xs font-black text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900 border border-rose-800/60 transition flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -407,48 +414,53 @@ export default function DirectorDashboard({
       )}
 
       {/* ======================================================== */}
-      {/* 2. منطقة المحتوى الرئيسية                                 */}
+      {/* 2. منطقة العمل الرئيسية                                   */}
       {/* ======================================================== */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* شريط الأدوات العلوي الرسمي */}
+        {/* الشريط العلوي مع محرك البحث الشامل وزر القائمة */}
         <header
-          className="sticky top-0 z-30 px-6 py-3.5 flex items-center justify-between"
-          style={{
-            backgroundColor: '#ffffff',
-            borderBottom: '1px solid #e2e8f0'
-          }}
+          className="sticky top-0 z-30 px-4 md:px-8 py-3 bg-white border-b border-slate-200 flex items-center justify-between gap-4 shadow-sm"
         >
-          <div className="flex items-center gap-3">
-            {/* زر فتح/إغلاق القائمة الجانبية (شغال دائماً) */}
+          <div className="flex items-center gap-3 flex-1 max-w-xl">
+            {/* زر إظهار/إخفاء القائمة */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded border border-slate-300 hover:bg-slate-100 transition flex items-center gap-1.5 text-xs font-bold text-slate-700"
-              title={isSidebarOpen ? 'إخفاء القائمة الجانبية' : 'إظهار القائمة الجانبية'}
+              className="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition flex items-center gap-1.5 text-xs font-black shrink-0 shadow-sm"
+              title="القائمة الجانبية"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span>{isSidebarOpen ? 'إخفاء القائمة' : 'القائمة الجانبية'}</span>
+              <span>{isSidebarOpen ? 'إخفاء' : 'القائمة'}</span>
             </button>
 
-            <div className="h-4 w-px bg-slate-300 mx-1 hidden sm:block"></div>
-
-            <div className="text-sm font-bold text-slate-900">
-              {activeTab === 'overview' && 'لوحة المؤشرات العامة للمحافظة'}
-              {activeTab === 'branches' && 'إدارة أفرع واردات مديرية ماء البصرة'}
-              {activeTab === 'reports' && 'مركز التقارير والإحصائيات المالية'}
+            {/* محرك بحث شامل في كل مكان */}
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="ابحث عن أي فرع من هنا مباشرة..."
+                value={globalSearch}
+                onChange={(e) => {
+                  setGlobalSearch(e.target.value)
+                  if (activeTab !== 'branches') setActiveTab('branches')
+                  if (activeBranchDetailId) setActiveBranchDetailId(null)
+                }}
+                className="w-full pr-9 pl-4 py-2 rounded-lg bg-slate-100 border border-slate-300 text-xs font-bold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition"
+              />
+              <svg className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {activeTab === 'branches' && (
               <button
                 onClick={() => setShowAddBranchModal(true)}
-                className="px-3.5 py-2 rounded text-xs font-bold transition flex items-center gap-1.5"
-                style={{ backgroundColor: '#1d4ed8', color: '#ffffff' }}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
                 </svg>
                 <span>إضافة فرع جديد</span>
               </button>
@@ -456,109 +468,106 @@ export default function DirectorDashboard({
 
             <button
               onClick={onLogout}
-              className="px-3 py-1.5 rounded text-xs font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 transition"
+              className="px-3.5 py-2 rounded-lg text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition"
             >
               خروج
             </button>
           </div>
         </header>
 
-        {/* جسم الصفحة حسب التبويب المختار */}
-        <main className="p-6 md:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto">
+        {/* جسم الصفحة الرئيسي */}
+        <main className="p-4 md:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto">
           {/* ======================================================== */}
-          {/* تبويب 1: الصفحة الرئيسية (نظيفة ومرتبة دون عرض الأفرع)   */}
+          {/* تبويب 1: الصفحة الرئيسية (مؤشرات عامة فقط ونظيفة)        */}
           {/* ======================================================== */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* ترويسة الصفحة الترحيبية الهادئة */}
-              <div
-                className="p-6 rounded border border-slate-200"
-                style={{ backgroundColor: '#ffffff' }}
-              >
-                <h3 className="text-lg font-bold text-slate-900">
-                  لوحة المتابعة الإدارية - مديرية ماء محافظة البصرة
+              {/* ترويسة هادئة */}
+              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+                <h3 className="text-lg font-black text-slate-900">
+                  لوحة المتابعة المركزية - مديرية ماء محافظة البصرة
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  نظام مركزي لمتابعة إيرادات واشتراكات الأفرع والكوادر الميدانية في عموم أقضية ونواحي المحافظة.
+                <p className="text-xs text-slate-500 font-semibold mt-1">
+                  نظرة عامة على اشتراكات الماء، المبالغ المستحصلة، وإدارة الكوادر في المحافظة.
                 </p>
               </div>
 
-              {/* بطاقات المؤشرات الأساسية الأربعة بتصميم رسمي نظيف */}
+              {/* بطاقات المؤشرات الأربعة */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. المشتركون */}
-                <div className="p-5 rounded border border-slate-200 bg-white">
+                <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
                   <div className="text-xs font-bold text-slate-500 mb-1">إجمالي مشتركي المحافظة</div>
-                  <div className="text-2xl font-bold text-slate-900">
+                  <div className="text-2xl font-black text-slate-900">
                     {totalSubscribersAllBranches.toLocaleString('ar-IQ')}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
-                    مسجلون في {directorateData.branches.length} فروع رسمية
+                  <div className="text-[11px] text-slate-400 font-bold mt-1">
+                    عبر {directorateData.branches.length} فروع رسمية
                   </div>
                 </div>
 
-                {/* 2. المبالغ المستحصلة */}
-                <div className="p-5 rounded border border-slate-200 bg-white">
-                  <div className="text-xs font-bold text-slate-500 mb-1">إجمالي المبالغ المستحصلة</div>
-                  <div className="text-2xl font-bold text-emerald-700">
+                <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">المبالغ المستحصلة</div>
+                  <div className="text-2xl font-black text-emerald-700">
                     {totalCollectedAllBranches.toLocaleString('ar-IQ')}{' '}
-                    <span className="text-xs font-normal text-slate-600">د.ع</span>
+                    <span className="text-xs font-bold text-slate-500">د.ع</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">إجمالي إيرادات الجباية المحققة</div>
+                  <div className="text-[11px] text-emerald-600 font-bold mt-1">إجمالي إيرادات الجباية</div>
                 </div>
 
-                {/* 3. أفرع المديرية */}
-                <div className="p-5 rounded border border-slate-200 bg-white">
-                  <div className="text-xs font-bold text-slate-500 mb-1">أفرع ماء البصرة</div>
-                  <div className="text-2xl font-bold text-slate-900">
+                <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">عدد أفرع المديرية</div>
+                  <div className="text-2xl font-black text-slate-900">
                     {directorateData.branches.length}{' '}
-                    <span className="text-xs font-normal text-slate-500">فروع</span>
+                    <span className="text-xs font-bold text-slate-500">فرع</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
+                  <div className="text-[11px] text-slate-400 font-bold mt-1">
                     تغطي {totalAreasAllBranches} منطقة مائية
                   </div>
                 </div>
 
-                {/* 4. الكوادر العاملة */}
-                <div className="p-5 rounded border border-slate-200 bg-white">
-                  <div className="text-xs font-bold text-slate-500 mb-1">الكوادر الإدارية والميدانية</div>
-                  <div className="text-2xl font-bold text-slate-900">
+                <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">إجمالي الكوادر</div>
+                  <div className="text-2xl font-black text-slate-900">
                     {totalManagersAllBranches + totalCollectorsAllBranches}{' '}
-                    <span className="text-xs font-normal text-slate-500">موظف</span>
+                    <span className="text-xs font-bold text-slate-500">موظف</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
+                  <div className="text-[11px] text-slate-400 font-bold mt-1">
                     {totalManagersAllBranches} مسؤولين | {totalCollectorsAllBranches} محصلين
                   </div>
                 </div>
               </div>
 
-              {/* أزرار تنقل وإجراءات سريعة واضحة */}
+              {/* أزرار الانتقال المباشر */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-6 rounded border border-slate-200 bg-white space-y-3">
-                  <h4 className="text-sm font-bold text-slate-900">إدارة الأفرع ومسؤوليها</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    يمكنك الدخول إلى قسم الأفرع لمعاينة كل فرع، وتعيين المسؤولين، ومشاركة روابط الدخول بالواتساب، أو إضافة فرع جديد.
+                <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
+                  <h4 className="text-sm font-black text-slate-900">إدارة أفرع المديرية ومسؤوليها</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                    افتح دليل الأفرع لاستعراض كل فرع في صفحة مستقلة وإدارته وتعيين المسؤولين ومشاركة روابطهم.
                   </p>
                   <button
-                    onClick={() => setActiveTab('branches')}
-                    className="px-4 py-2 rounded text-xs font-bold transition inline-flex items-center gap-2"
-                    style={{ backgroundColor: '#1d4ed8', color: '#ffffff' }}
+                    onClick={() => {
+                      setActiveTab('branches')
+                      setActiveBranchDetailId(null)
+                    }}
+                    className="px-4 py-2.5 rounded-lg text-xs font-black bg-blue-600 hover:bg-blue-700 text-white transition inline-flex items-center gap-2 shadow-sm"
                   >
-                    <span>فتح قسم الأفرع</span>
+                    <span>الانتقال إلى دليل الأفرع</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
                 </div>
 
-                <div className="p-6 rounded border border-slate-200 bg-white space-y-3">
-                  <h4 className="text-sm font-bold text-slate-900">التقارير المالية والتحصيل</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    استعراض مقارنة التحصيل المالي بين الأفرع، وتتبع فترات السنة المالية وجداول الأداء المالي المعتمدة.
+                <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
+                  <h4 className="text-sm font-black text-slate-900">التقارير والإحصائيات المالية</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                    مقارنة حركة التحصيل بين الأفرع ومتابعة الجباية السنوية والشهرية للمحافظة.
                   </p>
                   <button
-                    onClick={() => setActiveTab('reports')}
-                    className="px-4 py-2 rounded text-xs font-bold transition inline-flex items-center gap-2"
-                    style={{ backgroundColor: '#0f172a', color: '#ffffff' }}
+                    onClick={() => {
+                      setActiveTab('reports')
+                      setActiveBranchDetailId(null)
+                    }}
+                    className="px-4 py-2.5 rounded-lg text-xs font-black bg-slate-900 hover:bg-slate-800 text-white transition inline-flex items-center gap-2 shadow-sm"
                   >
                     <span>عرض التقارير المالية</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -571,125 +580,126 @@ export default function DirectorDashboard({
           )}
 
           {/* ======================================================== */}
-          {/* تبويب 2: خانة الأفرع (هنا توجد الأفرع وإضافتها ومسؤولوها)   */}
+          {/* تبويب 2: خانة الأفرع (عرض قائمة أو صفحة فرع مستقلة)       */}
           {/* ======================================================== */}
           {activeTab === 'branches' && (
             <div className="space-y-6">
-              {/* شريط إدارة الأفرع */}
-              <div className="p-5 rounded border border-slate-200 bg-white flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    أفرع مديرية ماء محافظة البصرة ({directorateData.branches.length})
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    اختر الفرع من القائمة أدناه لمعاينة بياناته ومسؤوليه أو إضافة فرع جديد.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setShowAddBranchModal(true)}
-                  className="px-4 py-2 rounded text-xs font-bold transition flex items-center gap-1.5"
-                  style={{ backgroundColor: '#1d4ed8', color: '#ffffff' }}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>+ إضافة فرع جديد</span>
-                </button>
-              </div>
-
-              {/* أزرار اختيار الأفرع بتصميم منظم ومحدد */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-                {directorateData.branches.map(branch => {
-                  const isSelected = selectedBranchId === branch.id
-                  return (
-                    <button
-                      key={branch.id}
-                      onClick={() => setSelectedBranchId(branch.id)}
-                      className="p-3 rounded text-right transition border text-xs flex flex-col justify-between gap-2"
-                      style={{
-                        backgroundColor: isSelected ? '#1e293b' : '#ffffff',
-                        color: isSelected ? '#ffffff' : '#0f172a',
-                        borderColor: isSelected ? '#1e293b' : '#cbd5e1'
-                      }}
-                    >
-                      <span className="font-bold truncate block">{branch.name}</span>
-                      <div className="flex items-center justify-between w-full pt-1">
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                          style={{
-                            backgroundColor: isSelected ? '#334155' : '#f1f5f9',
-                            color: isSelected ? '#ffffff' : '#475569'
-                          }}
-                        >
-                          {branch.subscribers?.length || 0} مشترك
-                        </span>
-                        {branch.managers && branch.managers.length > 0 && (
-                          <span className="text-[10px] text-emerald-600 font-bold">
-                            ✓ {branch.managers.length}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* تفاصيل الفرع المختار ومسؤولوه */}
-              {currentBranch && (
-                <div className="rounded border border-slate-200 bg-white overflow-hidden space-y-6 p-6">
-                  {/* ترويسة الفرع المختار */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+              {/* ---------------------------------------------------- */}
+              {/* الحالة أ: لم يتم اختيار فرع -> عرض قائمة الأفرع كاملة */}
+              {/* ---------------------------------------------------- */}
+              {!activeBranch ? (
+                <div className="space-y-4">
+                  {/* شريط أدوات قائمة الأفرع مع البحث البارز */}
+                  <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-3">
-                        <h4 className="text-xl font-bold text-slate-900">{currentBranch.name}</h4>
-                        <span className="text-xs px-2.5 py-0.5 rounded font-bold bg-blue-100 text-blue-800">
-                          {currentBranch.subscribers?.length || 0} مشترك
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-slate-600 mt-2">
-                        <span>المناطق: <strong>{currentBranch.areas?.length || 0}</strong></span>
-                        <span>المحصلون: <strong>{currentBranch.collectors?.length || 0}</strong></span>
-                        <span>الكُتّاب: <strong>{currentBranch.writers?.length || 0}</strong></span>
-                      </div>
+                      <h3 className="text-base font-black text-slate-900">
+                        دليل أفرع مديرية ماء محافظة البصرة ({filteredBranches.length})
+                      </h3>
+                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                        انقر على أي فرع لفتح صفحته المستقلة وإدارته بالكامل.
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingManager(null)
-                          setManagerName('')
-                          setManagerPhone('')
-                          setShowAddManagerModal(true)
-                        }}
-                        className="px-3.5 py-2 rounded text-xs font-bold transition flex items-center gap-1.5"
-                        style={{ backgroundColor: '#059669', color: '#ffffff' }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                        <span>إضافة مسؤول للفرع</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteBranch(currentBranch.id, currentBranch.name)}
-                        className="px-3 py-2 rounded text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition"
-                      >
-                        حذف الفرع
-                      </button>
+                    {/* مربع بحث الأفرع */}
+                    <div className="relative w-full sm:w-72">
+                      <input
+                        type="text"
+                        placeholder="ابحث عن اسم الفرع..."
+                        value={branchListSearch}
+                        onChange={(e) => setBranchListSearch(e.target.value)}
+                        className="w-full pr-9 pl-4 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 outline-none"
+                      />
+                      <svg className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                     </div>
                   </div>
 
-                  {/* مسؤولو الفرع */}
-                  <div>
-                    <div className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                      <span>مسؤولو الفرع:</span>
-                      <span className="text-xs text-slate-500">({currentBranch.managers?.length || 0})</span>
-                    </div>
+                  {/* بطاقات الأفرع: واضحة وأنيقة وسهلة النقر */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredBranches.map(branch => (
+                      <div
+                        key={branch.id}
+                        onClick={() => {
+                          setActiveBranchDetailId(branch.id)
+                          setManagerSearch('')
+                        }}
+                        className="p-5 rounded-xl bg-white border-2 border-slate-200 hover:border-blue-500 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-4 group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="text-base font-black text-slate-900 group-hover:text-blue-600 transition">
+                              {branch.name}
+                            </h4>
+                            <p className="text-xs text-slate-500 font-bold mt-1">
+                              المناطق: {branch.areas?.length || 0} | المحصلون: {branch.collectors?.length || 0}
+                            </p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
+                            {branch.subscribers?.length || 0} مشترك
+                          </span>
+                        </div>
 
-                    {(!currentBranch.managers || currentBranch.managers.length === 0) ? (
-                      <div className="text-center py-10 bg-slate-50 rounded border border-dashed border-slate-300">
-                        <p className="text-xs text-slate-600 font-bold">لا يوجد مسؤول مسجل لهذا الفرع حتى الآن</p>
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-600">
+                            المسؤولون: <strong className="text-slate-900">{branch.managers?.length || 0}</strong>
+                          </span>
+                          <span className="text-xs font-black text-blue-600 group-hover:underline flex items-center gap-1">
+                            <span>فتح صفحة الفرع</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {filteredBranches.length === 0 && (
+                    <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
+                      <p className="text-sm font-bold text-slate-600">لم يتم العثور على أفرع مطابقة للبحث</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* ---------------------------------------------------- */
+                /* الحالة ب: تم اختيار فرع -> فتح صفحته المستقلة بالكامل */
+                /* ---------------------------------------------------- */
+                <div className="space-y-6">
+                  {/* زر العودة البارز */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setActiveBranchDetailId(null)}
+                      className="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition flex items-center gap-2 shadow-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>← العودة إلى قائمة كافة الأفرع</span>
+                    </button>
+
+                    <span className="text-xs font-bold text-slate-500">
+                      أنت الآن داخل صفحة: <strong className="text-slate-900">{activeBranch.name}</strong>
+                    </span>
+                  </div>
+
+                  {/* بطاقة رأس الفرع المستقلة */}
+                  <div className="p-6 md:p-8 rounded-xl bg-white border border-slate-200 shadow-sm space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-2xl font-black text-slate-900">{activeBranch.name}</h3>
+                          <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
+                            {activeBranch.subscribers?.length || 0} مشترك
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 font-bold mt-1">
+                          تاريخ الإنشاء: {new Date(activeBranch.createdAt).toLocaleDateString('ar-IQ')}
+                        </p>
+                      </div>
+
+                      {/* أزرار الإجراءات للفرع */}
+                      <div className="flex items-center gap-3">
                         <button
                           onClick={() => {
                             setEditingManager(null)
@@ -697,51 +707,145 @@ export default function DirectorDashboard({
                             setManagerPhone('')
                             setShowAddManagerModal(true)
                           }}
-                          className="mt-3 px-4 py-1.5 rounded text-xs font-bold text-white bg-blue-700 transition"
+                          className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center gap-2 shadow-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                          </svg>
+                          <span>إضافة مسؤول للفرع</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteBranch(activeBranch.id, activeBranch.name)}
+                          className="px-4 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          <span>حذف الفرع</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* إحصائيات الفرع السريعة */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="text-xs font-bold text-slate-500">عدد المناطق</div>
+                        <div className="text-xl font-black text-slate-900 mt-1">{activeBranch.areas?.length || 0}</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="text-xs font-bold text-slate-500">عدد المحصلين</div>
+                        <div className="text-xl font-black text-slate-900 mt-1">{activeBranch.collectors?.length || 0}</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="text-xs font-bold text-slate-500">عدد الكتاب</div>
+                        <div className="text-xl font-black text-slate-900 mt-1">{activeBranch.writers?.length || 0}</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="text-xs font-bold text-slate-500">مسؤولو الفرع</div>
+                        <div className="text-xl font-black text-blue-600 mt-1">{activeBranch.managers?.length || 0}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* قسم مسؤولي الفرع مع محرك بحث خاص بهم */}
+                  <div className="p-6 md:p-8 rounded-xl bg-white border border-slate-200 shadow-sm space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                      <div>
+                        <h4 className="text-base font-black text-slate-900">
+                          قائمة مسؤولي ({activeBranch.name})
+                        </h4>
+                        <p className="text-xs text-slate-500 font-bold mt-0.5">
+                          لكل مسؤول رابط تسجيل دخول مباشر خاص به
+                        </p>
+                      </div>
+
+                      {/* بحث المسؤولين */}
+                      <div className="relative w-full sm:w-64">
+                        <input
+                          type="text"
+                          placeholder="ابحث عن مسؤول بالاسم أو الهاتف..."
+                          value={managerSearch}
+                          onChange={(e) => setManagerSearch(e.target.value)}
+                          className="w-full pr-8 pl-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 outline-none"
+                        />
+                        <svg className="w-4 h-4 text-slate-400 absolute right-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* شبكة كروت المسؤولين بأزرار واضحة وألوان صلبة غير باهتة إطلاقاً */}
+                    {filteredManagers.length === 0 ? (
+                      <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                        <p className="text-xs font-bold text-slate-600">لا يوجد مسؤول مسجل مطابق للبحث</p>
+                        <button
+                          onClick={() => {
+                            setEditingManager(null)
+                            setManagerName('')
+                            setManagerPhone('')
+                            setShowAddManagerModal(true)
+                          }}
+                          className="mt-3 px-4 py-2 rounded-lg text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition"
                         >
                           + إضافة مسؤول للفرع
                         </button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {currentBranch.managers.map(manager => (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredManagers.map(manager => (
                           <div
                             key={manager.id}
-                            className="p-4 rounded border border-slate-200 bg-white flex flex-col justify-between space-y-3"
+                            className="p-5 rounded-xl border-2 border-slate-200 bg-white shadow-sm flex flex-col justify-between space-y-4"
                           >
+                            {/* بيانات المسؤول */}
                             <div className="flex items-start justify-between">
                               <div>
-                                <h5 className="font-bold text-slate-900 text-sm">{manager.name}</h5>
-                                <p className="text-xs text-slate-500 dir-ltr text-right mt-0.5">{manager.phone}</p>
+                                <h5 className="font-black text-slate-900 text-base">{manager.name}</h5>
+                                <p className="text-xs font-black text-blue-700 dir-ltr text-right mt-1">
+                                  {manager.phone}
+                                </p>
                               </div>
-                              <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">
+                              <span className="text-[10px] font-black bg-slate-100 text-slate-800 px-2.5 py-1 rounded-md border border-slate-200">
                                 مسؤول
                               </span>
                             </div>
 
-                            <div className="pt-2 border-t border-slate-100 space-y-2">
+                            {/* الأزرار الخمسة بألوان صلبة وواضحة جداً */}
+                            <div className="space-y-2 pt-3 border-t border-slate-200">
+                              {/* الصف الأول: زيارة صفحته + واتساب */}
                               <div className="grid grid-cols-2 gap-2">
                                 <button
-                                  onClick={() => onVisitBranchManager(currentBranch, manager)}
-                                  className="px-2.5 py-1.5 rounded text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 transition flex items-center justify-center gap-1"
+                                  onClick={() => onVisitBranchManager(activeBranch, manager)}
+                                  className="px-3 py-2 rounded-lg text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-1.5 shadow-sm"
                                 >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
                                   <span>دخول لصفحته</span>
                                 </button>
+
                                 <button
-                                  onClick={() => handleShareManagerWhatsApp(manager, currentBranch)}
-                                  className="px-2.5 py-1.5 rounded text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center gap-1"
+                                  onClick={() => handleShareManagerWhatsApp(manager, activeBranch)}
+                                  className="px-3 py-2 rounded-lg text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-sm"
                                 >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.941-.708-1.792s.446-1.27.605-1.444c.159-.175.347-.219.462-.219.116 0 .232.001.332.006.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.101-.179.21-.077.385.101.174.453.748.971 1.209.667.593 1.229.776 1.403.863.174.087.275.072.376-.044.101-.116.433-.505.549-.679.116-.174.232-.145.39-.087s1.011.477 1.185.564c.174.087.289.13.332.203.043.072.043.419-.101.824z"/>
+                                  </svg>
                                   <span>واتساب</span>
                                 </button>
                               </div>
 
-                              <div className="grid grid-cols-3 gap-1.5">
+                              {/* الصف الثاني: نسخ الرابط + تعديل + حذف بألوان صلبة بارزة */}
+                              <div className="grid grid-cols-3 gap-2 pt-1">
                                 <button
-                                  onClick={() => handleCopyManagerLink(manager, currentBranch)}
-                                  className="px-2 py-1 rounded text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                                  onClick={() => handleCopyManagerLink(manager, activeBranch)}
+                                  className="px-2 py-1.5 rounded-lg text-xs font-black text-slate-800 bg-slate-200 hover:bg-slate-300 transition text-center"
+                                  title="نسخ الرابط المباشر"
                                 >
-                                  {copiedManagerId === manager.id ? '✓ تم' : 'نسخ الرابط'}
+                                  {copiedManagerId === manager.id ? '✓ تم النسخ' : 'نسخ الرابط'}
                                 </button>
+
                                 <button
                                   onClick={() => {
                                     setEditingManager(manager)
@@ -749,13 +853,14 @@ export default function DirectorDashboard({
                                     setManagerPhone(manager.phone)
                                     setShowAddManagerModal(true)
                                   }}
-                                  className="px-2 py-1 rounded text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                                  className="px-2 py-1.5 rounded-lg text-xs font-black text-slate-800 bg-slate-200 hover:bg-slate-300 transition text-center"
                                 >
                                   تعديل
                                 </button>
+
                                 <button
                                   onClick={() => handleDeleteManager(manager.id, manager.name)}
-                                  className="px-2 py-1 rounded text-[11px] font-bold text-red-600 bg-red-50 hover:bg-red-100 transition"
+                                  className="px-2 py-1.5 rounded-lg text-xs font-black text-white bg-rose-600 hover:bg-rose-700 transition text-center shadow-sm"
                                 >
                                   حذف
                                 </button>
@@ -772,65 +877,82 @@ export default function DirectorDashboard({
           )}
 
           {/* ======================================================== */}
-          {/* تبويب 3: التقارير والإحصائيات المالية                     */}
+          {/* تبويب 3: التقارير المالية (مع محرك بحث الأفرع وفلترة السنوات) */}
           {/* ======================================================== */}
           {activeTab === 'reports' && (
             <div className="space-y-6">
-              {/* شريط فلترة السنوات */}
-              <div className="p-5 rounded border border-slate-200 bg-white flex flex-wrap items-center justify-between gap-4">
+              {/* شريط أدوات التقارير مع البحث وفلترة السنوات */}
+              <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">
+                  <h3 className="text-base font-black text-slate-900">
                     تقارير التحصيل المالي ومقارنة الأفرع
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    البيانات المالية المعتمدة لمديرية ماء محافظة البصرة
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                    متابعة أداء الجباية لمديرية ماء محافظة البصرة
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded border border-slate-200">
-                  <span className="text-xs font-bold text-slate-600 px-2">السنة المالية:</span>
-                  {[2026, 2027, 2028].map(yr => (
-                    <button
-                      key={yr}
-                      onClick={() => setReportYear(yr)}
-                      className={`px-3 py-1 rounded text-xs font-bold transition ${
-                        reportYear === yr
-                          ? 'bg-blue-700 text-white'
-                          : 'text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {yr}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* بحث في التقارير */}
+                  <div className="relative w-48">
+                    <input
+                      type="text"
+                      placeholder="ابحث في الأفرع..."
+                      value={reportsSearch}
+                      onChange={(e) => setReportsSearch(e.target.value)}
+                      className="w-full pr-8 pl-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 outline-none"
+                    />
+                    <svg className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+
+                  {/* اختيار السنة */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-300">
+                    <span className="text-xs font-bold text-slate-600 px-1.5">السنة:</span>
+                    {[2026, 2027, 2028].map(yr => (
+                      <button
+                        key={yr}
+                        onClick={() => setReportYear(yr)}
+                        className={`px-3 py-1 rounded text-xs font-black transition ${
+                          reportYear === yr
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {yr}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* مقارنة تحصيل الأفرع */}
-              <div className="p-6 rounded border border-slate-200 bg-white space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-900">
-                    مقارنة المبالغ المستحصلة بين أفرع محافظة البصرة
+              {/* مقارنة مبالغ التحصيل */}
+              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                  <h4 className="text-sm font-black text-slate-900">
+                    المبالغ المستحصلة لكل فرع
                   </h4>
-                  <span className="text-xs font-bold text-emerald-700">
+                  <span className="text-xs font-black text-emerald-700">
                     الإجمالي: {totalCollectedAllBranches.toLocaleString('ar-IQ')} د.ع
                   </span>
                 </div>
 
                 <div className="space-y-3 pt-1">
-                  {branchStats.map(stat => {
-                    const maxVal = Math.max(...branchStats.map(s => s.collectedAmount), 1)
+                  {filteredReportStats.map(stat => {
+                    const maxVal = Math.max(...filteredReportStats.map(s => s.collectedAmount), 1)
                     const percent = Math.min(100, Math.round((stat.collectedAmount / maxVal) * 100))
                     return (
                       <div key={stat.branchId} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-slate-800">{stat.name}</span>
-                          <span className="font-bold text-emerald-700">
+                          <span className="font-black text-slate-900">{stat.name}</span>
+                          <span className="font-black text-emerald-700">
                             {stat.collectedAmount.toLocaleString('ar-IQ')} د.ع
                           </span>
                         </div>
-                        <div className="w-full h-2.5 bg-slate-100 rounded overflow-hidden">
+                        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                           <div
-                            className="h-full bg-blue-700 transition-all duration-300"
+                            className="h-full bg-blue-600 rounded-full transition-all duration-300"
                             style={{ width: `${Math.max(percent, 2)}%` }}
                           />
                         </div>
@@ -840,29 +962,41 @@ export default function DirectorDashboard({
                 </div>
               </div>
 
-              {/* جدول تفصيلي كامل للأفرع */}
-              <div className="rounded border border-slate-200 bg-white p-6 space-y-4">
-                <h4 className="text-sm font-bold text-slate-900">جدول البيانات المالية الموحدة</h4>
+              {/* جدول البيانات التفصيلي */}
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+                <h4 className="text-sm font-black text-slate-900">جدول البيانات المالية الموحدة</h4>
                 <div className="overflow-x-auto">
                   <table className="w-full text-right text-xs">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <tr className="bg-slate-100 text-slate-800 font-black border-b border-slate-200">
                         <th className="p-3">اسم الفرع</th>
                         <th className="p-3">المشتركون</th>
                         <th className="p-3">المسؤولون</th>
                         <th className="p-3">المحصلون</th>
                         <th className="p-3">المبالغ المستحصلة</th>
+                        <th className="p-3">الإجراء</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {branchStats.map(s => (
-                        <tr key={s.branchId} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold text-slate-900">{s.name}</td>
+                    <tbody className="divide-y divide-slate-100 font-bold">
+                      {filteredReportStats.map(s => (
+                        <tr key={s.branchId} className="hover:bg-slate-50 transition">
+                          <td className="p-3 text-slate-900 font-black">{s.name}</td>
                           <td className="p-3 text-slate-700">{s.subscribersCount.toLocaleString('ar-IQ')}</td>
                           <td className="p-3 text-slate-700">{s.managersCount}</td>
                           <td className="p-3 text-slate-700">{s.collectorsCount}</td>
-                          <td className="p-3 font-bold text-emerald-700">
+                          <td className="p-3 text-emerald-700 font-black">
                             {s.collectedAmount.toLocaleString('ar-IQ')} د.ع
+                          </td>
+                          <td className="p-3">
+                            <button
+                              onClick={() => {
+                                setActiveTab('branches')
+                                setActiveBranchDetailId(s.branchId)
+                              }}
+                              className="px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-black text-xs transition"
+                            >
+                              عرض الفرع ←
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -876,22 +1010,19 @@ export default function DirectorDashboard({
       </div>
 
       {/* ======================================================== */}
-      {/* 3. النوافذ المنبثقة الرسمية (Modals)                      */}
+      {/* 3. النوافذ المنبثقة (Modals)                               */}
       {/* ======================================================== */}
 
       {/* نافذة إضافة فرع جديد */}
       {showAddBranchModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
-        >
-          <div className="p-6 max-w-md w-full rounded border border-slate-200 bg-white space-y-4 shadow-xl">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="p-6 max-w-md w-full rounded-2xl bg-white space-y-4 shadow-2xl border border-slate-200 animate-in fade-in">
+            <h3 className="text-base font-black text-slate-900 border-b border-slate-100 pb-2">
               إضافة فرع واردات جديد
             </h3>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-black text-slate-700 mb-1.5">
                 اسم الفرع (مثال: فرع واردات القرنة):
               </label>
               <input
@@ -899,7 +1030,7 @@ export default function DirectorDashboard({
                 placeholder="اكتب اسم الفرع..."
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value)}
-                className="w-full px-3 py-2 rounded text-xs font-bold border border-slate-300 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg text-xs font-bold border border-slate-300 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                 autoFocus
               />
             </div>
@@ -907,13 +1038,13 @@ export default function DirectorDashboard({
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setShowAddBranchModal(false)}
-                className="px-4 py-2 rounded text-xs font-bold bg-slate-100 text-slate-700"
+                className="px-4 py-2 rounded-lg text-xs font-black bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleAddBranch}
-                className="px-4 py-2 rounded text-xs font-bold text-white bg-blue-700"
+                className="px-5 py-2 rounded-lg text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm"
               >
                 تأكيد الإضافة
               </button>
@@ -924,18 +1055,15 @@ export default function DirectorDashboard({
 
       {/* نافذة إضافة / تعديل مسؤول فرع */}
       {showAddManagerModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
-        >
-          <div className="p-6 max-w-md w-full rounded border border-slate-200 bg-white space-y-4 shadow-xl">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
-              {editingManager ? 'تعديل بيانات المسؤول' : `إضافة مسؤول لـ (${currentBranch?.name})`}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="p-6 max-w-md w-full rounded-2xl bg-white space-y-4 shadow-2xl border border-slate-200 animate-in fade-in">
+            <h3 className="text-base font-black text-slate-900 border-b border-slate-100 pb-2">
+              {editingManager ? 'تعديل بيانات المسؤول' : `إضافة مسؤول لـ (${activeBranch?.name})`}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-black text-slate-700 mb-1.5">
                   الاسم الثلاثي:
                 </label>
                 <input
@@ -943,13 +1071,13 @@ export default function DirectorDashboard({
                   placeholder="مثال: أحمد عبد الحسين علي"
                   value={managerName}
                   onChange={(e) => setManagerName(e.target.value)}
-                  className="w-full px-3 py-2 rounded text-xs font-bold border border-slate-300 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg text-xs font-bold border border-slate-300 outline-none focus:border-blue-600"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-black text-slate-700 mb-1.5">
                   رقم الهاتف:
                 </label>
                 <input
@@ -957,7 +1085,7 @@ export default function DirectorDashboard({
                   placeholder="مثال: 07701234567"
                   value={managerPhone}
                   onChange={(e) => setManagerPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded text-xs font-bold border border-slate-300 outline-none dir-ltr text-right"
+                  className="w-full px-3.5 py-2.5 rounded-lg text-xs font-bold border border-slate-300 outline-none dir-ltr text-right focus:border-blue-600"
                 />
               </div>
             </div>
@@ -968,13 +1096,13 @@ export default function DirectorDashboard({
                   setShowAddManagerModal(false)
                   setEditingManager(null)
                 }}
-                className="px-4 py-2 rounded text-xs font-bold bg-slate-100 text-slate-700"
+                className="px-4 py-2 rounded-lg text-xs font-black bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSaveManager}
-                className="px-4 py-2 rounded text-xs font-bold text-white bg-emerald-600"
+                className="px-5 py-2 rounded-lg text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm"
               >
                 حفظ البيانات
               </button>
