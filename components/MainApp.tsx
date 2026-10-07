@@ -2486,7 +2486,7 @@ export default function MainApp({
               className="h-8 px-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center gap-1 transition-all text-[11px] font-medium shadow-2xs"
               title="ماسح الوصولات بالذكاء الاصطناعي"
             >
-              <span className="text-[12px] leading-none">✨</span>
+              <span className="text-[12px] leading-none"></span>
               <span className="hidden md:inline text-[10px]">ماسح الوصولات</span>
             </button>
 
@@ -2554,7 +2554,7 @@ export default function MainApp({
                       className="w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
                       title="مسح البحث"
                     >
-                      ✕
+                      
                     </button>
                   )}
                   <span className="text-slate-400">
@@ -2593,7 +2593,7 @@ export default function MainApp({
                     onClick={() => setFilterDrawerOpen(false)}
                     className="w-8 h-8 rounded-xl border border-sky-100 bg-white flex items-center justify-center text-slate-500"
                   >
-                    ✕
+                    
                   </button>
                 </div>
               </div>
@@ -2735,7 +2735,7 @@ export default function MainApp({
                               className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] font-bold"
                               title="مسح"
                             >
-                              ✕
+                              
                             </button>
                           )}
                         </div>
@@ -2813,7 +2813,7 @@ export default function MainApp({
                           className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[10px] font-bold"
                           title="مسح"
                         >
-                          ✕
+                          
                         </button>
                       )}
                       <span className="text-slate-400 text-[12px]">⌕</span>
@@ -2895,7 +2895,7 @@ export default function MainApp({
                               className="w-4 h-4 rounded-full bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[10px] font-bold"
                               title="مسح"
                             >
-                              ✕
+                              
                             </button>
                           )}
                           <span className="text-slate-400 text-[12px]">⌕</span>
@@ -3202,7 +3202,7 @@ export default function MainApp({
             {addSuccessMsg && (
               <div className="bg-emerald-600 text-white px-4 py-3 rounded-2xl font-bold text-[12.5px] flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="flex items-center gap-2">
-                  <span className="text-[16px]">✓</span>
+                  <span className="text-[16px]"></span>
                   <span>{addSuccessMsg}</span>
                 </div>
                 <button
@@ -3210,7 +3210,7 @@ export default function MainApp({
                   onClick={() => setAddSuccessMsg('')}
                   className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs"
                 >
-                  ✕
+                  
                 </button>
               </div>
             )}
@@ -3359,7 +3359,7 @@ export default function MainApp({
                       <div className="flex items-center justify-between pb-3 border-b border-sky-50">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-[13px]">
-                            📍
+                            
                           </div>
                           <div>
                             {editingAreaId === area.id ? (
@@ -3403,7 +3403,7 @@ export default function MainApp({
                             className="w-7 h-7 rounded-lg border border-sky-100 bg-sky-50 hover:bg-white text-slate-600 flex items-center justify-center text-[11px]"
                             title="تعديل اسم المنطقة"
                           >
-                            ✎
+                            
                           </button>
                           <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white font-mono">
                             {formatNumber(areaCount)} مشترك
@@ -3561,7 +3561,7 @@ export default function MainApp({
             <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 relative">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-[12px] font-bold">
-                  ✍️
+                  
                 </span>
                 <h3 className="text-[13px] font-bold text-slate-900">
                   إضافة مشترك يتعين عليه مراجعة الدائرة
@@ -3588,7 +3588,7 @@ export default function MainApp({
                         className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
                         title="مسح"
                       >
-                        ✕
+                        
                       </button>
                     )}
                   </div>
@@ -3698,7 +3698,7 @@ export default function MainApp({
               <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-amber-700 font-bold text-[12px]">⚠️ مشتركون لديهم حالة مراجعة بالدائرة تلقائياً:</span>
+                    <span className="text-amber-700 font-bold text-[12px]"> مشتركون لديهم حالة مراجعة بالدائرة تلقائياً:</span>
                     <span className="bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded-full font-bold">
                       {formatNumber(officeStatusSubscribers.length)} مشتركون
                     </span>
@@ -3731,7 +3731,7 @@ export default function MainApp({
                         </div>
                         <div className="mt-2.5 pt-2 border-t border-amber-100 flex gap-1.5">
                           {isAlreadyAdded ? (
-                            <span className="text-[10px] text-emerald-600 font-bold py-1">مدرج بالقائمة ✓</span>
+                            <span className="text-[10px] text-emerald-600 font-bold py-1">مدرج بالقائمة </span>
                           ) : (
                             <button
                               type="button"
@@ -3774,7 +3774,7 @@ export default function MainApp({
               {reviewItems.filter((r) => reviewFilter === 'all' || r.status === reviewFilter).length === 0 ? (
                 <div className="bg-white rounded-2xl border border-sky-100 py-12 text-center text-slate-400 text-[13px]">
                   {reviewFilter === 'pending'
-                    ? 'لا توجد طلبات مراجعة معلقة حالياً في الدائرة 🎉'
+                    ? 'لا توجد طلبات مراجعة معلقة حالياً في الدائرة '
                     : reviewFilter === 'resolved'
                     ? 'لم يتم إكمال أي مراجعة بعد'
                     : 'سجل المراجعات فارغ حالياً، أضف مشتركاً من الأعلى'}
@@ -3818,7 +3818,7 @@ export default function MainApp({
                                     : 'bg-emerald-100 text-emerald-800'
                                 }`}
                               >
-                                {isPending ? 'يتعين عليه مراجعة الدائرة' : 'تمت المراجعة بالدائرة ✓'}
+                                {isPending ? 'يتعين عليه مراجعة الدائرة' : 'تمت المراجعة بالدائرة '}
                               </span>
                             </div>
 
@@ -3847,7 +3847,7 @@ export default function MainApp({
                                 href={`tel:${item.phone}`}
                                 className="h-8 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[11px] font-bold flex items-center gap-1.5 transition-colors"
                               >
-                                <span>📞</span>
+                                <span></span>
                                 <span>اتصال</span>
                               </a>
                             )}
@@ -3876,7 +3876,7 @@ export default function MainApp({
                                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                               }`}
                             >
-                              {isPending ? '✓ تمت المراجعة' : 'إعادة للمراجعة'}
+                              {isPending ? ' تمت المراجعة' : 'إعادة للمراجعة'}
                             </button>
 
                             {/* زر الحذف */}
@@ -3886,7 +3886,7 @@ export default function MainApp({
                               className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 flex items-center justify-center text-[12px] transition-colors"
                               title="حذف من المراجعات"
                             >
-                              🗑️
+                              
                             </button>
                           </div>
                         </div>
@@ -3984,7 +3984,7 @@ export default function MainApp({
             <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
               <div className="px-4 py-3 bg-red-50/50 border-b border-red-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-[14px]">🚨</span>
+                  <span className="text-[14px]"></span>
                   <h3 className="font-bold text-[13px] text-red-900">
                     أعلى 15 مشتركاً بالمديونية (الأكثر طلباً للتحصيل)
                   </h3>
@@ -4092,7 +4092,7 @@ export default function MainApp({
                 onClick={handleCloseSubscriberModal}
                 className="w-9 h-9 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500 hover:bg-sky-50 shrink-0"
               >
-                ✕
+                
               </button>
             </div>
 
@@ -4194,7 +4194,7 @@ export default function MainApp({
                       className="px-3 min-h-[46px] rounded-xl bg-white border border-sky-200 text-slate-700 hover:bg-sky-50 font-bold text-[12px] flex items-center justify-center gap-1.5 shadow-sm shrink-0"
                       title="اتصال هاتفي"
                     >
-                      <span>📞</span>
+                      <span></span>
                       <span>اتصال</span>
                     </a>
                   </div>
@@ -4524,7 +4524,7 @@ export default function MainApp({
                     return (
                       <div className="mt-3 w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center shadow-sm">
                         <div className="text-[12.5px] font-bold text-emerald-800 flex items-center justify-center gap-1.5">
-                          <span>✓</span>
+                          <span></span>
                           <span>الحساب مسدد بالكامل - لا توجد ديون متراكمة (0 د.ع)</span>
                         </div>
                       </div>
@@ -4542,7 +4542,7 @@ export default function MainApp({
                             </span>
                           </div>
                           <div className="text-[12px] font-bold text-red-800 mt-1.5 flex items-center gap-1.5 flex-wrap">
-                            <span>📅 منذ:</span>
+                            <span> منذ:</span>
                             <span className="font-mono bg-white/80 px-2 py-0.5 rounded-lg border border-red-200 text-red-950 font-black">
                               {debtSummary.startDate}
                             </span>
@@ -4672,7 +4672,7 @@ export default function MainApp({
                 onClick={() => setShowAddModal(false)}
                 className="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors text-sm"
               >
-                ✕
+                
               </button>
             </div>
 
@@ -4713,7 +4713,7 @@ export default function MainApp({
                         className="absolute left-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] font-bold transition-all"
                         title="مسح الاسم"
                       >
-                        ✕
+                        
                       </button>
                     )}
                   </div>
@@ -4950,7 +4950,7 @@ export default function MainApp({
                             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        {checked ? '✓ ' : ''}{st}
+                        {checked ? ' ' : ''}{st}
                       </button>
                     )
                   })}
@@ -4959,7 +4959,7 @@ export default function MainApp({
 
               {formError && (
                 <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-xl p-2.5 font-bold space-y-1.5">
-                  <div>⚠️ {formError}</div>
+                  <div> {formError}</div>
                   {duplicateSubId && (
                     <button
                       type="button"
@@ -4970,7 +4970,7 @@ export default function MainApp({
                       }}
                       className="w-full h-8 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
                     >
-                      <span>🔍</span>
+                      <span></span>
                       <span>فتح ملف المشترك #{formatNumber(duplicateSubId)} وتعديله فوراً</span>
                     </button>
                   )}
@@ -5004,7 +5004,7 @@ export default function MainApp({
                 onClick={() => setShowEditModal(false)}
                 className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
               >
-                ✕
+                
               </button>
             </div>
 
@@ -5024,7 +5024,7 @@ export default function MainApp({
                       className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 active:scale-90 text-slate-600 flex items-center justify-center text-[12px] font-bold transition-all"
                       title="مسح الاسم بالكامل"
                     >
-                      ✕
+                      
                     </button>
                   )}
                 </div>
@@ -5229,7 +5229,7 @@ export default function MainApp({
                 onClick={() => setShowContactModal(false)}
                 className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
               >
-                ✕
+                
               </button>
             </div>
             <div className="p-4 space-y-4 overflow-y-auto">
@@ -5330,7 +5330,7 @@ export default function MainApp({
                 onClick={() => setShowSettingsModal(false)}
                 className="w-7 h-7 border border-white/20 rounded-lg flex items-center justify-center bg-white/10"
               >
-                ✕
+                
               </button>
             </div>
 
@@ -5341,7 +5341,7 @@ export default function MainApp({
                   pricing: 'التسعير',
                   areas: 'المناطق والافرع',
                   import: 'الاستيراد',
-                  ai: 'الذكاء الاصطناعي 🤖'
+                  ai: 'الذكاء الاصطناعي '
                 }
                 return (
                   <button
@@ -5380,7 +5380,7 @@ export default function MainApp({
                       }}
                       className="h-12 bg-emerald-600 text-white rounded-2xl text-[12.5px] font-bold flex items-center justify-center gap-1.5 hover:bg-emerald-700 transition-colors shadow-2xs"
                     >
-                      <span className="text-[15px] leading-none">📥</span>
+                      <span className="text-[15px] leading-none"></span>
                       <span>تنزيل إرساليات</span>
                     </button>
                   </div>
@@ -5617,7 +5617,7 @@ export default function MainApp({
                           }}
                           className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white hover:bg-sky-50 text-slate-500"
                         >
-                          ✎
+                          
                         </button>
                       </div>
 
@@ -5660,7 +5660,7 @@ export default function MainApp({
                               }}
                               className="w-6 h-6 border rounded flex items-center justify-center text-[10px] text-slate-500"
                             >
-                              ✎
+                              
                             </button>
                           </div>
                         ))}
@@ -5819,28 +5819,10 @@ export default function MainApp({
                 <div className="space-y-4">
                   <div className="border border-sky-100 rounded-2xl p-4 bg-white shadow-sm space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">🤖</span>
+                      <span className="text-xl"></span>
                       <div>
-                        <div className="text-[13px] font-bold text-slate-800">مفاتيح الذكاء الاصطناعي (Gemini API)</div>
-                        <div className="text-[10px] text-slate-500">
-                          تُستخدم لقراءة وصولات وقوائم جباية الماء المكتوبة بخط اليد وتنزيل مبالغها تلقائياً
-                        </div>
+                        <div className="text-[13px] font-bold text-slate-800">مفاتيح الذكاء الاصطناعي</div>
                       </div>
-                    </div>
-
-                    <div className="p-3 bg-sky-50/60 rounded-xl border border-sky-100 text-[11px] text-slate-700 leading-relaxed space-y-1">
-                      <p className="font-bold text-sky-900">💡 كيفية الحصول على مفتاح مجاني:</p>
-                      <p>
-                        يمكنك إنشاء مفتاح مجاني وسريع من موقع Google AI Studio ولصقه هنا، وسيتم حفظه في نظامك فوراً.
-                      </p>
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-block mt-1 font-bold text-[#0e7490] hover:underline"
-                      >
-                        اضغط هنا لفتح Google AI Studio والحصول على المفتاح ↗
-                      </a>
                     </div>
 
                     {/* حقل إضافة مفتاح جديد */}
@@ -5853,7 +5835,6 @@ export default function MainApp({
                           type="text"
                           value={newAiKeyInput}
                           onChange={(e) => setNewAiKeyInput(e.target.value)}
-                          placeholder="الصق المفتاح هنا مثل: AIzaSy..."
                           className="flex-1 h-10 px-3 border border-sky-100 rounded-xl text-[12px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30"
                         />
                         <button
@@ -5908,7 +5889,7 @@ export default function MainApp({
                                     disabled={isTesting}
                                     className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
                                   >
-                                    {isTesting ? 'جاري الفحص...' : 'فحص الاتصال ⚡'}
+                                    {isTesting ? 'جاري الفحص...' : 'فحص الاتصال '}
                                   </button>
                                   <button
                                     type="button"
@@ -5916,7 +5897,7 @@ export default function MainApp({
                                     className="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center transition-colors text-xs"
                                     title="حذف هذا المفتاح"
                                   >
-                                    ✕
+                                    
                                   </button>
                                 </div>
                               </div>
@@ -5929,7 +5910,7 @@ export default function MainApp({
                                       : 'bg-red-50 text-red-700 border border-red-200'
                                   }`}
                                 >
-                                  {testRes.success ? '✓ ' : '⚠️ '}
+                                  {testRes.success ? ' ' : ' '}
                                   {testRes.message}
                                 </div>
                               )}
@@ -5950,7 +5931,7 @@ export default function MainApp({
                       }}
                       className="w-full h-11 bg-[#0e7490] hover:bg-[#085a70] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-colors"
                     >
-                      <span>✨</span>
+                      <span></span>
                       <span>فتح شاشة تنزيل الإرساليات الآن</span>
                     </button>
                   </div>
@@ -5996,7 +5977,7 @@ export default function MainApp({
             }}
             title="تنزيل إرساليات الدفع"
           >
-            <span style={{ fontSize: '15px', lineHeight: 1 }}>📥</span>
+            <span style={{ fontSize: '15px', lineHeight: 1 }}></span>
             <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '12.5px' }}>تنزيل إرساليات</span>
           </button>
 

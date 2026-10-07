@@ -340,9 +340,8 @@ export default function BranchManagerDashboard({
               <button
                 onClick={onBackToDirector}
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1"
-                title="العودة لإدارة المديرية"
               >
-                ← عودة للإدارة العامة
+                عودة للإدارة العامة
               </button>
             )}
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-white text-base">
@@ -352,10 +351,9 @@ export default function BranchManagerDashboard({
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-black text-white">{branch.name}</h1>
                 <span className="bg-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  {currentManager ? `المسؤول: ${currentManager.name}` : 'لوحة إدارة الفرع'}
+                  {currentManager ? currentManager.name : 'مسؤول الفرع'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">مديرية ماء محافظة البصرة</p>
             </div>
           </div>
 
@@ -474,7 +472,6 @@ export default function BranchManagerDashboard({
                 className="w-full text-right px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between text-amber-800 bg-amber-50 hover:bg-amber-100 transition border border-amber-200 mt-2"
               >
                 <span>تنزيل الإرساليات (A4)</span>
-                <span className="text-[10px] font-black">↗</span>
               </button>
 
               {/* الإعدادات */}
@@ -568,9 +565,6 @@ export default function BranchManagerDashboard({
 
               {branch.subscribers.length > 15 && (
                 <div className="text-center pt-2">
-                  <p className="text-xs text-slate-500 mb-2">
-                    يتم عرض أول 15 مشتركاً فقط هنا. لعرض وتعديل وطباعة والبحث في جميع المشتركين (الـ {branch.subscribers.length}):
-                  </p>
                   <button
                     onClick={() =>
                       onOpenSubscriberApp({
@@ -581,7 +575,7 @@ export default function BranchManagerDashboard({
                     }
                     className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow"
                   >
-                    فتح نظام المشتركين والتسعيرات الكامل ←
+                    فتح نظام المشتركين الكامل
                   </button>
                 </div>
               )}
@@ -594,7 +588,6 @@ export default function BranchManagerDashboard({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-lg font-black text-slate-900">المناطق التابعة لـ {branch.name}</h3>
-                  <p className="text-xs text-slate-500">إضافة وتعديل أسماء المناطق لتوزيع المشتركين والمحصلين عليها</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -602,14 +595,14 @@ export default function BranchManagerDashboard({
                     type="text"
                     value={newAreaName}
                     onChange={(e) => setNewAreaName(e.target.value)}
-                    placeholder="اسم المنطقة الجديدة"
+                    placeholder="اسم المنطقة"
                     className="px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   <button
                     onClick={handleAddArea}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition"
                   >
-                    + إضافة منطقة
+                    إضافة منطقة
                   </button>
                 </div>
               </div>
@@ -645,7 +638,6 @@ export default function BranchManagerDashboard({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-lg font-black text-slate-900">محصلو {branch.name}</h3>
-                  <p className="text-xs text-slate-500">إدارة المحصلين، تخصيص المناطق، وصلاحيات التعديل ومشاركة الروابط</p>
                 </div>
 
                 <button
@@ -769,9 +761,6 @@ export default function BranchManagerDashboard({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-lg font-black text-slate-900">كتّاب {branch.name}</h3>
-                  <p className="text-xs text-slate-500">
-                    الكتّاب يملكون الصلاحية الكاملة لتعديل المشتركين وكتابة وتعديل الديون والبيانات
-                  </p>
                 </div>
 
                 <button
@@ -873,14 +862,13 @@ export default function BranchManagerDashboard({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-lg font-black text-slate-900">مسؤولو الخزنة والصندوق</h3>
-                  <p className="text-xs text-slate-500">متابعة الإرساليات المالية والوصولات المسلمة</p>
                 </div>
 
                 <button
                   onClick={() => setShowTreasuryModal(true)}
                   className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition"
                 >
-                  + إضافة مسؤول خزنة
+                  إضافة مسؤول خزنة
                 </button>
               </div>
 
@@ -952,17 +940,12 @@ export default function BranchManagerDashboard({
       {showImportModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4 animate-in fade-in">
-            <h3 className="text-lg font-black text-slate-900">استيراد مشتركين جدد لـ ({branch.name})</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              ألصق أسطر المشتركين بحيث يحتوي كل سطر على: (رقم المشترك واسمه الثلاثي).<br />
-              سيتم تسجيلهم تلقائياً كـ <strong>4 متر - سكني</strong> بدون منطقة محددة لترتيبهم وتخصيصهم لاحقاً.
-            </p>
+            <h3 className="text-lg font-black text-slate-900">استيراد مشتركين</h3>
 
             <textarea
               rows={8}
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
-              placeholder="مثال:&#10;5202 نوري عبد الصمد احمد&#10;5203 محمد علي حسن&#10;5204 ساجدة محسن لفتة"
               className="w-full p-4 rounded-2xl border border-slate-300 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
@@ -977,7 +960,7 @@ export default function BranchManagerDashboard({
                 onClick={handleExecuteImport}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition"
               >
-                بدء الاستيراد الآن
+                بدء الاستيراد
               </button>
             </div>
           </div>
@@ -999,7 +982,6 @@ export default function BranchManagerDashboard({
                   type="text"
                   value={collectorName}
                   onChange={(e) => setCollectorName(e.target.value)}
-                  placeholder="مثال: احمد سامي عباس"
                   className="w-full px-4 py-2 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
@@ -1010,7 +992,6 @@ export default function BranchManagerDashboard({
                   type="text"
                   value={collectorPhone}
                   onChange={(e) => setCollectorPhone(e.target.value)}
-                  placeholder="مثال: 07733921468"
                   className="w-full px-4 py-2 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
                 />
               </div>
@@ -1028,9 +1009,6 @@ export default function BranchManagerDashboard({
                     السماح للمحصل بالتعديل على المشتركين والديون
                   </span>
                 </label>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  (إذا تم إلغاء التحديد، يرى المحصل المشتركين فقط للمتابعة والقراءة دون تعديل)
-                </p>
               </div>
 
               {/* تخصيص المناطق */}
@@ -1105,7 +1083,6 @@ export default function BranchManagerDashboard({
                   type="text"
                   value={writerPhone}
                   onChange={(e) => setWriterPhone(e.target.value)}
-                  placeholder="رقم الهاتف للواتساب"
                   className="w-full px-4 py-2 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
                 />
               </div>

@@ -254,7 +254,7 @@ export default function DirectorateRootApp() {
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* الشريط العلوي البسيط */}
+      {/* الشريط العلوي */}
       <header className="relative z-10 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center font-black text-white text-lg shadow-lg">
@@ -262,7 +262,6 @@ export default function DirectorateRootApp() {
           </div>
           <div>
             <h1 className="text-base font-black">مديرية ماء محافظة البصرة</h1>
-            <p className="text-[11px] text-slate-400">قسم الواردات والجباية والتحصيل</p>
           </div>
         </div>
 
@@ -279,28 +278,21 @@ export default function DirectorateRootApp() {
         </div>
       </header>
 
-      {/* المحتوى الرئيسي للمدخل */}
+      {/* المحتوى الرئيسي */}
       <main className="relative z-10 flex-1 max-w-4xl mx-auto w-full px-4 py-12 flex flex-col justify-center">
         <div className="text-center space-y-3 mb-10">
-          <div className="inline-block px-3 py-1 bg-blue-900/60 border border-blue-700/50 rounded-full text-blue-300 text-xs font-bold mb-2">
-            بوابة الإدارة والجباية الرسمية
-          </div>
           <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-            نظام إدارة واردات ماء محافظة البصرة
+            مديرية ماء محافظة البصرة
           </h2>
-          <p className="text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-            المنظومة الإلكترونية المتكاملة لمتابعة الأفرع، المشتركين، المحصلين، والوصولات اليومية
-          </p>
         </div>
 
-        {/* كروت الوصول السريع المباشرة لفرعك ومسؤولك ومحصلك */}
+        {/* كروت الوصول المباشر */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* كرت فرع أبي الخصيب ومسؤول الفرع علي حسين لفتة */}
           {defaultBranch && (
             <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-6 shadow-xl backdrop-blur-sm space-y-4 hover:border-blue-500/50 transition">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-800/50">
-                  الفرع النشط
+                  {defaultBranch.name}
                 </span>
                 <span className="text-xs text-slate-400 font-bold">
                   {defaultBranch.subscribers?.length || 0} مشترك
@@ -323,26 +315,25 @@ export default function DirectorateRootApp() {
                   }}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-black shadow-md transition flex items-center justify-center gap-2"
                 >
-                  فتح لوحة مسؤول الفرع (علي حسين لفتة) ←
+                  فتح صفحة مسؤول الفرع
                 </button>
               </div>
             </div>
           )}
 
-          {/* كرت المحصل المباشر أحمد سامي عباس */}
           {defaultCollector && (
             <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-6 shadow-xl backdrop-blur-sm space-y-4 hover:border-emerald-500/50 transition">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/50">
-                  بوابة المحصل اليومي
+                  المحصل
                 </span>
-                <span className="text-xs text-emerald-400 font-bold">صلاحية التعديل مفعلة</span>
+                <span className="text-xs text-emerald-400 font-bold">تعديل مفعل</span>
               </div>
 
               <div>
                 <h3 className="text-xl font-black text-white">{defaultCollector.name}</h3>
                 <p className="text-xs text-slate-300 mt-1">
-                  رقم الهاتف: {defaultCollector.phone} | فرع واردات أبي الخصيب
+                  {defaultCollector.phone} - {defaultBranch?.name}
                 </p>
               </div>
 
@@ -361,20 +352,19 @@ export default function DirectorateRootApp() {
                   }}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-md transition flex items-center justify-center gap-2"
                 >
-                  دخول صفحة المحصل لمتابعة المشتركين والديون ←
+                  فتح صفحة المحصل
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* زر الدخول لمدير الواردات في الأسفل أيضاً */}
         <div className="mt-8 text-center">
           <button
             onClick={() => setShowDirectorLoginModal(true)}
             className="text-xs text-slate-400 hover:text-white underline underline-offset-4 transition"
           >
-            لديك رمز مدير الواردات؟ اضغط هنا للدخول للوحة الإدارة العامة لجميع الأفرع
+            دخول مدير الواردات
           </button>
         </div>
       </main>

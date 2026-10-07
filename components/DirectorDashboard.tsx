@@ -223,7 +223,6 @@ export default function DirectorDashboard({
                   مدير الواردات
                 </span>
               </div>
-              <p className="text-xs text-slate-300">نظام إدارة الأفرع والتحصيل والجباية الموحد</p>
             </div>
           </div>
 
@@ -307,7 +306,6 @@ export default function DirectorDashboard({
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-black text-slate-900">أفرع مديرية ماء البصرة</h2>
-                  <p className="text-xs text-slate-500">اختر الفرع لإدارة مسؤوليه، محصليه، ومتابعة أعماله</p>
                 </div>
                 <button
                   onClick={() => setShowAddBranchModal(true)}
@@ -400,7 +398,7 @@ export default function DirectorDashboard({
                           }}
                           className="mt-3 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-sm hover:bg-blue-700 transition"
                         >
-                          + إضافة مسؤول الآن
+                          إضافة مسؤول
                         </button>
                       </div>
                     ) : (
@@ -486,7 +484,6 @@ export default function DirectorDashboard({
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-black text-slate-900">تقارير حركة الأفرع والتحصيل</h2>
-                  <p className="text-xs text-slate-500">رسوم بيانية توضح نسب الاستحصال وتوزيعها الزمني والجغرافي</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -595,7 +592,6 @@ export default function DirectorDashboard({
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in">
             <h3 className="text-lg font-black text-slate-900">إضافة فرع واردات جديد</h3>
-            <p className="text-xs text-slate-500">مثال: فرع واردات القرنة، فرع واردات الفاو...</p>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">اسم الفرع:</label>
@@ -603,7 +599,6 @@ export default function DirectorDashboard({
                 type="text"
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value)}
-                placeholder="اكتب اسم الفرع"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -641,18 +636,16 @@ export default function DirectorDashboard({
                   type="text"
                   value={managerName}
                   onChange={(e) => setManagerName(e.target.value)}
-                  placeholder="مثال: علي حسين لفتة"
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف (للواتساب):</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
                 <input
                   type="text"
                   value={managerPhone}
                   onChange={(e) => setManagerPhone(e.target.value)}
-                  placeholder="مثال: 07705666911"
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
                 />
               </div>

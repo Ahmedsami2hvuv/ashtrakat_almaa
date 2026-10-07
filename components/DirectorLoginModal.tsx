@@ -65,13 +65,9 @@ export default function DirectorLoginModal({ onSuccess, onCancel }: DirectorLogi
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              placeholder="••••••••••••••"
               autoFocus
               className="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 text-center font-mono text-lg tracking-widest outline-none transition"
             />
-            <p className="text-[11px] text-slate-400 mt-1 text-center">
-              الدخول بواسطة الرمز السري المخصص لمدير الواردات فقط
-            </p>
           </div>
 
           {error && (

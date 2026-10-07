@@ -203,7 +203,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition flex items-center gap-2"
           >
-            ← عودة
+            عودة
           </button>
           <div>
             <h1 className="text-xl font-black text-slate-900">تنزيل الإرساليات الرسمية</h1>
@@ -317,7 +317,6 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
               type="text"
               value={baseReceiptNumber}
               onChange={(e) => handleApplyBaseReceipt(e.target.value)}
-              placeholder="مثال: 10450 (يتسلسل للأسفل)"
               className="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
             />
           </div>
@@ -405,18 +404,14 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
           </table>
         </div>
 
-        {/* زر إضافة أسطر إضافية - مخفي عند الطباعة */}
+        {/* زر إضافة أسطر إضافية */}
         <div className="mt-4 flex justify-between items-center print:hidden">
           <button
             onClick={handleAddMoreRows}
             className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition"
           >
-            + إضافة 10 أسطر أخرى للاستمارة
+            إضافة 10 أسطر
           </button>
-
-          <span className="text-xs text-slate-500 font-semibold">
-            * عند كتابة رقم الوصل لأول سطر، تتسلسل باقي الوصولات تلقائياً.
-          </span>
         </div>
 
         {/* توقيعات المسؤولين المعتمدة في ورقة A4 */}
