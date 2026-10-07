@@ -14,11 +14,8 @@ export const metadata: Metadata = {
   description: 'نظام إدارة اشتراكات الماء للمحصلين',
   manifest: '/manifest.json',
   icons: {
-    icon: [
-      { url: '/favicon.ico' },
-      { url: '/icons/water-logo.jpg' },
-    ],
-    apple: '/icons/water-logo.jpg',
+    icon: '/icon.svg',
+    apple: '/icon.svg',
   },
   appleWebApp: {
     capable: true,

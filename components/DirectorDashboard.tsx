@@ -281,8 +281,8 @@ export default function DirectorDashboard({
             >
               <div className="flex items-center gap-2.5">
                 <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm text-white"
-                  style={{ backgroundColor: '#0284c7' }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm text-white shadow-sm"
+                  style={{ backgroundColor: '#1e3a8a' }}
                 >
                   ماء
                 </div>
@@ -484,9 +484,9 @@ export default function DirectorDashboard({
             <div className="space-y-6">
               {/* ترويسة هادئة */}
               <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
-                <h3 className="text-lg font-black text-slate-900">
+                <h2 className="text-lg font-black text-slate-900">
                   لوحة المتابعة المركزية - مديرية ماء محافظة البصرة
-                </h3>
+                </h2>
                 <p className="text-xs text-slate-500 font-semibold mt-1">
                   نظرة عامة على اشتراكات الماء، المبالغ المستحصلة، وإدارة الكوادر في المحافظة.
                 </p>
@@ -592,9 +592,9 @@ export default function DirectorDashboard({
                   {/* شريط أدوات قائمة الأفرع مع البحث البارز */}
                   <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-base font-black text-slate-900">
+                      <h2 className="text-base font-black text-slate-900">
                         دليل أفرع مديرية ماء محافظة البصرة ({filteredBranches.length})
-                      </h3>
+                      </h2>
                       <p className="text-xs text-slate-500 font-semibold mt-0.5">
                         انقر على أي فرع لفتح صفحته المستقلة وإدارته بالكامل.
                       </p>
@@ -628,9 +628,9 @@ export default function DirectorDashboard({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h4 className="text-base font-black text-slate-900 group-hover:text-blue-600 transition">
+                            <h3 className="text-base font-black text-slate-900 group-hover:text-blue-600 transition">
                               {branch.name}
-                            </h4>
+                            </h3>
                             <p className="text-xs text-slate-500 font-bold mt-1">
                               المناطق: {branch.areas?.length || 0} | المحصلون: {branch.collectors?.length || 0}
                             </p>

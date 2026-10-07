@@ -1,11 +1,21 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { loadDirectorateFromCloud, saveDirectorateToCloud } from '@/lib/directorateStore'
-import DirectorDashboard from './DirectorDashboard'
-import BranchManagerDashboard from './BranchManagerDashboard'
-import MainApp from './MainApp'
+
+const DirectorDashboard = dynamic(() => import('./DirectorDashboard'), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-black" dir="rtl">
+      جاري تحميل لوحة التحكم...
+    </div>
+  )
+})
+
+const BranchManagerDashboard = dynamic(() => import('./BranchManagerDashboard'), { ssr: false })
+const MainApp = dynamic(() => import('./MainApp'), { ssr: false })
 
 type ActiveView =
   | 'director_login'
@@ -14,8 +24,23 @@ type ActiveView =
   | 'subscriber_app'
 
 export default function DirectorateRootApp() {
-  const [directorateData, setDirectorateData] = useState<DirectorateData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [directorateData, setDirectorateData] = useState<DirectorateData | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('basra_water_directorate_cache')
+        if (cached) return JSON.parse(cached)
+      } catch {}
+    }
+    return null
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return !localStorage.getItem('basra_water_directorate_cache')
+      } catch {}
+    }
+    return true
+  })
 
   // عرض الشاشة الحالي - الرابط الرئيسي يبدأ بصفحة مدير الواردات
   const [activeView, setActiveView] = useState<ActiveView>('director_login')
