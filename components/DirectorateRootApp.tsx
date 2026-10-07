@@ -5,21 +5,25 @@ import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, Bra
 import { loadDirectorateFromCloud, saveDirectorateToCloud } from '@/lib/directorateStore'
 import DirectorDashboard from './DirectorDashboard'
 import BranchManagerDashboard from './BranchManagerDashboard'
-import DirectorLoginModal from './DirectorLoginModal'
 import MainApp from './MainApp'
 
 type ActiveView =
+  | 'director_login'
   | 'director_dashboard'
   | 'branch_manager'
   | 'subscriber_app'
-  | 'landing'
 
 export default function DirectorateRootApp() {
   const [directorateData, setDirectorateData] = useState<DirectorateData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // عرض الشاشة الحالي
-  const [activeView, setActiveView] = useState<ActiveView>('landing')
+  // عرض الشاشة الحالي - الرابط الرئيسي يبدأ بصفحة مدير الواردات
+  const [activeView, setActiveView] = useState<ActiveView>('director_login')
+
+  // حقول دخول مدير الواردات
+  const [directorPin, setDirectorPin] = useState('')
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   // المدير الحالي أو الفرع المختار
   const [selectedBranch, setSelectedBranch] = useState<DirectorateBranch | null>(null)
@@ -34,9 +38,6 @@ export default function DirectorateRootApp() {
     assignedSubscriberIds?: number[]
   } | null>(null)
 
-  // نافذة دخول مدير الواردات
-  const [showDirectorLoginModal, setShowDirectorLoginModal] = useState(false)
-
   // 1. تحميل بيانات المديرية من السحابة وفحص الرابط المباشر
   useEffect(() => {
     async function init() {
@@ -45,14 +46,13 @@ export default function DirectorateRootApp() {
         const data = await loadDirectorateFromCloud()
         setDirectorateData(data)
 
-        // فحص معلمات الرابط
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search)
           const role = params.get('role')
           const token = params.get('token')
           const branchId = params.get('branch')
 
-          // إذا كان الرابط يحمل توكن مسؤول فرع
+          // إذا كان الرابط رابطاً مباشراً لمسؤول فرع
           if (role === 'manager' && token) {
             const foundBranch = data.branches.find(b =>
               b.managers?.some(m => m.token === token) || (branchId && b.id === branchId)
@@ -68,7 +68,7 @@ export default function DirectorateRootApp() {
             }
           }
 
-          // إذا كان الرابط يحمل توكن محصل
+          // إذا كان الرابط رابطاً مباشراً لمحصل
           if (role === 'collector' && token) {
             let matchedBranch: DirectorateBranch | null = null
             let matchedCollector: BranchCollector | null = null
@@ -97,7 +97,7 @@ export default function DirectorateRootApp() {
             }
           }
 
-          // إذا كان الرابط يحمل توكن كاتب
+          // إذا كان الرابط رابطاً مباشراً لكاتب
           if (role === 'writer' && token) {
             let matchedBranch: DirectorateBranch | null = null
             let matchedWriter: BranchWriter | null = null
@@ -116,7 +116,7 @@ export default function DirectorateRootApp() {
               setSubscriberAppProps({
                 role: 'writer',
                 userTitle: `كاتب: ${matchedWriter.name} (${matchedBranch.name})`,
-                canEdit: true, // الكاتب يملك صلاحية التعديل دائماً
+                canEdit: true,
                 assignedAreaIds: matchedWriter.assignedAreaIds,
                 assignedSubscriberIds: matchedWriter.assignedSubscriberIds
               })
@@ -132,6 +132,11 @@ export default function DirectorateRootApp() {
             setActiveView('director_dashboard')
             setIsLoading(false)
             return
+          } else {
+            // الرابط الرئيسي بدون توكن يفتح صفحة دخول مدير الواردات حصراً
+            setActiveView('director_login')
+            setIsLoading(false)
+            return
           }
         }
       } catch (err) {
@@ -144,13 +149,46 @@ export default function DirectorateRootApp() {
     init()
   }, [])
 
-  // دالة تحديث بيانات المديرية ككل وحفظها سحابياً
+  // دالة تسجيل دخول مدير الواردات بالرمز فقط
+  const handleDirectorLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!directorPin.trim()) {
+      setLoginError('يرجى إدخال الرمز')
+      return
+    }
+
+    setIsLoggingIn(true)
+    setLoginError(null)
+
+    try {
+      const res = await fetch('/api/auth/director', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: directorPin.trim() })
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        localStorage.setItem('basra_director_session', data.token)
+        setActiveView('director_dashboard')
+      } else {
+        setLoginError('الرمز غير صحيح')
+      }
+    } catch {
+      setLoginError('خطأ في الاتصال')
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
+  // تحديث بيانات المديرية وحفظها سحابياً
   const handleUpdateDirectorate = async (updatedData: DirectorateData) => {
     setDirectorateData(updatedData)
     await saveDirectorateToCloud(updatedData)
   }
 
-  // دالة تحديث فرع معين
+  // تحديث فرع معين
   const handleUpdateBranch = async (updatedBranch: DirectorateBranch) => {
     if (!directorateData) return
     const updatedBranches = directorateData.branches.map(b =>
@@ -165,7 +203,7 @@ export default function DirectorateRootApp() {
     await saveDirectorateToCloud(updatedDirectorate)
   }
 
-  // شاشة التحميل الأولية
+  // شاشة التحميل
   if (isLoading || !directorateData) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white font-sans" dir="rtl">
@@ -173,12 +211,11 @@ export default function DirectorateRootApp() {
           ماء
         </div>
         <h2 className="text-xl font-black">مديرية ماء محافظة البصرة</h2>
-        <p className="text-xs text-slate-400 mt-2">جارِ تحميل البيانات السحابية والمزامنة...</p>
       </div>
     )
   }
 
-  // 1. عرض لوحة تحكم مدير الواردات
+  // 1. لوحة تحكم مدير الواردات
   if (activeView === 'director_dashboard') {
     return (
       <DirectorDashboard
@@ -191,13 +228,14 @@ export default function DirectorateRootApp() {
         }}
         onLogout={() => {
           localStorage.removeItem('basra_director_session')
-          setActiveView('landing')
+          setDirectorPin('')
+          setActiveView('director_login')
         }}
       />
     )
   }
 
-  // 2. عرض لوحة تحكم مسؤول الفرع
+  // 2. لوحة تحكم مسؤول الفرع
   if (activeView === 'branch_manager' && selectedBranch) {
     return (
       <BranchManagerDashboard
@@ -209,19 +247,18 @@ export default function DirectorateRootApp() {
           setActiveView('subscriber_app')
         }}
         onBackToDirector={() => {
-          // إذا كان المدير العام يتفقد الفرع، يمكنه العودة
           const dirSession = localStorage.getItem('basra_director_session')
           if (dirSession) {
             setActiveView('director_dashboard')
           } else {
-            setActiveView('landing')
+            setActiveView('director_login')
           }
         }}
       />
     )
   }
 
-  // 3. عرض تطبيق المشتركين المعتمد (MainApp) ببيانات الفرع المعزولة تماماً
+  // 3. تطبيق المشتركين المعتمد (MainApp)
   if (activeView === 'subscriber_app') {
     return (
       <MainApp
@@ -253,150 +290,50 @@ export default function DirectorateRootApp() {
           if (selectedBranch) {
             setActiveView('branch_manager')
           } else {
-            setActiveView('landing')
+            setActiveView('director_login')
           }
         }}
       />
     )
   }
 
-  // 4. الشاشة الرئيسية والمدخل العام لمديرية ماء البصرة
-  const defaultBranch = directorateData.branches.find(b => b.id === 'branch_abi_alkhaseeb') || directorateData.branches[0]
-  const defaultManager = defaultBranch?.managers[0]
-  const defaultCollector = defaultBranch?.collectors[0]
-
+  // 4. الرابط الرئيسي: صفحة مدير واردات البصرة حصراً (طلب الرمز فقط)
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col font-sans relative overflow-hidden" dir="rtl">
-      {/* خلفية جمالية */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900 to-blue-950 opacity-90 pointer-events-none" />
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-white select-none" dir="rtl">
+      <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center">
+        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-2xl mx-auto mb-4 shadow-lg shadow-blue-600/30">
+          ماء
+        </div>
 
-      {/* الشريط العلوي */}
-      <header className="relative z-10 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center font-black text-white text-lg shadow-lg">
-            ماء
+        <h1 className="text-xl font-black text-white">مديرية ماء محافظة البصرة</h1>
+        <h2 className="text-xs font-bold text-blue-400 mt-1 mb-6">مدير الواردات</h2>
+
+        <form onSubmit={handleDirectorLoginSubmit} className="space-y-4">
+          <div className="text-right">
+            <input
+              type="password"
+              value={directorPin}
+              onChange={(e) => setDirectorPin(e.target.value)}
+              autoFocus
+              className="w-full px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-center font-mono text-lg text-white focus:outline-none focus:border-blue-500 transition"
+            />
           </div>
-          <div>
-            <h1 className="text-base font-black">مديرية ماء محافظة البصرة</h1>
-          </div>
-        </div>
 
-        <div>
-          <button
-            onClick={() => setShowDirectorLoginModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-600/30 transition flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            دخول مدير الواردات
-          </button>
-        </div>
-      </header>
-
-      {/* المحتوى الرئيسي */}
-      <main className="relative z-10 flex-1 max-w-4xl mx-auto w-full px-4 py-12 flex flex-col justify-center">
-        <div className="text-center space-y-3 mb-10">
-          <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-            مديرية ماء محافظة البصرة
-          </h2>
-        </div>
-
-        {/* كروت الوصول المباشر */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {defaultBranch && (
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-6 shadow-xl backdrop-blur-sm space-y-4 hover:border-blue-500/50 transition">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-800/50">
-                  {defaultBranch.name}
-                </span>
-                <span className="text-xs text-slate-400 font-bold">
-                  {defaultBranch.subscribers?.length || 0} مشترك
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-black text-white">{defaultBranch.name}</h3>
-                <p className="text-xs text-slate-300 mt-1">
-                  المسؤول: {defaultManager ? defaultManager.name : 'علي حسين لفتة'} ({defaultManager ? defaultManager.phone : '07705666911'})
-                </p>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedBranch(defaultBranch)
-                    setSelectedManager(defaultManager || null)
-                    setActiveView('branch_manager')
-                  }}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-black shadow-md transition flex items-center justify-center gap-2"
-                >
-                  فتح صفحة مسؤول الفرع
-                </button>
-              </div>
+          {loginError && (
+            <div className="p-2.5 bg-rose-950/60 border border-rose-800 text-rose-300 text-xs font-bold rounded-xl text-center">
+              {loginError}
             </div>
           )}
 
-          {defaultCollector && (
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-6 shadow-xl backdrop-blur-sm space-y-4 hover:border-emerald-500/50 transition">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/50">
-                  المحصل
-                </span>
-                <span className="text-xs text-emerald-400 font-bold">تعديل مفعل</span>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-black text-white">{defaultCollector.name}</h3>
-                <p className="text-xs text-slate-300 mt-1">
-                  {defaultCollector.phone} - {defaultBranch?.name}
-                </p>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    if (defaultBranch) setSelectedBranch(defaultBranch)
-                    setSubscriberAppProps({
-                      role: 'collector',
-                      userTitle: `محصل: ${defaultCollector.name}`,
-                      canEdit: true,
-                      assignedAreaIds: defaultCollector.assignedAreaIds,
-                      assignedSubscriberIds: defaultCollector.assignedSubscriberIds
-                    })
-                    setActiveView('subscriber_app')
-                  }}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-md transition flex items-center justify-center gap-2"
-                >
-                  فتح صفحة المحصل
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8 text-center">
           <button
-            onClick={() => setShowDirectorLoginModal(true)}
-            className="text-xs text-slate-400 hover:text-white underline underline-offset-4 transition"
+            type="submit"
+            disabled={isLoggingIn}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl shadow-lg transition disabled:opacity-50"
           >
-            دخول مدير الواردات
+            {isLoggingIn ? 'جارِ التحقق...' : 'دخول'}
           </button>
-        </div>
-      </main>
-
-      {/* نافذة دخول مدير الواردات بالرمز فقط */}
-      {showDirectorLoginModal && (
-        <DirectorLoginModal
-          onSuccess={() => {
-            setShowDirectorLoginModal(false)
-            setActiveView('director_dashboard')
-          }}
-          onCancel={() => setShowDirectorLoginModal(false)}
-        />
-      )}
+        </form>
+      </div>
     </div>
   )
 }
