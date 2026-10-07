@@ -295,7 +295,8 @@ export default function DirectorDashboard({
               {/* زر الإغلاق */}
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="p-1.5 rounded-lg transition shadow-xs"
+                style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #334155' }}
                 title="إغلاق القائمة"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -402,7 +403,11 @@ export default function DirectorDashboard({
 
             <button
               onClick={onLogout}
-              className="w-full px-3 py-2 rounded-lg text-xs font-black text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900 border border-rose-800/60 transition flex items-center justify-center gap-2"
+              className="w-full px-3 py-2.5 rounded-lg text-xs font-black transition flex items-center justify-center gap-2 shadow-sm"
+              style={{
+                backgroundColor: '#dc2626',
+                color: '#ffffff'
+              }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -481,11 +486,10 @@ export default function DirectorDashboard({
 
             <button
               onClick={onLogout}
-              className="px-3.5 py-2 rounded-lg text-xs font-black transition"
+              className="px-3.5 py-2 rounded-lg text-xs font-black transition shadow-sm"
               style={{
-                backgroundColor: '#fee2e2',
-                color: '#b91c1c',
-                border: '1px solid #fca5a5'
+                backgroundColor: '#dc2626',
+                color: '#ffffff'
               }}
             >
               خروج
@@ -566,7 +570,8 @@ export default function DirectorDashboard({
                       setActiveTab('branches')
                       setActiveBranchDetailId(null)
                     }}
-                    className="px-4 py-2.5 rounded-lg text-xs font-black bg-blue-600 hover:bg-blue-700 text-white transition inline-flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2.5 rounded-lg text-xs font-black text-white transition inline-flex items-center gap-2 shadow-sm"
+                    style={{ backgroundColor: '#1d4ed8' }}
                   >
                     <span>الانتقال إلى دليل الأفرع</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -585,7 +590,8 @@ export default function DirectorDashboard({
                       setActiveTab('reports')
                       setActiveBranchDetailId(null)
                     }}
-                    className="px-4 py-2.5 rounded-lg text-xs font-black bg-slate-900 hover:bg-slate-800 text-white transition inline-flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2.5 rounded-lg text-xs font-black text-white transition inline-flex items-center gap-2 shadow-sm"
+                    style={{ backgroundColor: '#0f172a' }}
                   >
                     <span>عرض التقارير المالية</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -734,7 +740,8 @@ export default function DirectorDashboard({
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => setActiveBranchDetailId(null)}
-                      className="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition flex items-center gap-2 shadow-sm"
+                      className="px-4 py-2.5 rounded-lg text-white font-black text-xs transition flex items-center gap-2 shadow-sm"
+                      style={{ backgroundColor: '#0f172a' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
@@ -753,7 +760,14 @@ export default function DirectorDashboard({
                       <div>
                         <div className="flex items-center gap-3">
                           <h3 className="text-2xl font-black text-slate-900">{activeBranch.name}</h3>
-                          <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-black"
+                            style={{
+                              backgroundColor: '#e0f2fe',
+                              color: '#0369a1',
+                              border: '1px solid #bae6fd'
+                            }}
+                          >
                             {activeBranch.subscribers?.length || 0} مشترك
                           </span>
                         </div>
@@ -771,17 +785,19 @@ export default function DirectorDashboard({
                             setManagerPhone('')
                             setShowAddManagerModal(true)
                           }}
-                          className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition flex items-center gap-2 shadow-sm"
+                          className="px-5 py-2.5 rounded-lg text-white font-black text-xs transition flex items-center gap-2 shadow-sm"
+                          style={{ backgroundColor: '#16a34a' }}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                           </svg>
-                          <span>إضافة مسؤول للفرع</span>
+                          <span>+ إضافة مسؤول للفرع</span>
                         </button>
 
                         <button
                           onClick={() => handleDeleteBranch(activeBranch.id, activeBranch.name)}
-                          className="px-4 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
+                          className="px-4 py-2.5 rounded-lg text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
+                          style={{ backgroundColor: '#dc2626' }}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -807,7 +823,7 @@ export default function DirectorDashboard({
                       </div>
                       <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                         <div className="text-xs font-bold text-slate-500">مسؤولو الفرع</div>
-                        <div className="text-xl font-black text-blue-600 mt-1">{activeBranch.managers?.length || 0}</div>
+                        <div className="text-xl font-black text-blue-700 mt-1">{activeBranch.managers?.length || 0}</div>
                       </div>
                     </div>
                   </div>
@@ -825,17 +841,20 @@ export default function DirectorDashboard({
                       </div>
 
                       {/* بحث المسؤولين */}
-                      <div className="relative w-full sm:w-64">
-                        <input
-                          type="text"
-                          placeholder="ابحث عن مسؤول بالاسم أو الهاتف..."
-                          value={managerSearch}
-                          onChange={(e) => setManagerSearch(e.target.value)}
-                          className="w-full pr-8 pl-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 outline-none"
-                        />
-                        <svg className="w-4 h-4 text-slate-400 absolute right-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div
+                        className="flex items-center rounded-lg px-3 py-1.5 border w-full sm:w-64"
+                        style={{ backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }}
+                      >
+                        <svg className="w-4 h-4 text-slate-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
+                        <input
+                          type="text"
+                          placeholder="ابحث عن مسؤول..."
+                          value={managerSearch}
+                          onChange={(e) => setManagerSearch(e.target.value)}
+                          className="w-full bg-transparent text-xs font-bold text-slate-900 placeholder-slate-400 outline-none"
+                        />
                       </div>
                     </div>
 
@@ -850,7 +869,8 @@ export default function DirectorDashboard({
                             setManagerPhone('')
                             setShowAddManagerModal(true)
                           }}
-                          className="mt-3 px-4 py-2 rounded-lg text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition"
+                          className="mt-3 px-5 py-2 rounded-lg text-xs font-black text-white transition shadow-sm"
+                          style={{ backgroundColor: '#1d4ed8' }}
                         >
                           + إضافة مسؤول للفرع
                         </button>
@@ -870,7 +890,14 @@ export default function DirectorDashboard({
                                   {manager.phone}
                                 </p>
                               </div>
-                              <span className="text-[10px] font-black bg-slate-100 text-slate-800 px-2.5 py-1 rounded-md border border-slate-200">
+                              <span
+                                className="text-[10px] font-black px-2.5 py-1 rounded-md"
+                                style={{
+                                  backgroundColor: '#e0f2fe',
+                                  color: '#0369a1',
+                                  border: '1px solid #bae6fd'
+                                }}
+                              >
                                 مسؤول
                               </span>
                             </div>
@@ -881,7 +908,8 @@ export default function DirectorDashboard({
                               <div className="grid grid-cols-2 gap-2">
                                 <button
                                   onClick={() => onVisitBranchManager(activeBranch, manager)}
-                                  className="px-3 py-2 rounded-lg text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-1.5 shadow-sm"
+                                  className="px-3 py-2.5 rounded-lg text-xs font-black text-white transition flex items-center justify-center gap-1.5 shadow-sm"
+                                  style={{ backgroundColor: '#1d4ed8' }}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -891,7 +919,8 @@ export default function DirectorDashboard({
 
                                 <button
                                   onClick={() => handleShareManagerWhatsApp(manager, activeBranch)}
-                                  className="px-3 py-2 rounded-lg text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-sm"
+                                  className="px-3 py-2.5 rounded-lg text-xs font-black text-white transition flex items-center justify-center gap-1.5 shadow-sm"
+                                  style={{ backgroundColor: '#15803d' }}
                                 >
                                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.941-.708-1.792s.446-1.27.605-1.444c.159-.175.347-.219.462-.219.116 0 .232.001.332.006.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.101-.179.21-.077.385.101.174.453.748.971 1.209.667.593 1.229.776 1.403.863.174.087.275.072.376-.044.101-.116.433-.505.549-.679.116-.174.232-.145.39-.087s1.011.477 1.185.564c.174.087.289.13.332.203.043.072.043.419-.101.824z"/>
@@ -904,10 +933,11 @@ export default function DirectorDashboard({
                               <div className="grid grid-cols-3 gap-2 pt-1">
                                 <button
                                   onClick={() => handleCopyManagerLink(manager, activeBranch)}
-                                  className="px-2 py-1.5 rounded-lg text-xs font-black text-slate-800 bg-slate-200 hover:bg-slate-300 transition text-center"
+                                  className="py-2 px-1 rounded-lg text-xs font-black text-white transition text-center shadow-xs"
+                                  style={{ backgroundColor: '#334155' }}
                                   title="نسخ الرابط المباشر"
                                 >
-                                  {copiedManagerId === manager.id ? '✓ تم النسخ' : 'نسخ الرابط'}
+                                  {copiedManagerId === manager.id ? '✓ تم' : 'نسخ الرابط'}
                                 </button>
 
                                 <button
@@ -917,14 +947,16 @@ export default function DirectorDashboard({
                                     setManagerPhone(manager.phone)
                                     setShowAddManagerModal(true)
                                   }}
-                                  className="px-2 py-1.5 rounded-lg text-xs font-black text-slate-800 bg-slate-200 hover:bg-slate-300 transition text-center"
+                                  className="py-2 px-1 rounded-lg text-xs font-black text-white transition text-center shadow-xs"
+                                  style={{ backgroundColor: '#475569' }}
                                 >
                                   تعديل
                                 </button>
 
                                 <button
                                   onClick={() => handleDeleteManager(manager.id, manager.name)}
-                                  className="px-2 py-1.5 rounded-lg text-xs font-black text-white bg-rose-600 hover:bg-rose-700 transition text-center shadow-sm"
+                                  className="py-2 px-1 rounded-lg text-xs font-black text-white transition text-center shadow-xs"
+                                  style={{ backgroundColor: '#dc2626' }}
                                 >
                                   حذف
                                 </button>
@@ -972,17 +1004,17 @@ export default function DirectorDashboard({
                   </div>
 
                   {/* اختيار السنة */}
-                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-300">
-                    <span className="text-xs font-bold text-slate-600 px-1.5">السنة:</span>
+                  <div className="flex items-center gap-1.5 p-1 rounded-lg" style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1' }}>
+                    <span className="text-xs font-bold text-slate-700 px-1.5">السنة:</span>
                     {[2026, 2027, 2028].map(yr => (
                       <button
                         key={yr}
                         onClick={() => setReportYear(yr)}
-                        className={`px-3 py-1 rounded text-xs font-black transition ${
-                          reportYear === yr
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-700 hover:bg-slate-200'
-                        }`}
+                        className="px-3 py-1 rounded text-xs font-black transition shadow-xs"
+                        style={{
+                          backgroundColor: reportYear === yr ? '#1d4ed8' : '#e2e8f0',
+                          color: reportYear === yr ? '#ffffff' : '#1e293b'
+                        }}
                       >
                         {yr}
                       </button>
@@ -1017,7 +1049,7 @@ export default function DirectorDashboard({
                         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                           <div
                             className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.max(percent, 2)}%` }}
+                            style={{ width: `${Math.max(percent, 2)}%`, backgroundColor: '#1d4ed8' }}
                           />
                         </div>
                       </div>
@@ -1057,7 +1089,8 @@ export default function DirectorDashboard({
                                 setActiveTab('branches')
                                 setActiveBranchDetailId(s.branchId)
                               }}
-                              className="px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-black text-xs transition"
+                              className="px-3 py-1.5 rounded-lg text-white font-black text-xs transition shadow-xs"
+                              style={{ backgroundColor: '#1d4ed8' }}
                             >
                               عرض الفرع ←
                             </button>
@@ -1102,13 +1135,15 @@ export default function DirectorDashboard({
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setShowAddBranchModal(false)}
-                className="px-4 py-2 rounded-lg text-xs font-black bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                className="px-4 py-2 rounded-lg text-xs font-black transition"
+                style={{ backgroundColor: '#e2e8f0', color: '#1e293b' }}
               >
                 إلغاء
               </button>
               <button
                 onClick={handleAddBranch}
-                className="px-5 py-2 rounded-lg text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm"
+                className="px-5 py-2 rounded-lg text-xs font-black text-white transition shadow-sm"
+                style={{ backgroundColor: '#1d4ed8' }}
               >
                 تأكيد الإضافة
               </button>
@@ -1160,13 +1195,15 @@ export default function DirectorDashboard({
                   setShowAddManagerModal(false)
                   setEditingManager(null)
                 }}
-                className="px-4 py-2 rounded-lg text-xs font-black bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                className="px-4 py-2 rounded-lg text-xs font-black transition"
+                style={{ backgroundColor: '#e2e8f0', color: '#1e293b' }}
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSaveManager}
-                className="px-5 py-2 rounded-lg text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm"
+                className="px-5 py-2 rounded-lg text-xs font-black text-white transition shadow-sm"
+                style={{ backgroundColor: '#16a34a' }}
               >
                 حفظ البيانات
               </button>
