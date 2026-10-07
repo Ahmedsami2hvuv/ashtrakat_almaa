@@ -420,12 +420,14 @@ export default function DirectorDashboard({
         {/* الشريط العلوي مع محرك البحث الشامل وزر القائمة */}
         <header
           className="sticky top-0 z-30 px-4 md:px-8 py-3 bg-white border-b border-slate-200 flex items-center justify-between gap-4 shadow-sm"
+          style={{ minHeight: '60px' }}
         >
-          <div className="flex items-center gap-3 flex-1 max-w-xl">
+          <div className="flex items-center gap-3">
             {/* زر إظهار/إخفاء القائمة */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition flex items-center gap-1.5 text-xs font-black shrink-0 shadow-sm"
+              className="px-3 py-2 rounded-lg text-white font-black text-xs transition flex items-center gap-1.5 shrink-0 shadow-sm"
+              style={{ backgroundColor: '#0f172a' }}
               title="القائمة الجانبية"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -434,30 +436,41 @@ export default function DirectorDashboard({
               <span>{isSidebarOpen ? 'إخفاء' : 'القائمة'}</span>
             </button>
 
-            {/* محرك بحث شامل في كل مكان */}
-            <div className="relative flex-1">
+            {/* محرك بحث شامل في كل مكان بحجم مضبوط ومناسب */}
+            <div
+              className="hidden sm:flex items-center rounded-lg px-3 py-1.5 border"
+              style={{
+                backgroundColor: '#f8fafc',
+                borderColor: '#cbd5e1',
+                width: '320px'
+              }}
+            >
+              <svg className="w-4 h-4 text-slate-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 type="text"
-                placeholder="ابحث عن أي فرع من هنا مباشرة..."
+                placeholder="بحث سريع عن أي فرع..."
                 value={globalSearch}
                 onChange={(e) => {
                   setGlobalSearch(e.target.value)
                   if (activeTab !== 'branches') setActiveTab('branches')
                   if (activeBranchDetailId) setActiveBranchDetailId(null)
                 }}
-                className="w-full pr-9 pl-4 py-2 rounded-lg bg-slate-100 border border-slate-300 text-xs font-bold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition"
+                className="w-full bg-transparent text-xs font-bold text-slate-900 placeholder-slate-400 outline-none"
               />
-              <svg className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {activeTab === 'branches' && (
               <button
                 onClick={() => setShowAddBranchModal(true)}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
+                className="px-4 py-2 rounded-lg font-black text-xs transition flex items-center gap-1.5 shadow-sm"
+                style={{
+                  backgroundColor: '#1d4ed8',
+                  color: '#ffffff'
+                }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
@@ -468,7 +481,12 @@ export default function DirectorDashboard({
 
             <button
               onClick={onLogout}
-              className="px-3.5 py-2 rounded-lg text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition"
+              className="px-3.5 py-2 rounded-lg text-xs font-black transition"
+              style={{
+                backgroundColor: '#fee2e2',
+                color: '#b91c1c',
+                border: '1px solid #fca5a5'
+              }}
             >
               خروج
             </button>
@@ -590,7 +608,9 @@ export default function DirectorDashboard({
               {!activeBranch ? (
                 <div className="space-y-4">
                   {/* شريط أدوات قائمة الأفرع مع البحث البارز */}
-                  <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div
+                    className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
                     <div>
                       <h2 className="text-base font-black text-slate-900">
                         دليل أفرع مديرية ماء محافظة البصرة ({filteredBranches.length})
@@ -600,23 +620,35 @@ export default function DirectorDashboard({
                       </p>
                     </div>
 
-                    {/* مربع بحث الأفرع */}
-                    <div className="relative w-full sm:w-72">
+                    {/* مربع بحث الأفرع مضبوط المحاذاة */}
+                    <div
+                      className="flex items-center rounded-lg px-3 py-2 border w-full sm:w-80"
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        borderColor: '#cbd5e1'
+                      }}
+                    >
+                      <svg className="w-4 h-4 text-slate-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                       <input
                         type="text"
                         placeholder="ابحث عن اسم الفرع..."
                         value={branchListSearch}
                         onChange={(e) => setBranchListSearch(e.target.value)}
-                        className="w-full pr-9 pl-4 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 outline-none"
+                        className="w-full bg-transparent text-xs font-bold text-slate-900 placeholder-slate-400 outline-none"
                       />
-                      <svg className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
                     </div>
                   </div>
 
-                  {/* بطاقات الأفرع: واضحة وأنيقة وسهلة النقر */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* شبكة بطاقات الأفرع: متناسقة كـ 3 أعمدة بدون تمدد أو فراغ شاسع */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                      gap: '16px'
+                    }}
+                  >
                     {filteredBranches.map(branch => (
                       <div
                         key={branch.id}
@@ -624,33 +656,65 @@ export default function DirectorDashboard({
                           setActiveBranchDetailId(branch.id)
                           setManagerSearch('')
                         }}
-                        className="p-5 rounded-xl bg-white border-2 border-slate-200 hover:border-blue-500 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-4 group"
+                        className="p-5 rounded-xl bg-white transition cursor-pointer flex flex-col justify-between hover:shadow-md"
+                        style={{
+                          border: '1px solid #cbd5e1',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                        }}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h3 className="text-base font-black text-slate-900 group-hover:text-blue-600 transition">
-                              {branch.name}
-                            </h3>
-                            <p className="text-xs text-slate-500 font-bold mt-1">
-                              المناطق: {branch.areas?.length || 0} | المحصلون: {branch.collectors?.length || 0}
-                            </p>
+                        <div className="space-y-3">
+                          {/* رأس بطاقة الفرع */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h3 className="text-base font-black text-slate-900">
+                                {branch.name}
+                              </h3>
+                              <p className="text-xs text-slate-500 font-bold mt-0.5">
+                                كود: {branch.id.replace('branch_', '')}
+                              </p>
+                            </div>
+                            <span
+                              className="px-2.5 py-1 rounded-md text-xs font-black shrink-0"
+                              style={{
+                                backgroundColor: '#e0f2fe',
+                                color: '#0369a1',
+                                border: '1px solid #bae6fd'
+                              }}
+                            >
+                              {branch.subscribers?.length || 0} مشترك
+                            </span>
                           </div>
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
-                            {branch.subscribers?.length || 0} مشترك
-                          </span>
+
+                          {/* مؤشرات الفرع المصغرة */}
+                          <div
+                            className="grid grid-cols-3 gap-2 p-2.5 rounded-lg text-center"
+                            style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
+                          >
+                            <div>
+                              <div className="text-[10px] text-slate-500 font-bold">المناطق</div>
+                              <div className="text-xs font-black text-slate-900 mt-0.5">{branch.areas?.length || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-500 font-bold">المحصلون</div>
+                              <div className="text-xs font-black text-slate-900 mt-0.5">{branch.collectors?.length || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-500 font-bold">المسؤولون</div>
+                              <div className="text-xs font-black text-blue-700 mt-0.5">{branch.managers?.length || 0}</div>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-600">
-                            المسؤولون: <strong className="text-slate-900">{branch.managers?.length || 0}</strong>
-                          </span>
-                          <span className="text-xs font-black text-blue-600 group-hover:underline flex items-center gap-1">
-                            <span>فتح صفحة الفرع</span>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-                            </svg>
-                          </span>
-                        </div>
+                        {/* زر فتح صفحة الفرع */}
+                        <button
+                          className="w-full mt-4 py-2.5 rounded-lg text-xs font-black text-white transition flex items-center justify-center gap-1.5 shadow-sm"
+                          style={{ backgroundColor: '#1d4ed8' }}
+                        >
+                          <span>عرض وإدارة الفرع</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
                       </div>
                     ))}
                   </div>
