@@ -221,10 +221,28 @@ export default function DirectorateRootApp() {
     )
   }
 
-  // 3. عرض تطبيق المشتركين المعتمد (MainApp) بالصلاحيات المحددة
+  // 3. عرض تطبيق المشتركين المعتمد (MainApp) ببيانات الفرع المعزولة تماماً
   if (activeView === 'subscriber_app') {
     return (
       <MainApp
+        branchId={selectedBranch?.id}
+        initialSubscribers={selectedBranch?.subscribers || []}
+        initialAreas={selectedBranch?.areas || []}
+        initialBilling={selectedBranch?.billing || {}}
+        initialPricing={selectedBranch?.pricing}
+        initialAiApiKeys={selectedBranch?.aiApiKeys || []}
+        onSaveBranchData={(branchData) => {
+          if (!selectedBranch) return
+          const updatedBranch: DirectorateBranch = {
+            ...selectedBranch,
+            subscribers: branchData.subscribers,
+            areas: branchData.areas,
+            billing: branchData.billing,
+            pricing: branchData.pricing,
+            aiApiKeys: branchData.aiApiKeys
+          }
+          handleUpdateBranch(updatedBranch)
+        }}
         userRole={subscriberAppProps?.role || 'collector'}
         canEdit={subscriberAppProps?.canEdit ?? true}
         assignedAreaIds={subscriberAppProps?.assignedAreaIds}

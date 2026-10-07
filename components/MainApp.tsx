@@ -652,6 +652,19 @@ export interface MainAppProps {
   customHeaderTitle?: string
   onBack?: () => void
   bypassAuth?: boolean
+  branchId?: string
+  initialSubscribers?: Subscriber[]
+  initialAreas?: Area[]
+  initialBilling?: BillingRecords
+  initialPricing?: Pricing
+  initialAiApiKeys?: string[]
+  onSaveBranchData?: (data: {
+    subscribers: Subscriber[]
+    areas: Area[]
+    billing: BillingRecords
+    pricing: Pricing
+    aiApiKeys?: string[]
+  }) => void
 }
 
 export default function MainApp({
@@ -662,23 +675,30 @@ export default function MainApp({
   assignedSubscriberIds,
   customHeaderTitle,
   onBack,
-  bypassAuth = false
+  bypassAuth = false,
+  branchId,
+  initialSubscribers,
+  initialAreas,
+  initialBilling,
+  initialPricing,
+  initialAiApiKeys,
+  onSaveBranchData
 }: MainAppProps = {}) {
   // حالة تسجيل الدخول (إذا كان دخول مباشر عبر الرابط يتم تجاوزه فوراً)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(bypassAuth)
   const [pinInput, setPinInput] = useState<string>('')
   const [pinError, setPinError] = useState<string>('')
 
-
-  // البيانات الأساسية
-  const [areas, setAreas] = useState<Area[]>(DEFAULT_AREAS)
-  const [pricing, setPricing] = useState<Pricing>(DEFAULT_PRICING)
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
-  const [billing, setBilling] = useState<BillingRecords>({})
+  // البيانات الأساسية معزولة لكل فرع حصراً
+  const [areas, setAreas] = useState<Area[]>(() => initialAreas || DEFAULT_AREAS)
+  const [pricing, setPricing] = useState<Pricing>(() => initialPricing || DEFAULT_PRICING)
+  const [subscribers, setSubscribers] = useState<Subscriber[]>(() => initialSubscribers || [])
+  const [billing, setBilling] = useState<BillingRecords>(() => initialBilling || {})
   const [collectorName, setCollectorName] = useState<string>('احمد المحصل')
   const [collectorPhone, setCollectorPhone] = useState<string>('07801234567')
-  const [rangeFrom, setRangeFrom] = useState<number>(5203)
-  const [rangeTo, setRangeTo] = useState<number>(6202)
+  const [rangeFrom, setRangeFrom] = useState<number>(1)
+  const [rangeTo, setRangeTo] = useState<number>(999999)
+
 
   // البحث والفلترة
   const [searchOpen, setSearchOpen] = useState<boolean>(false)
@@ -873,9 +893,26 @@ export default function MainApp({
     }
   }, [selectedSubId])
 
-  // تحميل البيانات: سوبابيس أولاً ثم localStorage كاحتياط (يتم فقط بعد تسجيل الدخول)
+  // تحميل البيانات: عزل الفرع أولاً لمنع ظهور مشتركي الأفرع الأخرى
   useEffect(() => {
     if (!isAuthenticated) return
+
+    // إذا كانت بيانات الفرع محددة مسبقاً (وضع المديرية متعدد الأفرع)
+    if (branchId !== undefined || initialSubscribers !== undefined) {
+      if (initialAreas) setAreas(initialAreas)
+      if (initialPricing) setPricing(initialPricing)
+      if (initialBilling) setBilling(initialBilling)
+      if (initialAiApiKeys) setAiApiKeys(initialAiApiKeys)
+      if (initialSubscribers) {
+        const { updatedSubscribers } = applyAutoStatuses(initialSubscribers, initialBilling || {}, initialPricing || DEFAULT_PRICING)
+        setSubscribers(updatedSubscribers)
+      } else {
+        setSubscribers([])
+      }
+      setIsLoadingCloud(false)
+      setDataLoaded(true)
+      return
+    }
 
     const applyData = (data: Record<string, unknown>) => {
       const rawSubs = (data.subscribers as Subscriber[]) || []
@@ -899,7 +936,6 @@ export default function MainApp({
 
     const init = async () => {
       setIsLoadingCloud(true)
-      // تحميل مفاتيح الذكاء الاصطناعي من التخزين المحلي
       try {
         const savedKeys = localStorage.getItem('AI_GEMINI_API_KEYS')
         if (savedKeys) {
@@ -908,14 +944,11 @@ export default function MainApp({
         }
       } catch {}
 
-      // محاولة الجلب من السحابة
       const cloudData = await loadFromCloud()
       if (cloudData) {
         applyData(cloudData)
-        // حفظ نسخة محلية كاحتياط
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData)) } catch {}
       } else {
-        // الاحتياط: من localStorage
         try {
           const saved = localStorage.getItem(STORAGE_KEY)
           if (saved) applyData(JSON.parse(saved))
@@ -925,7 +958,7 @@ export default function MainApp({
       setDataLoaded(true)
     }
     init()
-  }, [isAuthenticated])
+  }, [isAuthenticated, branchId, initialSubscribers, initialAreas, initialBilling, initialPricing, initialAiApiKeys])
 
   // مراقبة تحديثات الفواتير والمدفوعات لتحديث الحالات تلقائياً
   useEffect(() => {
@@ -1011,14 +1044,24 @@ export default function MainApp({
       } catch {}
     }
 
-    // 3. حفظ سحابي دائم بدليل سوبابيس (خلال 500 ميلي ثانية)
+    // 3. حفظ سحابي دائم: إما للفرع المحدد حصراً أو حفظ عام
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     setIsSyncing(true)
     saveTimerRef.current = setTimeout(async () => {
-      await saveToCloud(data as Record<string, unknown>)
+      if (onSaveBranchData) {
+        onSaveBranchData({
+          subscribers,
+          areas,
+          billing,
+          pricing,
+          aiApiKeys
+        })
+      } else {
+        await saveToCloud(data as Record<string, unknown>)
+      }
       setIsSyncing(false)
     }, 500)
-  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated])
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated, onSaveBranchData])
 
   // تسجيل الدخول بشكل آمن عبر السيرفر
   const handleLogin = async (e: React.FormEvent) => {
@@ -1068,14 +1111,21 @@ export default function MainApp({
     [billing, subscribers, pricing, currentPeriodIndex]
   )
 
-  // المشتركون ضمن نطاق المحصل (بالإضافة إلى أي مشترك مضاف حديثاً أو مسجل باسمه حتى لو كان رقمه خارج النطاق)
+  // المشتركون ضمن نطاق الفرع والمناطق المخصصة
   const subscribersInRange = useMemo(() => {
-    return subscribers.filter((s) => 
+    let list = subscribers.filter((s) => 
       (s.id >= rangeFrom && s.id <= rangeTo) || 
       isRecentlyAddedSubscriber(s) || 
       (Boolean(s.name) && s.name.trim() !== '' && s.name !== 'رقم شاغر')
     )
-  }, [subscribers, rangeFrom, rangeTo])
+
+    // إذا كان للمستخدم مناطق مخصصة حصراً
+    if (assignedAreaIds && assignedAreaIds.length > 0) {
+      list = list.filter((s) => s.areaId && assignedAreaIds.includes(s.areaId))
+    }
+
+    return list
+  }, [subscribers, rangeFrom, rangeTo, assignedAreaIds])
 
   // فلترة المشتركين حسب النوع
   const typeFiltered = useMemo(() => {
