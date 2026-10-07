@@ -643,14 +643,32 @@ ${sub.name}
   return { message, url, endDate, totalAmount }
 }
 
-export default function MainApp({ initialShowInstallments = false }: { initialShowInstallments?: boolean } = {}) {
-  // رمز الدخول المطلوب
-  const REQUIRED_PIN = process.env.NEXT_PUBLIC_APP_PIN || 'AHMEDHLAWAADAHAM'
+export interface MainAppProps {
+  initialShowInstallments?: boolean
+  userRole?: 'director' | 'manager' | 'collector' | 'writer' | 'guest'
+  canEdit?: boolean
+  assignedAreaIds?: string[]
+  assignedSubscriberIds?: number[]
+  customHeaderTitle?: string
+  onBack?: () => void
+  bypassAuth?: boolean
+}
 
-  // حالة تسجيل الدخول
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+export default function MainApp({
+  initialShowInstallments = false,
+  userRole = 'collector',
+  canEdit = true,
+  assignedAreaIds,
+  assignedSubscriberIds,
+  customHeaderTitle,
+  onBack,
+  bypassAuth = false
+}: MainAppProps = {}) {
+  // حالة تسجيل الدخول (إذا كان دخول مباشر عبر الرابط يتم تجاوزه فوراً)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(bypassAuth)
   const [pinInput, setPinInput] = useState<string>('')
   const [pinError, setPinError] = useState<string>('')
+
 
   // البيانات الأساسية
   const [areas, setAreas] = useState<Area[]>(DEFAULT_AREAS)
@@ -794,11 +812,15 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
 
   // فحص تسجيل الدخول عند البدء
   useEffect(() => {
+    if (bypassAuth) {
+      setIsAuthenticated(true)
+      return
+    }
     const auth = localStorage.getItem(AUTH_STORAGE_KEY)
     if (auth === 'true') {
       setIsAuthenticated(true)
     }
-  }, [])
+  }, [bypassAuth])
 
   // مراقبة الانتقال بين المشتركين للتركيز التلقائي
   useEffect(() => {
@@ -998,15 +1020,29 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
     }, 500)
   }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated])
 
-  // تسجيل الدخول
-  const handleLogin = (e: React.FormEvent) => {
+  // تسجيل الدخول بشكل آمن عبر السيرفر
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (pinInput.trim() === REQUIRED_PIN) {
-      setIsAuthenticated(true)
-      localStorage.setItem(AUTH_STORAGE_KEY, 'true')
-      setPinError('')
-    } else {
-      setPinError('رمز الدخول غير صحيح، يرجى المحاولة مجدداً')
+    if (!pinInput.trim()) {
+      setPinError('يرجى إدخال الرمز السري')
+      return
+    }
+    try {
+      const res = await fetch('/api/auth/director', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinInput.trim() })
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setIsAuthenticated(true)
+        localStorage.setItem(AUTH_STORAGE_KEY, 'true')
+        setPinError('')
+      } else {
+        setPinError(data.error || 'رمز الدخول غير صحيح، يرجى المحاولة مجدداً')
+      }
+    } catch {
+      setPinError('تعذر الاتصال بالخادم للتحقق من الرمز')
     }
   }
 
@@ -2372,13 +2408,33 @@ export default function MainApp({ initialShowInstallments = false }: { initialSh
       {/* الهيدر الرئيسي - الحفاظ على شكل ومقاس الأزرار 100% */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
         <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1"
+                title="العودة"
+              >
+                ← عودة
+              </button>
+            )}
             <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 3L4 9v6l8 6 8-6V9l-8-6z" fill="white" opacity="0.9" />
               </svg>
             </div>
-            <h1 className="text-[15px] font-bold tracking-tight text-slate-900">نظام الاشتراكات</h1>
+            <div className="flex flex-col">
+              <h1 className="text-[14px] font-bold tracking-tight text-slate-900">
+                {customHeaderTitle || 'نظام الاشتراكات'}
+              </h1>
+              {!canEdit && (
+                <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 w-fit">
+                  وضع المتابعة (للقراءة فقط)
+                </span>
+              )}
+            </div>
+
             {/* مؤشر المزامنة السحابية */}
             {isSyncing ? (
               <span className="flex items-center gap-1 text-[11px] text-sky-700 font-semibold">

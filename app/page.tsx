@@ -1,5 +1,5 @@
-import MainApp from '@/components/MainApp'
+import DirectorateRootApp from '@/components/DirectorateRootApp'
 
 export default function Home() {
-  return <MainApp />
+  return <DirectorateRootApp />
 }
