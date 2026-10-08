@@ -40,9 +40,27 @@ const ICONS: Record<string, string> = {
   drop: 'M12 3s6 6.5 6 11a6 6 0 11-12 0c0-4.5 6-11 6-11z'
 }
 
-function Icon({ name, className = 'w-4 h-4' }: { name: string; className?: string }) {
+function Icon({ name, className = '', size = 18 }: { name: string; className?: string; size?: number }) {
   return (
-    <svg className={`${className} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        minWidth: `${size}px`,
+        minHeight: `${size}px`,
+        maxWidth: `${size}px`,
+        maxHeight: `${size}px`,
+        display: 'inline-block',
+        verticalAlign: 'middle'
+      }}
+      className={`${className} shrink-0`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={ICONS[name] || ''} />
     </svg>
   )
@@ -402,6 +420,7 @@ export default function DirectorDashboard({
         .border-cyan-700 { border-color: #0e7490 !important; }
         .hover\\:border-cyan-700:hover { border-color: #0e7490 !important; }
         .focus\\:border-cyan-700:focus { border-color: #0e7490 !important; }
+        .dd-root svg { display: inline-block !important; vertical-align: middle !important; }
       `}</style>
 
       {/* ════════════════════════════════════════════════════════════════ */}
@@ -422,7 +441,7 @@ export default function DirectorDashboard({
                 className="w-10 h-10 rounded-2xl flex items-center justify-center text-cyan-300 shadow-md shrink-0"
                 style={{ backgroundColor: 'rgba(34, 211, 238, 0.18)' }}
               >
-                <Icon name="drop" className="w-5 h-5 text-cyan-300" />
+                <Icon name="drop" size={20} className="text-cyan-300" />
               </div>
               <div>
                 <h1 className="text-sm font-black text-white tracking-tight">مديرية ماء البصرة</h1>
@@ -432,23 +451,23 @@ export default function DirectorDashboard({
               </div>
             </div>
 
-            {/* أزرار التبويبات العلوية الثلاثة - عريضة وواضحة جداً */}
-            <nav className="flex items-center gap-1.5 p-1 rounded-2xl" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }}>
+            {/* أزرار التبويبات العلوية الثلاثة - أنيقة ومتناسقة */}
+            <nav className="flex items-center gap-2 p-1.5 rounded-2xl" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }}>
               {navItems.map(item => {
                 const active = activeTab === item.id && !activeBranchDetailId
                 return (
                   <button
                     key={item.id}
                     onClick={() => changeTab(item.id)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
                     style={{
                       backgroundColor: active ? '#155e75' : 'transparent',
                       color: active ? '#ffffff' : '#cbd5e1',
                       border: active ? '1px solid rgba(34, 211, 238, 0.35)' : '1px solid transparent',
-                      boxShadow: active ? '0 2px 10px rgba(21, 94, 117, 0.4)' : 'none'
+                      boxShadow: active ? '0 2px 8px rgba(21, 94, 117, 0.4)' : 'none'
                     }}
                   >
-                    <Icon name={item.icon} className={active ? 'text-white' : 'text-cyan-200/70'} />
+                    <Icon name={item.icon} size={16} className={active ? 'text-white' : 'text-cyan-200'} />
                     <span>{item.label}</span>
                     {item.badge !== undefined && (
                       <span
