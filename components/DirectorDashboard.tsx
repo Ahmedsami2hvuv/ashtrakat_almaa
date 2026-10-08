@@ -19,6 +19,9 @@ export default function DirectorDashboard({
   onVisitBranchManager,
   onLogout
 }: DirectorDashboardProps) {
+  // حالة فتح وإغلاق القائمة الجانبية
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+
   // القسم النشط في القائمة الجانبية
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard')
 
@@ -255,23 +258,53 @@ export default function DirectorDashboard({
           flexDirection: 'column',
           justifyContent: 'space-between',
           zIndex: 50,
-          boxShadow: '-2px 0 10px rgba(0,0,0,0.1)'
+          boxShadow: '-2px 0 10px rgba(0,0,0,0.1)',
+          transform: isSidebarOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          visibility: isSidebarOpen ? 'visible' : 'hidden'
         }}
       >
         <div>
-          <h2
+          <div
             style={{
-              fontSize: '1.2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               marginBottom: '25px',
-              textAlign: 'center',
-              color: '#38bdf8',
               borderBottom: '1px solid #334155',
-              paddingBottom: '15px',
-              fontWeight: 800
+              paddingBottom: '15px'
             }}
           >
-            واردات ماء البصرة
-          </h2>
+            <h2
+              style={{
+                fontSize: '1.2rem',
+                color: '#38bdf8',
+                fontWeight: 800,
+                margin: 0
+              }}
+            >
+              واردات ماء البصرة
+            </h2>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              style={{
+                background: '#334155',
+                color: '#ffffff',
+                border: 'none',
+                width: '30px',
+                height: '30px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.85rem'
+              }}
+              title="إغلاق القائمة الجانبية"
+            >
+              ✕
+            </button>
+          </div>
 
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {/* 1. لوحة التحكم */}
@@ -510,11 +543,12 @@ export default function DirectorDashboard({
       {/* ======================================================== */}
       <main
         style={{
-          marginRight: '250px',
-          width: 'calc(100% - 250px)',
+          marginRight: isSidebarOpen ? '250px' : '0px',
+          width: isSidebarOpen ? 'calc(100% - 250px)' : '100%',
           padding: '30px',
           minHeight: '100vh',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         {/* =================== الهيدر =================== */}
@@ -530,13 +564,41 @@ export default function DirectorDashboard({
             boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
           }}
         >
-          <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b' }}>
-              أهلاً بك، المدير العام
-            </h2>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px' }}>
-              متابعة نظام الجباية والواردات لمحافظة البصرة
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {/* زر فتح / إغلاق القائمة الجانبية */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              style={{
+                backgroundColor: isSidebarOpen ? '#f1f5f9' : '#0056b3',
+                color: isSidebarOpen ? '#1e293b' : '#ffffff',
+                border: '1px solid #cbd5e1',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                transition: 'all 0.2s ease',
+                boxShadow: isSidebarOpen ? 'none' : '0 2px 8px rgba(0, 86, 179, 0.3)'
+              }}
+              title={isSidebarOpen ? 'إغلاق القائمة الجانبية' : 'فتح القائمة الجانبية'}
+            >
+              <svg style={{ width: '18px', height: '18px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span>{isSidebarOpen ? 'إخفاء القائمة' : 'القائمة الجانبية'}</span>
+            </button>
+
+            <div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                أهلاً بك، المدير العام
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px', margin: 0 }}>
+                متابعة نظام الجباية والواردات لمحافظة البصرة
+              </p>
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
