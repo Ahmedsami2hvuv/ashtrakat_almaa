@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { DirectorateData, DirectorateBranch, BranchManager } from '@/lib/directorateTypes'
+import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
+import { Area, Subscriber } from '@/components/MainApp'
 
 interface DirectorDashboardProps {
   directorateData: DirectorateData
@@ -33,6 +34,18 @@ export default function DirectorDashboard({
 
   // حالات النسخ
   const [copiedManagerId, setCopiedManagerId] = useState<string | null>(null)
+
+  // التبويب النشط داخل صفحة الفرع المستقلة
+  const [branchDetailTab, setBranchDetailTab] = useState<'subscribers' | 'areas' | 'collectors' | 'writers' | 'managers'>('subscribers')
+
+  // بحث المشتركين داخل الفرع
+  const [branchSubscriberSearch, setBranchSubscriberSearch] = useState('')
+
+  // المشترك المختار للعرض فقط (Read-only للمدير)
+  const [viewingSubscriber, setViewingSubscriber] = useState<Subscriber | null>(null)
+
+  // المحصل المختار لعرض تفاصيل الجباية والمناطق
+  const [viewingCollector, setViewingCollector] = useState<BranchCollector | null>(null)
 
   // نافذة إضافة مسؤول
   const [showAddManagerModal, setShowAddManagerModal] = useState(false)
@@ -738,7 +751,7 @@ export default function DirectorDashboard({
                 كود الفرع: {selectedBranch.id} • المشتركون: {selectedBranch.subscribers?.length || 0}
               </p>
 
-              {/* بطاقات فرعية للفرع */}
+              {/* أزرار التبويبات الخمسة التفاعلية بالأعلى */}
               <div
                 style={{
                   display: 'grid',
@@ -747,125 +760,575 @@ export default function DirectorDashboard({
                   marginTop: '20px'
                 }}
               >
-                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700 }}>المشتركون</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '4px' }}>
+                {/* 1. المشتركون */}
+                <button
+                  onClick={() => setBranchDetailTab('subscribers')}
+                  style={{
+                    background: branchDetailTab === 'subscribers' ? '#eff6ff' : '#ffffff',
+                    border: branchDetailTab === 'subscribers' ? '2px solid #0056b3' : '1px solid #cbd5e1',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    transition: 'all 0.2s',
+                    boxShadow: branchDetailTab === 'subscribers' ? '0 4px 12px rgba(0, 86, 179, 0.15)' : '0 2px 6px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <div style={{ color: branchDetailTab === 'subscribers' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>المشتركون</span>
+                    <span style={{ fontSize: '1.1rem' }}>👥</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
                     {(selectedBranch.subscribers?.length || 0).toLocaleString('ar-IQ')}
                   </div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700 }}>المناطق المائية</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.75rem', color: branchDetailTab === 'subscribers' ? '#0056b3' : '#94a3b8', fontWeight: 700, marginTop: '4px' }}>
+                    قاعدة بيانات المشتركين
+                  </div>
+                </button>
+
+                {/* 2. المناطق المائية */}
+                <button
+                  onClick={() => setBranchDetailTab('areas')}
+                  style={{
+                    background: branchDetailTab === 'areas' ? '#eff6ff' : '#ffffff',
+                    border: branchDetailTab === 'areas' ? '2px solid #0056b3' : '1px solid #cbd5e1',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    transition: 'all 0.2s',
+                    boxShadow: branchDetailTab === 'areas' ? '0 4px 12px rgba(0, 86, 179, 0.15)' : '0 2px 6px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <div style={{ color: branchDetailTab === 'areas' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>المناطق المائية</span>
+                    <span style={{ fontSize: '1.1rem' }}>📍</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
                     {selectedBranch.areas?.length || 0}
                   </div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700 }}>المحصلون والكتاب</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '4px' }}>
-                    {(selectedBranch.collectors?.length || 0) + (selectedBranch.writers?.length || 0)}
+                  <div style={{ fontSize: '0.75rem', color: branchDetailTab === 'areas' ? '#0056b3' : '#94a3b8', fontWeight: 700, marginTop: '4px' }}>
+                    المناطق التابعة للفرع
                   </div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700 }}>مسؤولو الفرع</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0056b3', marginTop: '4px' }}>
+                </button>
+
+                {/* 3. المحصلون */}
+                <button
+                  onClick={() => setBranchDetailTab('collectors')}
+                  style={{
+                    background: branchDetailTab === 'collectors' ? '#eff6ff' : '#ffffff',
+                    border: branchDetailTab === 'collectors' ? '2px solid #0056b3' : '1px solid #cbd5e1',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    transition: 'all 0.2s',
+                    boxShadow: branchDetailTab === 'collectors' ? '0 4px 12px rgba(0, 86, 179, 0.15)' : '0 2px 6px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <div style={{ color: branchDetailTab === 'collectors' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>المحصلون</span>
+                    <span style={{ fontSize: '1.1rem' }}>💼</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
+                    {selectedBranch.collectors?.length || 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: branchDetailTab === 'collectors' ? '#0056b3' : '#94a3b8', fontWeight: 700, marginTop: '4px' }}>
+                    المحصلين ومناطق الجباية
+                  </div>
+                </button>
+
+                {/* 4. الكُتّاب */}
+                <button
+                  onClick={() => setBranchDetailTab('writers')}
+                  style={{
+                    background: branchDetailTab === 'writers' ? '#eff6ff' : '#ffffff',
+                    border: branchDetailTab === 'writers' ? '2px solid #0056b3' : '1px solid #cbd5e1',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    transition: 'all 0.2s',
+                    boxShadow: branchDetailTab === 'writers' ? '0 4px 12px rgba(0, 86, 179, 0.15)' : '0 2px 6px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <div style={{ color: branchDetailTab === 'writers' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>الكُتّاب</span>
+                    <span style={{ fontSize: '1.1rem' }}>✍️</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
+                    {selectedBranch.writers?.length || 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: branchDetailTab === 'writers' ? '#0056b3' : '#94a3b8', fontWeight: 700, marginTop: '4px' }}>
+                    كُتاب القراءات والمسند لهم
+                  </div>
+                </button>
+
+                {/* 5. مسؤولو الفرع */}
+                <button
+                  onClick={() => setBranchDetailTab('managers')}
+                  style={{
+                    background: branchDetailTab === 'managers' ? '#eff6ff' : '#ffffff',
+                    border: branchDetailTab === 'managers' ? '2px solid #0056b3' : '1px solid #cbd5e1',
+                    padding: '16px',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    transition: 'all 0.2s',
+                    boxShadow: branchDetailTab === 'managers' ? '0 4px 12px rgba(0, 86, 179, 0.15)' : '0 2px 6px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <div style={{ color: branchDetailTab === 'managers' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>مسؤولو الفرع</span>
+                    <span style={{ fontSize: '1.1rem' }}>👔</span>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0056b3', marginTop: '6px' }}>
                     {selectedBranch.managers?.length || 0}
                   </div>
-                </div>
+                  <div style={{ fontSize: '0.75rem', color: branchDetailTab === 'managers' ? '#0056b3' : '#94a3b8', fontWeight: 700, marginTop: '4px' }}>
+                    إدارة حسابات المسؤولين
+                  </div>
+                </button>
               </div>
 
-              {/* جدول مسؤولي هذا الفرع */}
-              <div style={{ marginTop: '30px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', color: '#1e293b' }}>
-                  مسؤولو ({selectedBranch.name})
-                </h3>
-                {(!selectedBranch.managers || selectedBranch.managers.length === 0) ? (
-                  <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '8px', color: '#64748b' }}>
-                    لا يوجد مسؤولون مسجلون في هذا الفرع حالياً
+              {/* ======================================================== */}
+              {/* محتوى التبويب المختار                                    */}
+              {/* ======================================================== */}
+
+              {/* 1. تبويب المشتركين (قاعدة بيانات المشتركين - للقراءة والمعاينة فقط) */}
+              {branchDetailTab === 'subscribers' && (
+                <div style={{ marginTop: '30px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b' }}>
+                        قاعدة بيانات مشتركي ({selectedBranch.name})
+                      </h3>
+                      <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '3px' }}>
+                        (وضع القراءة والمعاينة فقط للمدير العام - لا يمكن التعديل المباشر)
+                      </p>
+                    </div>
+
+                    {/* بحث في المشتركين */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        padding: '8px 14px',
+                        border: '1px solid #cbd5e1',
+                        width: '260px'
+                      }}
+                    >
+                      <svg style={{ width: '16px', height: '16px', color: '#64748b', marginLeft: '8px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="بحث بالاسم أو الهاتف..."
+                        value={branchSubscriberSearch}
+                        onChange={(e) => setBranchSubscriberSearch(e.target.value)}
+                        style={{
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          width: '100%'
+                        }}
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0' }}>الاسم</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0' }}>رقم الهاتف</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', textAlign: 'center' }}>الإجراءات</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedBranch.managers.map(manager => (
-                        <tr key={manager.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '12px 15px', fontWeight: 800 }}>{manager.name}</td>
-                          <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }} dir="ltr">{manager.phone}</td>
-                          <td style={{ padding: '12px 15px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                              <button
-                                onClick={() => onVisitBranchManager(selectedBranch, manager)}
-                                style={{
-                                  backgroundColor: '#0056b3',
-                                  color: '#fff',
-                                  border: 'none',
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                دخول لصفحته
-                              </button>
-                              <button
-                                onClick={() => handleShareWhatsApp(manager, selectedBranch)}
-                                style={{
-                                  backgroundColor: '#16a34a',
-                                  color: '#fff',
-                                  border: 'none',
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                واتساب
-                              </button>
-                              <button
-                                onClick={() => handleCopyLink(manager, selectedBranch)}
-                                style={{
-                                  backgroundColor: '#475569',
-                                  color: '#fff',
-                                  border: 'none',
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                {copiedManagerId === manager.id ? '✓ تم' : 'نسخ الرابط'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteManager(selectedBranch.id, manager.id, manager.name)}
-                                style={{
-                                  backgroundColor: '#dc2626',
-                                  color: '#fff',
-                                  border: 'none',
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                حذف
-                              </button>
+
+                  {(!selectedBranch.subscribers || selectedBranch.subscribers.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
+                      لا يوجد مشتركون مسجلون في هذا الفرع حالياً
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.9rem' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8fafc', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 14px', fontWeight: 800 }}>ت</th>
+                            <th style={{ padding: '12px 14px', fontWeight: 800 }}>اسم المشترك</th>
+                            <th style={{ padding: '12px 14px', fontWeight: 800 }}>رقم الهاتف</th>
+                            <th style={{ padding: '12px 14px', fontWeight: 800 }}>المنطقة المائية</th>
+                            <th style={{ padding: '12px 14px', fontWeight: 800 }}>نوع العقار</th>
+                            <th style={{ padding: '12px 14px', fontWeight: 800 }}>نوع المقياس</th>
+                            <th style={{ padding: '12px 14px', fontWeight: 800, textAlign: 'center' }}>معاينة</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedBranch.subscribers
+                            .filter(s => {
+                              const q = branchSubscriberSearch.trim().toLowerCase()
+                              if (!q) return true
+                              return s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q))
+                            })
+                            .slice(0, 100)
+                            .map((sub, index) => {
+                              const areaName = selectedBranch.areas?.find(a => a.id === sub.areaId)?.name || 'غير محدد'
+                              return (
+                                <tr key={sub.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                  <td style={{ padding: '12px 14px', color: '#64748b', fontWeight: 700 }}>{index + 1}</td>
+                                  <td style={{ padding: '12px 14px', fontWeight: 800, color: '#1e293b' }}>{sub.name}</td>
+                                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0056b3' }} dir="ltr">{sub.phone || '—'}</td>
+                                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#475569' }}>{areaName}</td>
+                                  <td style={{ padding: '12px 14px', fontWeight: 700 }}>
+                                    <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, backgroundColor: sub.propertyType === 'تجاري' ? '#fef3c7' : '#e0f2fe', color: sub.propertyType === 'تجاري' ? '#b45309' : '#0369a1' }}>
+                                      {sub.propertyType || 'سكني'}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#64748b' }}>{sub.meterType || 'ميكانيكي'}</td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                    <button
+                                      onClick={() => setViewingSubscriber(sub)}
+                                      style={{
+                                        backgroundColor: '#0056b3',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        padding: '6px 14px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontWeight: 800,
+                                        fontSize: '0.8rem',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px'
+                                      }}
+                                    >
+                                      <span>معاينة</span>
+                                      <span>👁️</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. تبويب المناطق المائية */}
+              {branchDetailTab === 'areas' && (
+                <div style={{ marginTop: '30px' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '15px', color: '#1e293b' }}>
+                    المناطق المائية المسجلة في ({selectedBranch.name})
+                  </h3>
+
+                  {(!selectedBranch.areas || selectedBranch.areas.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
+                      لا توجد مناطق مائية مسجلة في هذا الفرع حالياً
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.9rem' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8fafc', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>اسم المنطقة المائية</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>كود المنطقة</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>عدد المشتركين</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>المحصل المسند</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>الكاتب المسند</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedBranch.areas.map(area => {
+                            const subCount = selectedBranch.subscribers?.filter(s => s.areaId === area.id).length || 0
+                            const assignedCollector = selectedBranch.collectors?.find(c => c.assignedAreaIds?.includes(area.id))
+                            const assignedWriter = selectedBranch.writers?.find(w => w.assignedAreaIds?.includes(area.id))
+                            return (
+                              <tr key={area.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>{area.name}</td>
+                                <td style={{ padding: '12px 15px', color: '#64748b', fontWeight: 700 }}>{area.id}</td>
+                                <td style={{ padding: '12px 15px', fontWeight: 800, color: '#0056b3' }}>
+                                  {subCount.toLocaleString('ar-IQ')} مشترك
+                                </td>
+                                <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedCollector ? '#15803d' : '#94a3b8' }}>
+                                  {assignedCollector ? `💼 ${assignedCollector.name}` : 'غير مسند'}
+                                </td>
+                                <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedWriter ? '#b45309' : '#94a3b8' }}>
+                                  {assignedWriter ? `✍️ ${assignedWriter.name}` : 'غير مسند'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3. تبويب المحصلين (مع تفاصيل الجباية والمناطق المسندة) */}
+              {branchDetailTab === 'collectors' && (
+                <div style={{ marginTop: '30px' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '15px', color: '#1e293b' }}>
+                    قائمة محصلي ({selectedBranch.name}) وتفاصيل الجباية
+                  </h3>
+
+                  {(!selectedBranch.collectors || selectedBranch.collectors.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
+                      لا يوجد محصلون مسجلون في هذا الفرع حالياً
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                      {selectedBranch.collectors.map(collector => {
+                        const assignedAreas = selectedBranch.areas?.filter(a => collector.assignedAreaIds?.includes(a.id)) || []
+                        const collectorConsignments = selectedBranch.consignments?.filter(c => c.collectorId === collector.id) || []
+                        const collectorTotal = collectorConsignments.reduce((sum, c) => sum + (c.totalAmount || 0), 0)
+                        return (
+                          <div
+                            key={collector.id}
+                            style={{
+                              background: '#f8fafc',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '12px',
+                              padding: '20px',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              gap: '15px'
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>{collector.name}</h4>
+                                <span style={{ backgroundColor: '#e0f2fe', color: '#0056b3', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>محصل معتمد</span>
+                              </div>
+                              <p style={{ color: '#0056b3', fontWeight: 700, fontSize: '0.85rem', marginTop: '4px' }} dir="ltr">{collector.phone}</p>
+
+                              {/* المناطق المسندة */}
+                              <div style={{ marginTop: '14px', background: '#ffffff', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                  المناطق المسندة إليه ({assignedAreas.length}):
+                                </span>
+                                {assignedAreas.length === 0 ? (
+                                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>لا توجد مناطق مسندة حالياً</span>
+                                ) : (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                    {assignedAreas.map(a => (
+                                      <span key={a.id} style={{ backgroundColor: '#f1f5f9', color: '#1e293b', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        📍 {a.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* الجباية الإجمالية */}
+                              <div style={{ marginTop: '10px', background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#15803d' }}>إجمالي الجباية المستحصلة:</span>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#16a34a', marginTop: '2px' }}>
+                                  {collectorTotal.toLocaleString('ar-IQ')} د.ع
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+
+                            <button
+                              onClick={() => setViewingCollector(collector)}
+                              style={{
+                                backgroundColor: '#0056b3',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 800,
+                                fontSize: '0.85rem',
+                                width: '100%',
+                                textAlign: 'center'
+                              }}
+                            >
+                              عرض تقرير الجباية والوصولات الكاملة ←
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. تبويب الكُتّاب */}
+              {branchDetailTab === 'writers' && (
+                <div style={{ marginTop: '30px' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '15px', color: '#1e293b' }}>
+                    كُتّاب ({selectedBranch.name}) والمناطق المسندة إليهم
+                  </h3>
+
+                  {(!selectedBranch.writers || selectedBranch.writers.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
+                      لا يوجد كُتّاب مسجلون في هذا الفرع حالياً
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.9rem' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8fafc', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>اسم الكاتب</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>رقم الهاتف</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>المناطق المائية المسندة إليه</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>عدد المناطق</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedBranch.writers.map(writer => {
+                            const assignedAreas = selectedBranch.areas?.filter(a => writer.assignedAreaIds?.includes(a.id)) || []
+                            return (
+                              <tr key={writer.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>{writer.name}</td>
+                                <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }} dir="ltr">{writer.phone}</td>
+                                <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                                  {assignedAreas.length === 0 ? (
+                                    <span style={{ color: '#94a3b8' }}>لا توجد مناطق مسندة</span>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                      {assignedAreas.map(a => (
+                                        <span key={a.id} style={{ backgroundColor: '#eff6ff', color: '#0056b3', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                          ✍️ {a.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                                <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
+                                  {assignedAreas.length} مناطق
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 5. تبويب مسؤولي الفرع */}
+              {branchDetailTab === 'managers' && (
+                <div style={{ marginTop: '30px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b' }}>
+                      مسؤولو ({selectedBranch.name})
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setSelectedBranchForManager(selectedBranch.id)
+                        setEditingManager(null)
+                        setManagerFullName('')
+                        setManagerPhone('')
+                        setShowAddManagerModal(true)
+                      }}
+                      style={{
+                        backgroundColor: '#16a34a',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      + إضافة مسؤول جديد
+                    </button>
+                  </div>
+
+                  {(!selectedBranch.managers || selectedBranch.managers.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
+                      لا يوجد مسؤولون مسجلون في هذا الفرع حالياً
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.9rem' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8fafc', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>الاسم</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800 }}>رقم الهاتف</th>
+                            <th style={{ padding: '12px 15px', fontWeight: 800, textAlign: 'center' }}>الإجراءات</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedBranch.managers.map(manager => (
+                            <tr key={manager.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                              <td style={{ padding: '12px 15px', fontWeight: 800 }}>{manager.name}</td>
+                              <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }} dir="ltr">{manager.phone}</td>
+                              <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                                  <button
+                                    onClick={() => onVisitBranchManager(selectedBranch, manager)}
+                                    style={{
+                                      backgroundColor: '#0056b3',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    دخول لصفحته
+                                  </button>
+                                  <button
+                                    onClick={() => handleShareWhatsApp(manager, selectedBranch)}
+                                    style={{
+                                      backgroundColor: '#16a34a',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    واتساب
+                                  </button>
+                                  <button
+                                    onClick={() => handleCopyLink(manager, selectedBranch)}
+                                    style={{
+                                      backgroundColor: '#475569',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    {copiedManagerId === manager.id ? '✓ تم' : 'نسخ الرابط'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteManager(selectedBranch.id, manager.id, manager.name)}
+                                    style={{
+                                      backgroundColor: '#dc2626',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    حذف
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -1511,6 +1974,260 @@ export default function DirectorDashboard({
                 }}
               >
                 تأكيد الإضافة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 5. نافذة معاينة بيانات المشترك (للقراءة فقط بدون تعديل)    */}
+      {/* ======================================================== */}
+      {viewingSubscriber && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 110
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              padding: '25px',
+              borderRadius: '12px',
+              width: '480px',
+              maxWidth: '92%',
+              boxShadow: '0 4px 25px rgba(0,0,0,0.2)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.2rem', color: '#1e293b', margin: 0 }}>
+                  بيانات المشترك
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>
+                  (سجل رسمي للاطلاع والمعاينة فقط - فرع {selectedBranch?.name})
+                </span>
+              </div>
+              <button
+                onClick={() => setViewingSubscriber(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>الاسم الكامل:</span>
+                <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '1.05rem' }}>{viewingSubscriber.name}</span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>رقم الهاتف:</span>
+                  <span style={{ fontWeight: 800, color: '#0056b3' }} dir="ltr">{viewingSubscriber.phone || 'غير مسجل'}</span>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>المنطقة المائية:</span>
+                  <span style={{ fontWeight: 800, color: '#1e293b' }}>
+                    {selectedBranch?.areas?.find(a => a.id === viewingSubscriber.areaId)?.name || 'غير محدد'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>نوع العقار:</span>
+                  <span style={{ fontWeight: 800, color: '#1e293b' }}>{viewingSubscriber.propertyType || 'سكني'}</span>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>نوع المقياس:</span>
+                  <span style={{ fontWeight: 800, color: '#1e293b' }}>{viewingSubscriber.meterType || 'ميكانيكي'}</span>
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>العنوان التفصيلي:</span>
+                <span style={{ fontWeight: 700, color: '#334155' }}>{viewingSubscriber.detailedAddress || 'لا يوجد عنوان تفصيلي مدخل'}</span>
+              </div>
+
+              {viewingSubscriber.location?.link && (
+                <div style={{ background: '#f0fdf4', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                  <span style={{ color: '#15803d', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>الموقع الجغرافي:</span>
+                  <a href={viewingSubscriber.location.link} target="_blank" rel="noreferrer" style={{ color: '#0056b3', fontWeight: 800, textDecoration: 'underline' }}>
+                    فتح موقع العقار على الخريطة ↗
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setViewingSubscriber(null)}
+                style={{
+                  background: '#1e293b',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '9px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 800,
+                  fontSize: '0.9rem'
+                }}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 6. نافذة تفاصيل المحصل والمناطق والجباية                  */}
+      {/* ======================================================== */}
+      {viewingCollector && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 110
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              padding: '25px',
+              borderRadius: '12px',
+              width: '560px',
+              maxWidth: '92%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 4px 25px rgba(0,0,0,0.2)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b', margin: 0 }}>
+                  تقرير المحصل: {viewingCollector.name}
+                </h3>
+                <span style={{ fontSize: '0.85rem', color: '#0056b3', fontWeight: 700 }} dir="ltr">
+                  هاتف: {viewingCollector.phone}
+                </span>
+              </div>
+              <button
+                onClick={() => setViewingCollector(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* المناطق المسندة */}
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e293b', marginBottom: '8px' }}>
+                  المناطق المائية المسندة للمحصل:
+                </h4>
+                {(() => {
+                  const assigned = selectedBranch?.areas?.filter(a => viewingCollector.assignedAreaIds?.includes(a.id)) || []
+                  if (assigned.length === 0) return <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>لا توجد مناطق مسندة حالياً لهذا المحصل</p>
+                  return (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {assigned.map(a => {
+                        const count = selectedBranch?.subscribers?.filter(s => s.areaId === a.id).length || 0
+                        return (
+                          <div key={a.id} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>
+                            <span style={{ fontWeight: 800, color: '#1e293b' }}>📍 {a.name}</span>
+                            <span style={{ color: '#0056b3', fontWeight: 700, marginRight: '6px' }}>({count} مشترك)</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* تفاصيل الجباية المالية */}
+              <div style={{ background: '#f0fdf4', padding: '14px', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#15803d', margin: 0 }}>
+                    تفاصيل الجباية والمبالغ المودعة:
+                  </h4>
+                  {(() => {
+                    const cCons = selectedBranch?.consignments?.filter(c => c.collectorId === viewingCollector.id) || []
+                    const cTotal = cCons.reduce((s, c) => s + (c.totalAmount || 0), 0)
+                    return (
+                      <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#16a34a' }}>
+                        {cTotal.toLocaleString('ar-IQ')} د.ع
+                      </span>
+                    )
+                  })()}
+                </div>
+
+                <div style={{ marginTop: '12px' }}>
+                  {(() => {
+                    const cCons = selectedBranch?.consignments?.filter(c => c.collectorId === viewingCollector.id) || []
+                    if (cCons.length === 0) return <p style={{ color: '#64748b', fontSize: '0.85rem' }}>لا توجد وصولات أو إرساليات جباية مسجلة لهذا المحصل حتى الآن.</p>
+                    return (
+                      <div style={{ overflowX: 'auto', background: '#fff', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr style={{ background: '#f0fdf4', color: '#15803d', borderBottom: '1px solid #bbf7d0' }}>
+                              <th style={{ padding: '8px 10px', fontWeight: 800 }}>كود الإرسالية</th>
+                              <th style={{ padding: '8px 10px', fontWeight: 800 }}>التاريخ</th>
+                              <th style={{ padding: '8px 10px', fontWeight: 800 }}>عدد الوصولات</th>
+                              <th style={{ padding: '8px 10px', fontWeight: 800 }}>المبلغ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cCons.map(c => (
+                              <tr key={c.id} style={{ borderBottom: '1px solid #f0fdf4' }}>
+                                <td style={{ padding: '8px 10px', fontWeight: 700 }}>{c.id}</td>
+                                <td style={{ padding: '8px 10px', color: '#475569' }}>{c.date || new Date(c.createdAt).toLocaleDateString('ar-IQ')}</td>
+                                <td style={{ padding: '8px 10px', fontWeight: 700 }}>{c.items?.length || 0} وصل</td>
+                                <td style={{ padding: '8px 10px', fontWeight: 800, color: '#16a34a' }}>{(c.totalAmount || 0).toLocaleString('ar-IQ')} د.ع</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setViewingCollector(null)}
+                style={{
+                  background: '#1e293b',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '9px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 800,
+                  fontSize: '0.9rem'
+                }}
+              >
+                إغلاق
               </button>
             </div>
           </div>
