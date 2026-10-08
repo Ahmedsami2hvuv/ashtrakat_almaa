@@ -229,7 +229,7 @@ export function formatInputDisplay(val: string | number | null | undefined): str
 }
 
 // حساب الديون لفترات سنة معينة
-function calculateBilling(
+export function calculateBilling(
   subId: number,
   year: number,
   billingRecords: BillingRecords,

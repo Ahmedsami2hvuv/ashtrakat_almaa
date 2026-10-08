@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
-import { Area, Subscriber } from '@/components/MainApp'
+import { Area, Subscriber, calculateBilling, PERIODS, formatInputDisplay } from '@/components/MainApp'
 
 interface DirectorDashboardProps {
   directorateData: DirectorateData
@@ -43,6 +43,7 @@ export default function DirectorDashboard({
 
   // المشترك المختار للعرض فقط (Read-only للمدير)
   const [viewingSubscriber, setViewingSubscriber] = useState<Subscriber | null>(null)
+  const [viewingSubscriberYear, setViewingSubscriberYear] = useState<number>(2026)
 
   // المحصل المختار لعرض تفاصيل الجباية والمناطق
   const [viewingCollector, setViewingCollector] = useState<BranchCollector | null>(null)
@@ -1981,115 +1982,284 @@ export default function DirectorDashboard({
       )}
 
       {/* ======================================================== */}
-      {/* 5. نافذة معاينة بيانات المشترك (للقراءة فقط بدون تعديل)    */}
+      {/* 5. نافذة معاينة بيانات المشترك وسجل الديون (للقراءة فقط)   */}
       {/* ======================================================== */}
-      {viewingSubscriber && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 110
-          }}
-        >
+      {viewingSubscriber && (() => {
+        const subBilling = calculateBilling(
+          viewingSubscriber.id,
+          viewingSubscriberYear,
+          selectedBranch?.billing || {},
+          selectedBranch?.subscribers || [],
+          selectedBranch?.pricing || { 'سكني': { '3 متر': 24600, '4 متر': 24600 }, 'تجاري': {} }
+        )
+
+        return (
           <div
             style={{
-              background: '#fff',
-              padding: '25px',
-              borderRadius: '12px',
-              width: '480px',
-              maxWidth: '92%',
-              boxShadow: '0 4px 25px rgba(0,0,0,0.2)'
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 110
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontWeight: 800, fontSize: '1.2rem', color: '#1e293b', margin: 0 }}>
-                  بيانات المشترك
-                </h3>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>
-                  (سجل رسمي للاطلاع والمعاينة فقط - فرع {selectedBranch?.name})
-                </span>
-              </div>
-              <button
-                onClick={() => setViewingSubscriber(null)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 800 }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
-              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>الاسم الكامل:</span>
-                <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '1.05rem' }}>{viewingSubscriber.name}</span>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>رقم الهاتف:</span>
-                  <span style={{ fontWeight: 800, color: '#0056b3' }} dir="ltr">{viewingSubscriber.phone || 'غير مسجل'}</span>
+            <div
+              style={{
+                background: '#fff',
+                padding: '25px',
+                borderRadius: '14px',
+                width: '740px',
+                maxWidth: '95%',
+                maxHeight: '92vh',
+                overflowY: 'auto',
+                boxShadow: '0 6px 30px rgba(0,0,0,0.25)'
+              }}
+            >
+              {/* رأس النافذة */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '16px' }}>
+                <div>
+                  <h3 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b', margin: 0 }}>
+                    معاينة المشترك: {viewingSubscriber.name}
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>
+                    (سجل رسمي للاطلاع والمعاينة فقط - فرع {selectedBranch?.name} • بدون صلاحية تعديل)
+                  </span>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>المنطقة المائية:</span>
-                  <span style={{ fontWeight: 800, color: '#1e293b' }}>
+                <button
+                  onClick={() => setViewingSubscriber(null)}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* بطاقة معلومات المشترك المختصرة */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px', background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>رقم الهاتف:</span>
+                  <span style={{ fontWeight: 800, color: '#0056b3', fontSize: '0.9rem' }} dir="ltr">{viewingSubscriber.phone || 'غير مسجل'}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>المنطقة المائية:</span>
+                  <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>
                     {selectedBranch?.areas?.find(a => a.id === viewingSubscriber.areaId)?.name || 'غير محدد'}
                   </span>
                 </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>نوع العقار:</span>
+                  <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>{viewingSubscriber.propertyType || 'سكني'}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>نوع المقياس:</span>
+                  <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>{viewingSubscriber.meterType || 'ميكانيكي'}</span>
+                </div>
+                {viewingSubscriber.detailedAddress && (
+                  <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '4px' }}>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700 }}>العنوان: </span>
+                    <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.85rem' }}>{viewingSubscriber.detailedAddress}</span>
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>نوع العقار:</span>
-                  <span style={{ fontWeight: 800, color: '#1e293b' }}>{viewingSubscriber.propertyType || 'سكني'}</span>
+              {/* سجل الديون وفترات الجباية (مطابق تماماً لما يظهر عند المحصل والكاتب) */}
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                    <span>سجل الديون وفترات الجباية</span>
+                    <span style={{ fontSize: '0.75rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>
+                      قراءة فقط
+                    </span>
+                  </h4>
+
+                  {/* شريط اختيار السنة */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', padding: '0 6px' }}>السنة:</span>
+                    {[2026, 2027, 2028].map(yr => (
+                      <button
+                        key={yr}
+                        onClick={() => setViewingSubscriberYear(yr)}
+                        style={{
+                          backgroundColor: viewingSubscriberYear === yr ? '#0056b3' : 'transparent',
+                          color: viewingSubscriberYear === yr ? '#ffffff' : '#334155',
+                          border: 'none',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 800,
+                          fontSize: '0.8rem',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {yr}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>نوع المقياس:</span>
-                  <span style={{ fontWeight: 800, color: '#1e293b' }}>{viewingSubscriber.meterType || 'ميكانيكي'}</span>
+
+                {/* جدول فترات الديون الأربعة أعمدة المطابق لمحاسبة النظام */}
+                <div style={{ border: '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+                  {/* رأس جدول الديون */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '22% 26% 26% 26%',
+                      backgroundColor: '#1e293b',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      textAlign: 'center',
+                      padding: '10px 0'
+                    }}
+                  >
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>الديون السابقة</div>
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>المجموع</div>
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>المدفوع</div>
+                    <div>المجموع الكلي</div>
+                  </div>
+
+                  {/* صفوف الفترات الست */}
+                  {subBilling.rows.map((row, idx) => (
+                    <div
+                      key={row.periodLabel}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '22% 26% 26% 26%',
+                        borderBottom: idx === 5 ? 'none' : '1px solid #e2e8f0',
+                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                        padding: '6px 4px',
+                        alignItems: 'center',
+                        fontSize: '0.9rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      {/* 1. الديون السابقة */}
+                      <div style={{ padding: '0 4px' }}>
+                        <div
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '6px 4px',
+                            textAlign: 'center',
+                            fontWeight: 800,
+                            color: '#1e293b',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {formatInputDisplay(row.old) || '0'}
+                        </div>
+                      </div>
+
+                      {/* 2. المجموع */}
+                      <div style={{ padding: '0 4px' }}>
+                        <div
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '6px 4px',
+                            textAlign: 'center',
+                            fontWeight: 800,
+                            color: '#1e293b',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {formatInputDisplay(row.total) || '0'}
+                        </div>
+                      </div>
+
+                      {/* 3. المدفوع */}
+                      <div style={{ padding: '0 4px' }}>
+                        <div
+                          style={{
+                            backgroundColor: row.paid > 0 ? '#ecfdf5' : '#ffffff',
+                            border: row.paid > 0 ? '1px solid #86efac' : '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '6px 4px',
+                            textAlign: 'center',
+                            fontWeight: 800,
+                            color: row.paid > 0 ? '#15803d' : '#94a3b8',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {row.paid > 0 ? formatInputDisplay(row.paid) : '0'}
+                        </div>
+                      </div>
+
+                      {/* 4. المجموع الكلي / المتبقي */}
+                      <div style={{ padding: '0 4px' }}>
+                        <div
+                          style={{
+                            backgroundColor: row.remaining > 0 ? '#fff1f2' : '#f8fafc',
+                            border: row.remaining > 0 ? '1px solid #fecdd3' : '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '6px 4px',
+                            textAlign: 'center',
+                            fontWeight: 800,
+                            color: row.remaining > 0 ? '#be123c' : '#475569',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {formatInputDisplay(row.remaining) || '0'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* شريط الإجمالي والحسابات النهائية */}
+                <div style={{ marginTop: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '12px 18px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>استحقاق الفترة الواحدة: </span>
+                    <span style={{ fontSize: '0.85rem', color: '#0056b3', fontWeight: 800 }}>{(subBilling.due || 24600).toLocaleString('ar-IQ')} د.ع</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: 800 }}>صافي المبلغ المطلوب حالياً:</span>
+                    <span
+                      style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 900,
+                        color: subBilling.totalRemaining > 0 ? '#dc2626' : '#16a34a',
+                        backgroundColor: subBilling.totalRemaining > 0 ? '#fee2e2' : '#dcfce7',
+                        padding: '4px 14px',
+                        borderRadius: '8px',
+                        border: subBilling.totalRemaining > 0 ? '1px solid #fca5a5' : '1px solid #bbf7d0'
+                      }}
+                    >
+                      {(subBilling.totalRemaining || 0).toLocaleString('ar-IQ')} د.ع
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>العنوان التفصيلي:</span>
-                <span style={{ fontWeight: 700, color: '#334155' }}>{viewingSubscriber.detailedAddress || 'لا يوجد عنوان تفصيلي مدخل'}</span>
+              {/* زر الإغلاق */}
+              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setViewingSubscriber(null)}
+                  style={{
+                    background: '#1e293b',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '9px 24px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  إغلاق المعاينة
+                </button>
               </div>
-
-              {viewingSubscriber.location?.link && (
-                <div style={{ background: '#f0fdf4', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                  <span style={{ color: '#15803d', fontSize: '0.8rem', fontWeight: 700, display: 'block' }}>الموقع الجغرافي:</span>
-                  <a href={viewingSubscriber.location.link} target="_blank" rel="noreferrer" style={{ color: '#0056b3', fontWeight: 800, textDecoration: 'underline' }}>
-                    فتح موقع العقار على الخريطة ↗
-                  </a>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setViewingSubscriber(null)}
-                style={{
-                  background: '#1e293b',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '9px 24px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 800,
-                  fontSize: '0.9rem'
-                }}
-              >
-                إغلاق
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ======================================================== */}
       {/* 6. نافذة تفاصيل المحصل والمناطق والجباية                  */}
