@@ -20,8 +20,8 @@ export default function DirectorDashboard({
   onVisitBranchManager,
   onLogout
 }: DirectorDashboardProps) {
-  // حالة فتح وإغلاق القائمة الجانبية
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  // حالة فتح وإغلاق القائمة الجانبية (مغلقة افتراضياً بناء على طلب المدير)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // القسم النشط في القائمة الجانبية
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard')
@@ -256,11 +256,26 @@ export default function DirectorDashboard({
       }}
     >
       {/* ======================================================== */}
-      {/* 1. القائمة الجانبية (Sidebar) المطابقة للتصميم المطلوب    */}
+      {/* 1. القائمة الجانبية العائمة (Floating Sidebar)           */}
       {/* ======================================================== */}
+      {/* خلفية شبه شفافة عند فتح القائمة الجانبية لإغلاقها بالنقر في أي مكان */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 998,
+            transition: 'opacity 0.3s'
+          }}
+        />
+      )}
+
       <aside
         style={{
-          width: '250px',
+          width: '260px',
           height: '100vh',
           backgroundColor: '#1e293b',
           color: '#ffffff',
@@ -271,8 +286,8 @@ export default function DirectorDashboard({
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          zIndex: 50,
-          boxShadow: '-2px 0 10px rgba(0,0,0,0.1)',
+          zIndex: 999,
+          boxShadow: isSidebarOpen ? '-6px 0 25px rgba(0,0,0,0.25)' : 'none',
           transform: isSidebarOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           visibility: isSidebarOpen ? 'visible' : 'hidden'
@@ -557,12 +572,10 @@ export default function DirectorDashboard({
       {/* ======================================================== */}
       <main
         style={{
-          marginRight: isSidebarOpen ? '250px' : '0px',
-          width: isSidebarOpen ? 'calc(100% - 250px)' : '100%',
+          width: '100%',
           padding: '30px',
           minHeight: '100vh',
-          boxSizing: 'border-box',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          boxSizing: 'border-box'
         }}
       >
         {/* =================== الهيدر =================== */}
