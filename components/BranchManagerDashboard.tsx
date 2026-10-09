@@ -92,12 +92,12 @@ export default function BranchManagerDashboard({
     }
   }
 
-  // تحميل المشتركين تلقائياً فقط إذا فتح المسؤول تبويب المشتركين
+  // تحميل المشتركين تلقائياً إذا فتح المسؤول تبويب المشتركين أو صفحة الإرساليات
   useEffect(() => {
-    if (activeTab === 'subscribers' && !hasLoadedSubscribers) {
+    if ((activeTab === 'subscribers' || isConsignmentA4Open) && !hasLoadedSubscribers) {
       fetchBranchSubscribers()
     }
-  }, [activeTab, hasLoadedSubscribers])
+  }, [activeTab, isConsignmentA4Open, hasLoadedSubscribers])
 
   // حالات المناطق
   const [newAreaName, setNewAreaName] = useState('')
@@ -959,7 +959,11 @@ export default function BranchManagerDashboard({
   if (isConsignmentA4Open) {
     return (
       <ConsignmentsA4Page
-        branch={branch}
+        branch={{
+          ...branch,
+          subscribers: loadedSubscribers.length > 0 ? loadedSubscribers : (branch.subscribers || []),
+          billing: Object.keys(loadedBilling).length > 0 ? loadedBilling : (branch.billing || {})
+        }}
         onSaveConsignment={handleSaveConsignmentA4}
         onClose={() => setIsConsignmentA4Open(false)}
       />
@@ -997,7 +1001,12 @@ export default function BranchManagerDashboard({
           </div>
 
           <button
-            onClick={() => setIsConsignmentA4Open(true)}
+            onClick={() => {
+              if (!hasLoadedSubscribers) {
+                fetchBranchSubscribers()
+              }
+              setIsConsignmentA4Open(true)
+            }}
             className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0"
           >
             <FileText className="w-3.5 h-3.5" />

@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { Printer, Save, ArrowRight, Plus, RefreshCw, Hash, Percent } from 'lucide-react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { Printer, Save, ArrowRight, Plus, RefreshCw, Hash, Percent, Loader2 } from 'lucide-react'
 import { DirectorateBranch, Consignment, ConsignmentItem } from '@/lib/directorateTypes'
+import { loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
 
 interface ConsignmentsA4PageProps {
@@ -111,6 +112,20 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
   const [savedSuccessMessage, setSavedSuccessMessage] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
+  // المشتركون المحملون محلياً مع جلب فوري من السيرفر عند الحاجة
+  const [subscribersList, setSubscribersList] = useState<Subscriber[]>(() => branch.subscribers || [])
+  const [isLoadingSubs, setIsLoadingSubs] = useState<boolean>(false)
+
+  // دالة تنظيف واستخراج رقم المشترك حتى لو كتب بأرقام عربية أو به مسافات
+  const parseSubscriberId = (val: string): number => {
+    if (!val) return NaN
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']
+    let res = String(val)
+    for (let i = 0; i < 10; i++) res = res.replaceAll(arabic[i], String(i))
+    const cleaned = res.replace(/[^0-9]/g, '')
+    return parseInt(cleaned, 10)
+  }
+
   // خريطة سريعة للمناطق
   const areasMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -121,9 +136,71 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
   // خريطة سريعة للبحث عن بيانات المشتركين
   const subscriberMap = useMemo(() => {
     const map = new Map<number, Subscriber>()
-    ;(branch.subscribers || []).forEach(sub => map.set(sub.id, sub))
+    subscribersList.forEach(sub => map.set(sub.id, sub))
     return map
-  }, [branch.subscribers])
+  }, [subscribersList])
+
+  // تحميل المشتركين فوراً إذا لم تكن المصفوفة محملة بعد
+  useEffect(() => {
+    if (branch.subscribers && branch.subscribers.length > 0) {
+      setSubscribersList(branch.subscribers)
+    } else {
+      setIsLoadingSubs(true)
+      loadBranchSubscribersAndBilling(branch.id)
+        .then(data => {
+          if (data.subscribers && data.subscribers.length > 0) {
+            setSubscribersList(data.subscribers)
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching subscribers in ConsignmentsA4Page:', err)
+        })
+        .finally(() => {
+          setIsLoadingSubs(false)
+        })
+    }
+  }, [branch.id, branch.subscribers])
+
+  // تحديث أسماء ومناطق الصفوف التي أدخل المستخدم أرقامها بمجرد اكتمال تحميل المشتركين
+  useEffect(() => {
+    if (subscribersList.length === 0) return
+    setRows(prevRows => {
+      let changed = false
+      const updated = prevRows.map((r, idx) => {
+        if (r.subscriberId.trim() && !r.subscriberName) {
+          const numId = parseSubscriberId(r.subscriberId)
+          if (!isNaN(numId) && subscriberMap.has(numId)) {
+            const foundSub = subscriberMap.get(numId)!
+            changed = true
+            let areaFound = ''
+            if (foundSub.areaId && areasMap.has(foundSub.areaId)) {
+              areaFound = areasMap.get(foundSub.areaId)!
+            }
+            if (!areaFound && foundSub.detailedAddress) {
+              const clean = foundSub.detailedAddress.trim()
+              for (const a of (branch.areas || [])) {
+                if (clean.includes(a.name)) {
+                  areaFound = a.name
+                  break
+                }
+              }
+              if (!areaFound && clean !== 'قرب') areaFound = clean
+            }
+            if (!areaFound && idx > 0 && prevRows[idx - 1]?.areaName) {
+              areaFound = prevRows[idx - 1].areaName
+            }
+            return {
+              ...r,
+              subscriberName: foundSub.name || '',
+              areaName: r.areaName || areaFound
+            }
+          }
+        }
+        return r
+      })
+      return changed ? updated : prevRows
+    })
+  }, [subscribersList, subscriberMap, areasMap, branch.areas])
 
   // تحديث خانة معينة
   const handleCellChange = (index: number, field: keyof RowData, value: string) => {
@@ -132,7 +209,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
 
     // 1. إذا تم تعديل رقم المشترك، استخرج الاسم والمنطقة تلقائياً فوراً
     if (field === 'subscriberId') {
-      const numId = parseInt(value.trim(), 10)
+      const numId = parseSubscriberId(value)
       if (!isNaN(numId) && subscriberMap.has(numId)) {
         const foundSub = subscriberMap.get(numId)!
         newRows[index].subscriberName = foundSub.name || ''
