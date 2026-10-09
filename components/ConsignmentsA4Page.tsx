@@ -161,6 +161,61 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     }
   }, [branch.id, branch.subscribers])
 
+  // الحسبة الرسمية لمديرية ماء البصرة:
+  // كل 24,600 دينار (فاتورة دورية كاملة) تقابلها 3,000 دينار بلدية بالضبط و 21,600 دينار ماء
+  // وإذا كان المبلغ مختلفاً (مثلاً 50,000 دينار)، تحسب الفترات الكاملة (كل 24600 -> 3000) والمتبقي تناسبياً بدقة
+  const calculateWaterAndMunicipality = (amount: number): { water: number; municipality: number } => {
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return { water: 0, municipality: 0 }
+    }
+
+    const fullPeriods = Math.floor(amount / 24600)
+    const remainder = amount % 24600
+
+    // 3,000 دينار عن كل فترة كاملة (24,600)
+    let municipality = fullPeriods * 3000
+
+    // احتساب الجزء المتبقي تناسبياً (3000 / 24600)
+    if (remainder > 0) {
+      municipality += Math.round(remainder * (3000 / 24600))
+    }
+
+    const water = amount - municipality
+    return { water, municipality }
+  }
+
+  // دالة البحث الشامل عن المشترك في كافة المصادر
+  const findSubscriberById = (numId: number): Subscriber | undefined => {
+    if (isNaN(numId) || numId <= 0) return undefined
+    
+    // 1. الخريطة المباشرة
+    if (subscriberMap.has(numId)) return subscriberMap.get(numId)
+
+    // 2. القائمة الحالية
+    const inList = subscribersList.find(s => Number(s.id) === numId || String(s.id) === String(numId))
+    if (inList) return inList
+
+    // 3. كائن الفرع
+    const inBranch = branch.subscribers?.find(s => Number(s.id) === numId || String(s.id) === String(numId))
+    if (inBranch) return inBranch
+
+    // 4. كاش المتصفح العام
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('basra_water_directorate_cache')
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          for (const b of (parsed.branches || [])) {
+            const foundInB = b.subscribers?.find((s: Subscriber) => Number(s.id) === numId || String(s.id) === String(numId))
+            if (foundInB) return foundInB
+          }
+        }
+      } catch {}
+    }
+
+    return undefined
+  }
+
   // تحديث أسماء ومناطق الصفوف التي أدخل المستخدم أرقامها بمجرد اكتمال تحميل المشتركين
   useEffect(() => {
     if (subscribersList.length === 0) return
@@ -169,8 +224,8 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
       const updated = prevRows.map((r, idx) => {
         if (r.subscriberId.trim() && !r.subscriberName) {
           const numId = parseSubscriberId(r.subscriberId)
-          if (!isNaN(numId) && subscriberMap.has(numId)) {
-            const foundSub = subscriberMap.get(numId)!
+          const foundSub = findSubscriberById(numId)
+          if (!isNaN(numId) && foundSub) {
             changed = true
             let areaFound = ''
             if (foundSub.areaId && areasMap.has(foundSub.areaId)) {
@@ -210,8 +265,8 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     // 1. إذا تم تعديل رقم المشترك، استخرج الاسم والمنطقة تلقائياً فوراً
     if (field === 'subscriberId') {
       const numId = parseSubscriberId(value)
-      if (!isNaN(numId) && subscriberMap.has(numId)) {
-        const foundSub = subscriberMap.get(numId)!
+      const foundSub = findSubscriberById(numId)
+      if (!isNaN(numId) && foundSub) {
         newRows[index].subscriberName = foundSub.name || ''
         
         let areaFound = ''
@@ -246,13 +301,12 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
       }
     }
 
-    // 2. إذا تم تعديل المبلغ الإجمالي، وزّع المبلغ تلقائياً بين الماء والبلدية حسب النسبة
+    // 2. إذا تم تعديل المبلغ الإجمالي، وزّع المبلغ تلقائياً بين الماء والبلدية حسب القاعدة الذكية الرسمية
     if (field === 'amount') {
       const totalVal = parseFloat(value.trim())
       if (!isNaN(totalVal) && totalVal > 0) {
-        const muni = Math.round(totalVal * (municipalityRatio / 100))
-        const water = totalVal - muni
-        newRows[index].municipalityAmount = String(muni)
+        const { water, municipality } = calculateWaterAndMunicipality(totalVal)
+        newRows[index].municipalityAmount = String(municipality)
         newRows[index].waterAmount = String(water)
       } else {
         newRows[index].municipalityAmount = ''
@@ -496,8 +550,8 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
           </div>
         </div>
 
-        {/* أدوات الإعدادات السريعة (رقم الوصل المتسلسل + نسبة البلدية + الرقم التسلسلي) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700">
+        {/* أدوات الإعدادات السريعة (رقم أول وصل + تسلسل الورقة فقط) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700">
           <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
             <Hash className="w-4 h-4 text-blue-600" />
             <span className="whitespace-nowrap">رقم أول وصل:</span>
@@ -508,20 +562,6 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
               placeholder="مثال: 4575068"
               className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-bold text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-          </div>
-
-          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <Percent className="w-4 h-4 text-amber-600" />
-            <span className="whitespace-nowrap">نسبة البلدية:</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={municipalityRatio}
-              onChange={(e) => handleUpdateRatio(Number(e.target.value) || 0)}
-              className="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-black text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            />
-            <span className="text-[11px] text-slate-500">% من المبلغ المستلم</span>
           </div>
 
           <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 justify-between">
@@ -537,7 +577,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
             <button
               onClick={handleGenerateNewSerial}
               title="توليد رقم تسلسلي جديد للورقة التالية"
-              className="p-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 transition"
+              className="p-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 transition cursor-pointer active:scale-95"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
