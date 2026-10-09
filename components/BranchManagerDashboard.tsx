@@ -30,8 +30,6 @@ import {
   CheckCircle2,
   XCircle,
   Key,
-  ShieldAlert,
-  Smartphone,
   ExternalLink,
   ChevronLeft
 } from 'lucide-react'
@@ -101,7 +99,7 @@ export default function BranchManagerDashboard({
     return { totalSubscribers, totalDebt, totalAreas, totalCollectors, totalWriters }
   }, [branch])
 
-  // فلترة المشتركين حسب البحث
+  // فلترة المشتركين
   const filteredSubscribers = useMemo(() => {
     if (!searchQuery.trim()) return branch.subscribers || []
     const q = searchQuery.toLowerCase()
@@ -186,7 +184,7 @@ export default function BranchManagerDashboard({
     })
     setShowImportModal(false)
     setImportText('')
-    alert(`تم استيراد ${addedCount} مشترك بنجاح كـ (4 متر - سكني).`)
+    alert(`تم استيراد ${addedCount} مشترك بنجاح.`)
   }
 
   // ------------------ إدارة المحصلين ------------------
@@ -247,7 +245,7 @@ export default function BranchManagerDashboard({
   const handleShareCollectorWhatsApp = (collector: BranchCollector) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
-    const msg = `مرحبا ${collector.name}\nمحصل واردات ${branch.name}\nهذا رابط حسابك الخاص لمتابعة المشتركين والتحصيل:\n${directLink}`
+    const msg = `مرحبا ${collector.name}\nمحصل واردات ${branch.name}\nرابط حسابك المباشر:\n${directLink}`
     const waUrl = generateWhatsAppLink(collector.phone, msg)
     window.open(waUrl, '_blank')
   }
@@ -301,7 +299,7 @@ export default function BranchManagerDashboard({
   const handleShareWriterWhatsApp = (writer: BranchWriter) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
-    const msg = `مرحبا ${writer.name}\nكاتب في واردات ${branch.name}\nهذا رابط الحساب الخاص بك لإدخال وتعديل البيانات والديون:\n${directLink}`
+    const msg = `مرحبا ${writer.name}\nكاتب واردات ${branch.name}\nرابط حسابك المباشر:\n${directLink}`
     const waUrl = generateWhatsAppLink(writer.phone, msg)
     window.open(waUrl, '_blank')
   }
@@ -350,7 +348,7 @@ export default function BranchManagerDashboard({
     const updatedKeys = [...currentKeys, newApiKey.trim()]
     onUpdateBranch({ ...branch, aiApiKeys: updatedKeys })
     setNewApiKey('')
-    alert('تم إضافة مفتاح الذكاء الاصطناعي بنجاح')
+    alert('تم إضافة المفتاح بنجاح')
   }
 
   const handleDeleteAiKey = (keyToDelete: string) => {
@@ -379,646 +377,613 @@ export default function BranchManagerDashboard({
   ]
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-900 flex flex-col font-sans pb-20 md:pb-8" dir="rtl">
-      {/* الترويسة العلوية الأنيقة */}
-      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 text-white shadow-lg sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans" dir="rtl">
+      {/* الترويسة العلوية */}
+      <header className="bg-slate-950 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-400 flex items-center justify-center font-black text-white text-lg shadow-inner">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white">
+              <Building2 className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black tracking-tight text-white">{branch.name}</h1>
-                <span className="bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+                <h1 className="text-base font-black text-white">{branch.name}</h1>
+                <span className="bg-blue-900/60 text-blue-300 border border-blue-700/50 text-[11px] font-bold px-2.5 py-0.5 rounded-md">
                   {currentManager ? currentManager.name : 'مسؤول الفرع'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-300">لوحة التحكم التنفيذية للجباية والكوادر</p>
+              <p className="text-[11px] text-slate-400">لوحة التحكم التنفيذية للجباية والكوادر</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsConsignmentA4Open(true)}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 border border-amber-400/30"
-            >
-              <FileText className="w-4 h-4" />
-              <span>تنزيل الإرساليات (A4)</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setIsConsignmentA4Open(true)}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            <span>تنزيل الإرساليات (A4)</span>
+          </button>
         </div>
       </header>
 
       {/* المحتوى الرئيسي */}
       <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6">
         
-        {/* بطاقات الإحصائيات السريعة */}
+        {/* بطاقات الإحصائيات */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+          <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-3">
+            <div className="p-3 bg-blue-900/50 text-blue-400 rounded-xl">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-slate-500">إجمالي المشتركين</p>
-              <p className="text-base md:text-lg font-black text-slate-900">{stats.totalSubscribers.toLocaleString('ar-IQ')}</p>
+              <p className="text-[11px] font-bold text-slate-400">إجمالي المشتركين</p>
+              <p className="text-base md:text-lg font-black text-white">{stats.totalSubscribers.toLocaleString('ar-IQ')}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
+          <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-3">
+            <div className="p-3 bg-rose-900/50 text-rose-400 rounded-xl">
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-slate-500">مجموع الديون والذمم</p>
-              <p className="text-sm md:text-base font-black text-rose-600">{stats.totalDebt.toLocaleString('ar-IQ')} <span className="text-[10px]">د.ع</span></p>
+              <p className="text-[11px] font-bold text-slate-400">مجموع الديون والذمم</p>
+              <p className="text-sm md:text-base font-black text-rose-400">{stats.totalDebt.toLocaleString('ar-IQ')} <span className="text-[10px]">د.ع</span></p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+          <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-3">
+            <div className="p-3 bg-emerald-900/50 text-emerald-400 rounded-xl">
               <MapPin className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-slate-500">المناطق المشمولة</p>
-              <p className="text-base md:text-lg font-black text-slate-900">{stats.totalAreas}</p>
+              <p className="text-[11px] font-bold text-slate-400">المناطق المشمولة</p>
+              <p className="text-base md:text-lg font-black text-white">{stats.totalAreas}</p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+          <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-3">
+            <div className="p-3 bg-purple-900/50 text-purple-400 rounded-xl">
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-slate-500">الكوادر (محصلين وكتاب)</p>
-              <p className="text-base md:text-lg font-black text-slate-900">{stats.totalCollectors + stats.totalWriters}</p>
+              <p className="text-[11px] font-bold text-slate-400">الكوادر (محصلين وكتاب)</p>
+              <p className="text-base md:text-lg font-black text-white">{stats.totalCollectors + stats.totalWriters}</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          {/* القائمة الجانبية للحاسبة */}
-          <aside className="hidden lg:block lg:col-span-1 space-y-4 sticky top-20">
-            <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80">
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3 px-2">أقسام الفرع</h2>
-              <nav className="space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = activeTab === item.id
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id as TabType)}
-                      className={`w-full text-right px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-all ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                          : 'text-slate-700 hover:bg-slate-100/80'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.count !== undefined && (
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {item.count}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </nav>
-            </div>
-          </aside>
+        {/* تقسيم التنقل القوائم بالأعلى كـ Tabs */}
+        <div className="bg-slate-800 rounded-2xl p-2 border border-slate-700 overflow-x-auto flex items-center gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as TabType)}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-300 hover:bg-slate-700/60'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span>{item.label}</span>
+                {item.count !== undefined && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-900 text-slate-400'
+                  }`}>
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
 
-          {/* body الرئيسية */}
-          <main className="lg:col-span-3 space-y-6">
-            {/* تبويب المشتركين */}
-            {activeTab === 'subscribers' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-base md:text-lg font-black text-slate-900">مشتركو {branch.name}</h3>
-                    <p className="text-xs text-slate-500">
-                      عرض وتصفية قاعدة بيانات المشتركين
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() =>
-                        onOpenSubscriberApp({
-                          role: 'manager',
-                          userTitle: `مسؤول فرع (${branch.name})`,
-                          canEdit: true
-                        })
-                      }
-                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>تطبيق المشتركين</span>
-                    </button>
-
-                    <button
-                      onClick={() => setShowImportModal(true)}
-                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>استيراد</span>
-                    </button>
-                  </div>
+        {/* جسم الشاشة الرئيسي */}
+        <main className="space-y-6">
+          {/* تبويب المشتركين */}
+          {activeTab === 'subscribers' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700">
+                <div>
+                  <h3 className="text-base md:text-lg font-black text-white">مشتركو {branch.name}</h3>
+                  <p className="text-xs text-slate-400">قاعدة بيانات المشتركين المسجلين في هذا الفرع</p>
                 </div>
 
-                {/* شريط البحث */}
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() =>
+                      onOpenSubscriberApp({
+                        role: 'manager',
+                        userTitle: `مسؤول فرع (${branch.name})`,
+                        canEdit: true
+                      })
+                    }
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>تطبيق المشتركين</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>استيراد</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* شريط البحث */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="ابحث برقم المشترك أو اسمه..."
+                  className="w-full pr-10 pl-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </div>
+
+              {/* جدول المشتركين */}
+              <div className="overflow-x-auto rounded-xl border border-slate-700">
+                <table className="w-full text-right text-xs">
+                  <thead>
+                    <tr className="bg-slate-900 text-slate-300 font-black border-b border-slate-700">
+                      <th className="p-3">رقم المشترك</th>
+                      <th className="p-3">اسم المشترك</th>
+                      <th className="p-3">المنطقة</th>
+                      <th className="p-3">النوع/العداد</th>
+                      <th className="p-3">الدين السابق</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/60">
+                    {filteredSubscribers.slice(0, 15).map((sub) => {
+                      const areaName = branch.areas?.find(a => a.id === sub.areaId)?.name || 'غير محدد'
+                      return (
+                        <tr key={sub.id} className="hover:bg-slate-700/40 font-bold transition">
+                          <td className="p-3 font-mono text-blue-400">{sub.id}</td>
+                          <td className="p-3 text-white">{sub.name}</td>
+                          <td className="p-3 text-slate-400">{areaName}</td>
+                          <td className="p-3 text-slate-400">{sub.propertyType} - {sub.meterType}</td>
+                          <td className="p-3 text-rose-400 font-mono">{(sub.remainingPrev || 0).toLocaleString('ar-IQ')} د.ع</td>
+                        </tr>
+                      )
+                    })}
+                    {filteredSubscribers.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-slate-500 font-bold">
+                          لا توجد نتائج مطابقة للبحث
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredSubscribers.length > 15 && (
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() =>
+                      onOpenSubscriberApp({
+                        role: 'manager',
+                        userTitle: `مسؤول فرع (${branch.name})`,
+                        canEdit: true
+                      })
+                    }
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-xs font-bold transition border border-slate-700 inline-flex items-center gap-2"
+                  >
+                    <span>عرض باقي المشتركين ({filteredSubscribers.length - 15}+)</span>
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* تبويب المناطق */}
+          {activeTab === 'areas' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-700">
+                <div>
+                  <h3 className="text-base md:text-lg font-black text-white">المناطق المشمولة بالفرع</h3>
+                  <p className="text-xs text-slate-400">إدارة وتقسيم مناطق الجباية</p>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="ابحث برقم المشترك أو اسمه..."
-                    className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                    value={newAreaName}
+                    onChange={(e) => setNewAreaName(e.target.value)}
+                    placeholder="اسم المنطقة الجديد..."
+                    className="px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <button
+                    onClick={handleAddArea}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>إضافة</span>
+                  </button>
                 </div>
-
-                {/* جدول المشتركين */}
-                <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-600 font-black border-b border-slate-200/80">
-                        <th className="p-3">رقم المشترك</th>
-                        <th className="p-3">اسم المشترك</th>
-                        <th className="p-3">المنطقة</th>
-                        <th className="p-3">النوع/العداد</th>
-                        <th className="p-3">الدين السابق</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredSubscribers.slice(0, 15).map((sub) => {
-                        const areaName = branch.areas?.find(a => a.id === sub.areaId)?.name || 'غير محدد'
-                        return (
-                          <tr key={sub.id} className="hover:bg-slate-50/80 font-bold transition">
-                            <td className="p-3 font-mono text-blue-600 bg-blue-50/30">{sub.id}</td>
-                            <td className="p-3 text-slate-900">{sub.name}</td>
-                            <td className="p-3 text-slate-600">{areaName}</td>
-                            <td className="p-3 text-slate-500">{sub.propertyType} - {sub.meterType}</td>
-                            <td className="p-3 text-rose-600 font-mono">{(sub.remainingPrev || 0).toLocaleString('ar-IQ')} د.ع</td>
-                          </tr>
-                        )
-                      })}
-                      {filteredSubscribers.length === 0 && (
-                        <tr>
-                          <td colSpan={5} className="text-center py-8 text-slate-400 font-bold">
-                            لا توجد نتائج مطابقة للبحث
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {filteredSubscribers.length > 15 && (
-                  <div className="text-center pt-2">
-                    <button
-                      onClick={() =>
-                        onOpenSubscriberApp({
-                          role: 'manager',
-                          userTitle: `مسؤول فرع (${branch.name})`,
-                          canEdit: true
-                        })
-                      }
-                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-md inline-flex items-center gap-2"
-                    >
-                      <span>عرض بقية المشتركين ({filteredSubscribers.length - 15}+)</span>
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
               </div>
-            )}
 
-            {/* تبويب المناطق */}
-            {activeTab === 'areas' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-base md:text-lg font-black text-slate-900">المناطق والأحياء السكنية</h3>
-                    <p className="text-xs text-slate-500">إدارة تقسيمات الأفرع وتخصيص الجباية</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newAreaName}
-                      onChange={(e) => setNewAreaName(e.target.value)}
-                      placeholder="اسم المنطقة الجديد..."
-                      className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={handleAddArea}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1 shrink-0"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {(branch.areas || []).map((area) => {
+                  const subsInArea = (branch.subscribers || []).filter(s => s.areaId === area.id).length
+                  return (
+                    <div
+                      key={area.id}
+                      className="p-4 bg-slate-900/60 rounded-2xl border border-slate-700 flex items-center justify-between"
                     >
-                      <Plus className="w-4 h-4" />
-                      <span>إضافة</span>
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-blue-900/50 text-blue-400 rounded-xl">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-white text-sm">{area.name}</h4>
+                          <p className="text-[11px] text-slate-400 font-bold mt-0.5">{subsInArea} مشترك مسجل</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteArea(area.id, area.name)}
+                        className="p-2 text-rose-400 hover:bg-rose-950/40 rounded-xl transition"
+                        title="حذف المنطقة"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* تبويب المحصلين */}
+          {activeTab === 'collectors' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-700">
+                <div>
+                  <h3 className="text-base md:text-lg font-black text-white">كادر المحصلين</h3>
+                  <p className="text-xs text-slate-400">إدارة وتخصيص صلاحيات المحصلين الميدانيين</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {(branch.areas || []).map((area) => {
-                    const subsInArea = (branch.subscribers || []).filter(s => s.areaId === area.id).length
-                    return (
-                      <div
-                        key={area.id}
-                        className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 flex items-center justify-between hover:border-blue-300 transition"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-blue-100/70 text-blue-700 rounded-xl">
-                            <MapPin className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-black text-slate-900 text-sm">{area.name}</h4>
-                            <p className="text-[11px] text-slate-500 font-bold mt-0.5">{subsInArea} مشترك مسجل</p>
+                <button
+                  onClick={() => {
+                    setEditingCollector(null)
+                    setCollectorName('')
+                    setCollectorPhone('')
+                    setCollectorCanEdit(false)
+                    setSelectedCollectorAreas([])
+                    setShowCollectorModal(true)
+                  }}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>محصل جديد</span>
+                </button>
+              </div>
+
+              {(!branch.collectors || branch.collectors.length === 0) ? (
+                <div className="text-center py-12 bg-slate-900/40 rounded-2xl border border-dashed border-slate-700">
+                  <Wallet className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-slate-400">لا يوجد محصلون مسجلون حالياً</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {branch.collectors.map((collector) => (
+                    <div
+                      key={collector.id}
+                      className="bg-slate-900/60 p-4.5 rounded-2xl border border-slate-700 space-y-4"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h4 className="font-black text-white text-sm">{collector.name}</h4>
+                          <p className="text-xs font-mono text-slate-400 dir-ltr text-right">{collector.phone}</p>
+                          <div className="flex items-center gap-1.5 pt-1">
+                            {collector.canEdit ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                                <CheckCircle2 className="w-3 h-3" /> مسموح بالتعديل
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-amber-950/80 text-amber-400 border border-amber-800 px-2 py-0.5 rounded-full font-bold">
+                                <XCircle className="w-3 h-3" /> للقراءة فقط
+                              </span>
+                            )}
                           </div>
                         </div>
+
                         <button
-                          onClick={() => handleDeleteArea(area.id, area.name)}
-                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition"
-                          title="حذف المنطقة"
+                          onClick={() => handleToggleCollectorEdit(collector.id, collector.canEdit)}
+                          className={`text-[10px] px-2.5 py-1 rounded-xl font-bold transition border ${
+                            collector.canEdit
+                              ? 'bg-rose-950/60 text-rose-300 border-rose-800 hover:bg-rose-900'
+                              : 'bg-emerald-950/60 text-emerald-300 border-emerald-800 hover:bg-emerald-900'
+                          }`}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {collector.canEdit ? 'إيقاف التعديل' : 'سماح بالتعديل'}
                         </button>
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
-            {/* تبويب المحصلين */}
-            {activeTab === 'collectors' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-base md:text-lg font-black text-slate-900">كادر المحصلين</h3>
-                    <p className="text-xs text-slate-500">إدارة وتخصيص صلاحيات الجباية الميدانية</p>
-                  </div>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                        <button
+                          onClick={() =>
+                            onOpenSubscriberApp({
+                              role: 'collector',
+                              userTitle: `محصل: ${collector.name}`,
+                              canEdit: collector.canEdit,
+                              assignedAreaIds: collector.assignedAreaIds,
+                              assignedSubscriberIds: collector.assignedSubscriberIds
+                            })
+                          }
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>فتح الحساب</span>
+                        </button>
 
-                  <button
-                    onClick={() => {
-                      setEditingCollector(null)
-                      setCollectorName('')
-                      setCollectorPhone('')
-                      setCollectorCanEdit(false)
-                      setSelectedCollectorAreas([])
-                      setShowCollectorModal(true)
-                    }}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>محصل جديد</span>
-                  </button>
-                </div>
+                        <button
+                          onClick={() => handleShareCollectorWhatsApp(collector)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>مشاركة</span>
+                        </button>
 
-                {(!branch.collectors || branch.collectors.length === 0) ? (
-                  <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-                    <Wallet className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-slate-500">لا يوجد محصلون مسجلون حالياً</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {branch.collectors.map((collector) => (
-                      <div
-                        key={collector.id}
-                        className="bg-slate-50/70 p-4.5 rounded-2xl border border-slate-200/80 space-y-4 shadow-sm hover:border-blue-200 transition"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <h4 className="font-black text-slate-900 text-sm">{collector.name}</h4>
-                            <p className="text-xs font-mono text-slate-500 dir-ltr text-right">{collector.phone}</p>
-                            <div className="flex items-center gap-1.5 pt-1">
-                              {collector.canEdit ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-                                  <CheckCircle2 className="w-3 h-3" /> مسموح بالتعديل
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                                  <XCircle className="w-3 h-3" /> للقراءة فقط
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                        <button
+                          onClick={() => {
+                            setEditingCollector(collector)
+                            setCollectorName(collector.name)
+                            setCollectorPhone(collector.phone)
+                            setCollectorCanEdit(collector.canEdit)
+                            setSelectedCollectorAreas(collector.assignedAreaIds || [])
+                            setShowCollectorModal(true)
+                          }}
+                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>تعديل</span>
+                        </button>
 
-                          <button
-                            onClick={() => handleToggleCollectorEdit(collector.id, collector.canEdit)}
-                            className={`text-[10px] px-2.5 py-1 rounded-xl font-bold transition border ${
-                              collector.canEdit
-                                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            }`}
-                          >
-                            {collector.canEdit ? 'إيقاف التعديل' : 'سماح بالتعديل'}
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80">
-                          <button
-                            onClick={() =>
-                              onOpenSubscriberApp({
-                                role: 'collector',
-                                userTitle: `محصل: ${collector.name}`,
-                                canEdit: collector.canEdit,
-                                assignedAreaIds: collector.assignedAreaIds,
-                                assignedSubscriberIds: collector.assignedSubscriberIds
-                              })
-                            }
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Smartphone className="w-3.5 h-3.5" />
-                            <span>فتح الحساب</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleShareCollectorWhatsApp(collector)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span>مشاركة</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setEditingCollector(collector)
-                              setCollectorName(collector.name)
-                              setCollectorPhone(collector.phone)
-                              setCollectorCanEdit(collector.canEdit)
-                              setSelectedCollectorAreas(collector.assignedAreaIds || [])
-                              setShowCollectorModal(true)
-                            }}
-                            className="px-3 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>تعديل</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteCollector(collector.id, collector.name)}
-                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>حذف</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* تبويب الكتّاب */}
-            {activeTab === 'writers' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-base md:text-lg font-black text-slate-900">كادر الكتّاب</h3>
-                    <p className="text-xs text-slate-500">المسؤولون عن إدخال القراءات وتعديل البيانات</p>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setEditingWriter(null)
-                      setWriterName('')
-                      setWriterPhone('')
-                      setSelectedWriterAreas([])
-                      setShowWriterModal(true)
-                    }}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>كاتب جديد</span>
-                  </button>
-                </div>
-
-                {(!branch.writers || branch.writers.length === 0) ? (
-                  <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-                    <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-slate-500">لا يوجد كتاب مسجلون حالياً</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {branch.writers.map((writer) => (
-                      <div
-                        key={writer.id}
-                        className="bg-slate-50/70 p-4.5 rounded-2xl border border-slate-200/80 space-y-4 shadow-sm hover:border-blue-200 transition"
-                      >
-                        <div className="space-y-1">
-                          <h4 className="font-black text-slate-900 text-sm">{writer.name}</h4>
-                          <p className="text-xs font-mono text-slate-500 dir-ltr text-right">{writer.phone}</p>
-                          <span className="inline-block text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-bold">
-                            صلاحية تعديل الديون
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80">
-                          <button
-                            onClick={() =>
-                              onOpenSubscriberApp({
-                                role: 'writer',
-                                userTitle: `كاتب: ${writer.name}`,
-                                canEdit: true,
-                                assignedAreaIds: writer.assignedAreaIds,
-                                assignedSubscriberIds: writer.assignedSubscriberIds
-                              })
-                            }
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Smartphone className="w-3.5 h-3.5" />
-                            <span>فتح الحساب</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleShareWriterWhatsApp(writer)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span>مشاركة</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setEditingWriter(writer)
-                              setWriterName(writer.name)
-                              setWriterPhone(writer.phone)
-                              setSelectedWriterAreas(writer.assignedAreaIds || [])
-                              setShowWriterModal(true)
-                            }}
-                            className="px-3 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>تعديل</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteWriter(writer.id, writer.name)}
-                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>حذف</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* تبويب مدير الخزنة */}
-            {activeTab === 'treasury' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-base md:text-lg font-black text-slate-900">مسؤولو الخزنة والصندوق</h3>
-                    <p className="text-xs text-slate-500">إدارة ومتابعة المبالغ المستلمة والإرساليات</p>
-                  </div>
-
-                  <button
-                    onClick={() => setShowTreasuryModal(true)}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>مسؤول خزنة</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(branch.treasuryManagers || []).map((tr) => (
-                    <div key={tr.id} className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 flex items-center gap-3">
-                      <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
-                        <Vault className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-black text-slate-900 text-sm">{tr.name}</h4>
-                        <p className="text-xs font-mono text-slate-500 dir-ltr text-right">{tr.phone}</p>
+                        <button
+                          onClick={() => handleDeleteCollector(collector.id, collector.name)}
+                          className="px-3 py-1.5 bg-rose-950/60 text-rose-300 hover:bg-rose-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف</span>
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
-            {/* تبويب بيانات الفرع */}
-            {activeTab === 'branch_info' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-4">
-                <h3 className="text-base md:text-lg font-black text-slate-900">بيانات الفرع التفصيلية</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <span className="text-slate-500 font-bold block mb-1">اسم الفرع</span>
-                    <span className="font-black text-slate-900 text-sm">{branch.name}</span>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <span className="text-slate-500 font-bold block mb-1">تاريخ الإنشاء</span>
-                    <span className="font-bold text-slate-900">{new Date(branch.createdAt).toLocaleDateString('ar-IQ')}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* تبويب الإعدادات والذكاء الاصطناعي */}
-            {activeTab === 'settings' && (
-              <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-200/80 space-y-6">
+          {/* تبويب الكتّاب */}
+          {activeTab === 'writers' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-700">
                 <div>
-                  <h3 className="text-base md:text-lg font-black text-slate-900">إعدادات الذكاء الاصطناعي (AI)</h3>
-                  <p className="text-xs text-slate-500">إدارة مفاتيح Gemini API لقراءة واستخراج بيانات الوصولات إلكترونياً</p>
+                  <h3 className="text-base md:text-lg font-black text-white">كادر الكتّاب</h3>
+                  <p className="text-xs text-slate-400">إدارة صلاحيات إدخال وتحديث بيانات القراءات</p>
                 </div>
 
-                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newApiKey}
-                      onChange={(e) => setNewApiKey(e.target.value)}
-                      placeholder="ألصق مفتاح Gemini API Key هنا..."
-                      className="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={handleAddAiKey}
-                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md shrink-0 flex items-center gap-1"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span>حفظ المفتاح</span>
-                    </button>
-                  </div>
+                <button
+                  onClick={() => {
+                    setEditingWriter(null)
+                    setWriterName('')
+                    setWriterPhone('')
+                    setSelectedWriterAreas([])
+                    setShowWriterModal(true)
+                  }}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>كاتب جديد</span>
+                </button>
+              </div>
 
-                  <div className="space-y-2 pt-2">
-                    {(branch.aiApiKeys || []).map((key, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 text-xs">
-                        <span className="font-mono text-slate-600">{key.substring(0, 10)}...{key.substring(key.length - 6)}</span>
+              {(!branch.writers || branch.writers.length === 0) ? (
+                <div className="text-center py-12 bg-slate-900/40 rounded-2xl border border-dashed border-slate-700">
+                  <BookOpen className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-slate-400">لا يوجد كتاب مسجلون حالياً</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {branch.writers.map((writer) => (
+                    <div
+                      key={writer.id}
+                      className="bg-slate-900/60 p-4.5 rounded-2xl border border-slate-700 space-y-4"
+                    >
+                      <div className="space-y-1">
+                        <h4 className="font-black text-white text-sm">{writer.name}</h4>
+                        <p className="text-xs font-mono text-slate-400 dir-ltr text-right">{writer.phone}</p>
+                        <span className="inline-block text-[10px] bg-purple-950/80 text-purple-300 border border-purple-800 px-2 py-0.5 rounded-full font-bold">
+                          صلاحية تعديل الديون
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
                         <button
-                          onClick={() => handleDeleteAiKey(key)}
-                          className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition"
+                          onClick={() =>
+                            onOpenSubscriberApp({
+                              role: 'writer',
+                              userTitle: `كاتب: ${writer.name}`,
+                              canEdit: true,
+                              assignedAreaIds: writer.assignedAreaIds,
+                              assignedSubscriberIds: writer.assignedSubscriberIds
+                            })
+                          }
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>فتح الحساب</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleShareWriterWhatsApp(writer)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>مشاركة</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setEditingWriter(writer)
+                            setWriterName(writer.name)
+                            setWriterPhone(writer.phone)
+                            setSelectedWriterAreas(writer.assignedAreaIds || [])
+                            setShowWriterModal(true)
+                          }}
+                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>تعديل</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteWriter(writer.id, writer.name)}
+                          className="px-3 py-1.5 bg-rose-950/60 text-rose-300 hover:bg-rose-900 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف</span>
                         </button>
                       </div>
-                    ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* تبويب مدير الخزنة */}
+          {activeTab === 'treasury' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-700">
+                <div>
+                  <h3 className="text-base md:text-lg font-black text-white">مسؤولو الخزنة والصندوق</h3>
+                  <p className="text-xs text-slate-400">إدارة وتدقيق السجلات المالية</p>
+                </div>
+
+                <button
+                  onClick={() => setShowTreasuryModal(true)}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>مسؤول خزنة</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(branch.treasuryManagers || []).map((tr) => (
+                  <div key={tr.id} className="p-4 bg-slate-900/60 rounded-2xl border border-slate-700 flex items-center gap-3">
+                    <div className="p-3 bg-amber-900/50 text-amber-400 rounded-xl">
+                      <Vault className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-white text-sm">{tr.name}</h4>
+                      <p className="text-xs font-mono text-slate-400 dir-ltr text-right">{tr.phone}</p>
+                    </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* تبويب بيانات الفرع */}
+          {activeTab === 'branch_info' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-4">
+              <h3 className="text-base md:text-lg font-black text-white">بيانات الفرع التفصيلية</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 bg-slate-900/60 rounded-xl border border-slate-700">
+                  <span className="text-slate-400 font-bold block mb-1">اسم الفرع</span>
+                  <span className="font-black text-white text-sm">{branch.name}</span>
+                </div>
+                <div className="p-3.5 bg-slate-900/60 rounded-xl border border-slate-700">
+                  <span className="text-slate-400 font-bold block mb-1">تاريخ الإنشاء</span>
+                  <span className="font-bold text-white">{new Date(branch.createdAt).toLocaleDateString('ar-IQ')}</span>
                 </div>
               </div>
-            )}
-          </main>
-        </div>
-      </div>
+            </div>
+          )}
 
-      {/* الشريط السفلي للتنقل السريع (خاص بالموبايل) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 z-40 flex items-center justify-around shadow-lg">
-        {navItems.slice(0, 5).map((item) => {
-          const Icon = item.icon
-          const isActive = activeTab === item.id
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as TabType)}
-              className={`flex flex-col items-center gap-1 px-2 py-1 rounded-xl transition ${
-                isActive ? 'text-blue-600 font-black' : 'text-slate-500 font-bold'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          )
-        })}
-      </nav>
+          {/* تبويب الإعدادات والذكاء الاصطناعي */}
+          {activeTab === 'settings' && (
+            <div className="bg-slate-800 rounded-2xl p-4 md:p-6 border border-slate-700 space-y-6">
+              <div>
+                <h3 className="text-base md:text-lg font-black text-white">إعدادات الذكاء الاصطناعي (AI)</h3>
+                <p className="text-xs text-slate-400">إدارة مفاتيح Gemini API لاستخراج بيانات الوصولات إلكترونياً</p>
+              </div>
+
+              <div className="p-4 bg-slate-900/60 rounded-2xl border border-slate-700 space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newApiKey}
+                    onChange={(e) => setNewApiKey(e.target.value)}
+                    placeholder="ألصق مفتاح Gemini API Key هنا..."
+                    className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleAddAiKey}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1"
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>حفظ المفتاح</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  {(branch.aiApiKeys || []).map((key, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                      <span className="font-mono text-slate-400">{key.substring(0, 10)}...{key.substring(key.length - 6)}</span>
+                      <button
+                        onClick={() => handleDeleteAiKey(key)}
+                        className="text-rose-400 hover:bg-rose-950/40 p-1.5 rounded-lg transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
 
       {/* النوافذ المنبثقة (Modals) */}
       {/* نافذة استيراد المشتركين */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4 animate-in fade-in duration-200">
-            <h3 className="text-base font-black text-slate-900">استيراد مشتركين جدد</h3>
-            <p className="text-xs text-slate-500">الصق قائمة الأسماء مع أرقام المشتركين (مثال: 5202 نوري عبد الصمد):</p>
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-xl w-full space-y-4">
+            <h3 className="text-base font-black text-white">استيراد مشتركين جدد</h3>
+            <p className="text-xs text-slate-400">الصق قائمة الأسماء مع أرقام المشتركين (مثال: 5202 نوري عبد الصمد):</p>
 
             <textarea
               rows={8}
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
               placeholder="5202 نوري عبد الصمد&#10;5203 أحمد علي..."
-              className="w-full p-3.5 rounded-2xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50"
+              className="w-full p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-700 transition"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleExecuteImport}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
               >
                 بدء الاستيراد
               </button>
@@ -1029,52 +994,52 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل محصل */}
       {showCollectorModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in duration-200">
-            <h3 className="text-base font-black text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 className="text-base font-black text-white">
               {editingCollector ? 'تعديل بيانات المحصل' : 'إضافة محصل جديد'}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الاسم الثلاثي:</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">الاسم الثلاثي:</label>
                 <input
                   type="text"
                   value={collectorName}
                   onChange={(e) => setCollectorName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف:</label>
                 <input
                   type="text"
                   value={collectorPhone}
                   onChange={(e) => setCollectorPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
                 />
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={collectorCanEdit}
                     onChange={(e) => setCollectorCanEdit(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 rounded bg-slate-900 border-slate-700"
                   />
-                  <span className="text-xs font-bold text-slate-800">
+                  <span className="text-xs font-bold text-slate-200">
                     السماح بالتعديل على المشتركين والديون
                   </span>
                 </label>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المناطق المخصصة:</label>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                <label className="block text-xs font-bold text-slate-300 mb-1">المناطق المخصصة:</label>
+                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs">
                   {(branch.areas || []).map(area => (
-                    <label key={area.id} className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                    <label key={area.id} className="flex items-center gap-2 cursor-pointer font-bold text-slate-300">
                       <input
                         type="checkbox"
                         checked={selectedCollectorAreas.includes(area.id)}
@@ -1085,7 +1050,7 @@ export default function BranchManagerDashboard({
                             setSelectedCollectorAreas(selectedCollectorAreas.filter(id => id !== area.id))
                           }
                         }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
+                        className="rounded text-blue-600 bg-slate-900 border-slate-700"
                       />
                       <span>{area.name}</span>
                     </label>
@@ -1097,13 +1062,13 @@ export default function BranchManagerDashboard({
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setShowCollectorModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-700 transition"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSaveCollector}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition"
               >
                 حفظ المحصل
               </button>
@@ -1114,38 +1079,38 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل كاتب */}
       {showWriterModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in duration-200">
-            <h3 className="text-base font-black text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 className="text-base font-black text-white">
               {editingWriter ? 'تعديل بيانات الكاتب' : 'إضافة كاتب جديد'}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">اسم الكاتب:</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">اسم الكاتب:</label>
                 <input
                   type="text"
                   value={writerName}
                   onChange={(e) => setWriterName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف:</label>
                 <input
                   type="text"
                   value={writerPhone}
                   onChange={(e) => setWriterPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المناطق المخصصة:</label>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                <label className="block text-xs font-bold text-slate-300 mb-1">المناطق المخصصة:</label>
+                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs">
                   {(branch.areas || []).map(area => (
-                    <label key={area.id} className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                    <label key={area.id} className="flex items-center gap-2 cursor-pointer font-bold text-slate-300">
                       <input
                         type="checkbox"
                         checked={selectedWriterAreas.includes(area.id)}
@@ -1156,7 +1121,7 @@ export default function BranchManagerDashboard({
                             setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
                           }
                         }}
-                        className="rounded text-blue-600 focus:ring-blue-500"
+                        className="rounded text-blue-600 bg-slate-900 border-slate-700"
                       />
                       <span>{area.name}</span>
                     </label>
@@ -1168,13 +1133,13 @@ export default function BranchManagerDashboard({
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setShowWriterModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-700 transition"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSaveWriter}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition"
               >
                 حفظ الكاتب
               </button>
@@ -1185,39 +1150,39 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة مسؤول خزنة */}
       {showTreasuryModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in duration-200">
-            <h3 className="text-base font-black text-slate-900">إضافة مسؤول خزنة جديد</h3>
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 className="text-base font-black text-white">إضافة مسؤول خزنة جديد</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الاسم:</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">الاسم:</label>
                 <input
                   type="text"
                   value={treasuryName}
                   onChange={(e) => setTreasuryName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف:</label>
                 <input
                   type="text"
                   value={treasuryPhone}
                   onChange={(e) => setTreasuryPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
                 />
               </div>
             </div>
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setShowTreasuryModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-700 transition"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSaveTreasury}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition"
               >
                 حفظ
               </button>
