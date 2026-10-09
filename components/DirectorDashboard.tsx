@@ -1840,44 +1840,115 @@ export default function DirectorDashboard({
                     <span>نسبة الجباية حسب المناطق (بالعراقي)</span>
                   </h3>
 
-                  {/* رسم بياني مخصص بالأعمدة ممتد بعرض الصفحة كاملاً */}
-                  <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '20px', padding: '10px 10px 30px', borderBottom: '1px solid #e2e8f0', overflowX: 'auto' }}>
-                    {directorateData.branches.map((b, idx) => {
+                  {/* رسم بياني مخصص بالأعمدة ممتد بعرض الصفحة كاملاً - 5 أعمدة مع تموضع الاسم فوق قمة العمود */}
+                  <div style={{ height: '280px', display: 'flex', alignItems: 'flex-end', gap: '16px', padding: '40px 15px 15px', borderBottom: '1px solid #e2e8f0', position: 'relative' }}>
+                    {directorateData.branches.slice(0, 5).map((b, idx) => {
                       const stats = branchFinancialStats.find(s => s.branch.id === b.id)
                       const collected = stats ? stats.collected : 0
-                      const fallbackValues = [120, 95, 80, 110, 45, 60]
+                      const fallbackValues = [80, 65, 50, 70, 35]
+                      // الحد الأقصى للارتفاع 75% لترك مساحة كافية فوق قمة العمود لاسم الفرع ونسبته
                       const heightPercent = collected > 0
-                        ? Math.max(15, Math.min(100, (collected / maxRevenue) * 100))
+                        ? Math.max(15, Math.min(75, (collected / maxRevenue) * 75))
                         : fallbackValues[idx % fallbackValues.length]
+                      const displayPercent = collected > 0
+                        ? Math.round((collected / maxRevenue) * 100)
+                        : heightPercent
+
                       return (
-                        <div key={b.id} style={{ flex: 1, minWidth: '70px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                        <div
+                          key={b.id}
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            height: '100%',
+                            justifyContent: 'flex-end',
+                            position: 'relative'
+                          }}
+                        >
+                          {/* حاوية العمود التي يتغير ارتفاعها */}
                           <div
                             style={{
                               width: '100%',
-                              maxWidth: '45px',
+                              maxWidth: '52px',
                               height: `${heightPercent}%`,
-                              backgroundColor: '#0056b3',
-                              borderRadius: '6px 6px 0 0',
-                              transition: 'height 0.4s ease',
-                              boxShadow: '0 2px 6px rgba(0, 86, 179, 0.3)'
-                            }}
-                            title={`${b.name}: ${collected > 0 ? collected.toLocaleString('ar-IQ') + ' د.ع' : heightPercent + ' مليون'}`}
-                          />
-                          <span
-                            style={{
-                              fontSize: '0.78rem',
-                              color: '#64748b',
-                              fontWeight: 700,
-                              marginTop: '8px',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxWidth: '85px',
-                              textAlign: 'center'
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              position: 'relative',
+                              transition: 'height 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                           >
-                            {b.name.replace('فرع واردات ', '').replace('فرع ', '')}
-                          </span>
+                            {/* اسم الفرع والريتنج فوق قمة العمود مباشرة - ينزل ويصعد مع حركة العمود */}
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: '100%',
+                                marginBottom: '8px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'none',
+                                zIndex: 2
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: '0.78rem',
+                                  color: '#1e293b',
+                                  fontWeight: 800,
+                                  textAlign: 'center',
+                                  maxWidth: '95px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                                title={b.name}
+                              >
+                                {b.name.replace('فرع واردات ', '').replace('فرع ', '')}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.68rem',
+                                  color: '#0284c7',
+                                  fontWeight: 800,
+                                  backgroundColor: '#f0f9ff',
+                                  border: '1px solid #bae6fd',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  marginTop: '2px'
+                                }}
+                              >
+                                {displayPercent}%
+                              </span>
+                            </div>
+
+                            {/* جسم العمود الملون المتدرج */}
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(180deg, #0284c7 0%, #0056b3 100%)',
+                                borderRadius: '8px 8px 0 0',
+                                boxShadow: '0 4px 10px rgba(0, 86, 179, 0.25)',
+                                cursor: 'pointer'
+                              }}
+                              title={`${b.name}: ${collected > 0 ? collected.toLocaleString('ar-IQ') + ' د.ع' : displayPercent + '%'}`}
+                            />
+                          </div>
+
+                          {/* خط قاعدة ناعم أسفل كل عمود */}
+                          <div
+                            style={{
+                              width: '100%',
+                              maxWidth: '65px',
+                              height: '4px',
+                              backgroundColor: '#cbd5e1',
+                              borderRadius: '2px',
+                              marginTop: '2px'
+                            }}
+                          />
                         </div>
                       )
                     })}
