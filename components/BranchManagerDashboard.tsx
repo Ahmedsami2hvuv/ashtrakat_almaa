@@ -12,6 +12,7 @@ import {
 import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
 import { Area, Subscriber, BillingRecords } from '@/components/MainApp'
 import ConsignmentsA4Page from './ConsignmentsA4Page'
+import * as XLSX from 'xlsx'
 import {
   Users,
   MapPin,
@@ -26,6 +27,7 @@ import {
   Edit3,
   Trash2,
   FileText,
+  FileSpreadsheet,
   Search,
   CheckCircle2,
   XCircle,
@@ -67,6 +69,21 @@ export default function BranchManagerDashboard({
   // حالات استيراد المشتركين
   const [showImportModal, setShowImportModal] = useState(false)
   const [importText, setImportText] = useState('')
+
+  // حالات استيراد ملف الإكسل الشامل
+  const [showExcelModal, setShowExcelModal] = useState(false)
+  const [isProcessingExcel, setIsProcessingExcel] = useState(false)
+  const [excelPreviewResult, setExcelPreviewResult] = useState<{
+    subscribers: Subscriber[]
+    areas: Area[]
+    writers: BranchWriter[]
+    newSubscribersCount: number
+    updatedSubscribersCount: number
+    newAreasCount: number
+    newWritersCount: number
+    previewRows: any[]
+  } | null>(null)
+  const [excelError, setExcelError] = useState<string | null>(null)
 
   // حالات المحصلين
   const [showCollectorModal, setShowCollectorModal] = useState(false)
@@ -237,6 +254,303 @@ export default function BranchManagerDashboard({
     setShowImportModal(false)
     setImportText('')
     alert(`تم استيراد ${addedCount} مشترك بنجاح.`)
+  }
+
+  // ------------------ استيراد ملف إكسل شامل (Excel) ------------------
+  // دالة ذكية للبحث عن قيمة الحقل في السطر حسب مفاتيح محتملة
+  const extractFieldValue = (row: any, patterns: string[]): any => {
+    const keys = Object.keys(row)
+    for (const pattern of patterns) {
+      // تطابق تام
+      const exactKey = keys.find(k => k.trim().toLowerCase() === pattern.toLowerCase())
+      if (exactKey && row[exactKey] !== undefined && row[exactKey] !== '') return row[exactKey]
+      
+      // تطابق جزئي
+      const partialKey = keys.find(k => k.trim().toLowerCase().includes(pattern.toLowerCase()))
+      if (partialKey && row[partialKey] !== undefined && row[partialKey] !== '') return row[partialKey]
+    }
+    return ''
+  }
+
+  const handleExcelFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setExcelError(null)
+    setIsProcessingExcel(true)
+    setExcelPreviewResult(null)
+
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const buffer = evt.target?.result
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const sheetName = workbook.SheetNames[0]
+        if (!sheetName) {
+          throw new Error('الملف فارغ ولا يحتوي على أوراق عمل.')
+        }
+
+        const sheet = workbook.Sheets[sheetName]
+        const rawRows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+
+        if (!rawRows || rawRows.length === 0) {
+          throw new Error('ورقة العمل لا تحتوي على بيانات أو سطور مقروءة.')
+        }
+
+        // إعداد الهياكل للربط والمعالجة
+        const currentAreas = [...(branch.areas || [])]
+        const areaMap = new Map<string, Area>()
+        currentAreas.forEach(a => areaMap.set(a.name.trim().toLowerCase(), a))
+
+        const currentWriters = [...(branch.writers || [])]
+        const writerMap = new Map<string, BranchWriter>()
+        currentWriters.forEach(w => writerMap.set(w.name.trim().toLowerCase(), w))
+
+        const currentSubscribers = [...(branch.subscribers || [])]
+        const subscriberIdMap = new Map<number, Subscriber>()
+        currentSubscribers.forEach(s => subscriberIdMap.set(s.id, s))
+
+        let newAreasCount = 0
+        let newWritersCount = 0
+        let newSubscribersCount = 0
+        let updatedSubscribersCount = 0
+
+        // تحديد أعلى رقم متسلسل حالي للمشتركين إذا كان السطر بلا رقم
+        let maxSubId = currentSubscribers.reduce((max, s) => Math.max(max, s.id || 0), 1000)
+        let maxOrder = currentSubscribers.reduce((max, s) => Math.max(max, s.order || 0), 0)
+
+        const previewRows: any[] = []
+
+        rawRows.forEach((row) => {
+          // استخراج اسم المشترك
+          const nameVal = extractFieldValue(row, [
+            'اسم المشترك', 'اسم_المشترك', 'الاسم المشترك', 'الاسم الثلاثي', 'اسم', 'الاسم', 'المشترك', 'name', 'subscriber'
+          ])
+          const name = String(nameVal || '').trim()
+
+          // استخراج رقم المشترك
+          const idVal = extractFieldValue(row, [
+            'رقم المشترك', 'رقم_المشترك', 'الرقم', 'التسلسل', 'تسلسل', 'ت', 'رقم', 'رمز المشترك', 'رمز', 'id', 'sub_id', 'no'
+          ])
+          
+          let subId: number
+          const parsedId = parseInt(String(idVal).replace(/[^\d]/g, ''), 10)
+          if (!isNaN(parsedId) && parsedId > 0) {
+            subId = parsedId
+          } else if (name) {
+            maxSubId++
+            subId = maxSubId
+          } else {
+            // سطر فارغ تماماً نتجاهله
+            return
+          }
+
+          // إذا لم يكن هناك اسم، نضع اسماً افتراضياً برقم المشترك
+          const finalName = name || `مشترك رقم ${subId}`
+
+          // استخراج المنطقة
+          const areaVal = extractFieldValue(row, [
+            'المنطقة', 'منطقة', 'اسم المنطقة', 'الحي', 'حي', 'المحلة', 'محلة', 'الشارع', 'area'
+          ])
+          const areaName = String(areaVal || '').trim()
+          let assignedAreaId = ''
+
+          if (areaName) {
+            const lowerArea = areaName.toLowerCase()
+            if (areaMap.has(lowerArea)) {
+              assignedAreaId = areaMap.get(lowerArea)!.id
+            } else {
+              // إنشاء منطقة جديدة تلقائياً
+              const newArea: Area = {
+                id: 'area_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+                name: areaName,
+                branches: []
+              }
+              currentAreas.push(newArea)
+              areaMap.set(lowerArea, newArea)
+              assignedAreaId = newArea.id
+              newAreasCount++
+            }
+          }
+
+          // استخراج اسم الكاتب
+          const writerVal = extractFieldValue(row, [
+            'اسم الكاتب', 'اسم_الكاتب', 'الكاتب', 'القارئ', 'الجابي', 'الموظف', 'writer', 'reader'
+          ])
+          const writerName = String(writerVal || '').trim()
+
+          if (writerName) {
+            const lowerWriter = writerName.toLowerCase()
+            let writerObj = writerMap.get(lowerWriter)
+            if (!writerObj) {
+              // إنشاء حساب كاتب جديد تلقائياً
+              writerObj = {
+                id: 'wri_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+                name: writerName,
+                phone: '',
+                token: generateSecureToken('wri'),
+                assignedAreaIds: assignedAreaId ? [assignedAreaId] : [],
+                assignedSubscriberIds: [subId],
+                createdAt: new Date().toISOString()
+              }
+              currentWriters.push(writerObj)
+              writerMap.set(lowerWriter, writerObj)
+              newWritersCount++
+            } else {
+              // تحديث الكاتب القائم لربط المنطقة والمشترك
+              if (assignedAreaId && !writerObj.assignedAreaIds.includes(assignedAreaId)) {
+                writerObj.assignedAreaIds.push(assignedAreaId)
+              }
+              if (!writerObj.assignedSubscriberIds) {
+                writerObj.assignedSubscriberIds = []
+              }
+              if (!writerObj.assignedSubscriberIds.includes(subId)) {
+                writerObj.assignedSubscriberIds.push(subId)
+              }
+            }
+          }
+
+          // استخراج نوع العقار (سكني / تجاري)
+          const propVal = extractFieldValue(row, [
+            'نوع العقار', 'العقار', 'الصنف', 'النوع', 'سكني/تجاري', 'نوع الاشتراك', 'property', 'type'
+          ])
+          const propText = String(propVal || '').trim()
+          let propertyType: any = 'سكني'
+          if (propText.includes('تجاري')) propertyType = 'تجاري'
+          else if (propText.includes('حكومي')) propertyType = 'حكومي'
+          else if (propText.includes('صناعي')) propertyType = 'صناعي'
+
+          // استخراج العداد / عدد المتر
+          const meterVal = extractFieldValue(row, [
+            'عدد المتر', 'المتر', 'العداد', 'نوع العداد', 'قطر العداد', 'القطر', 'meter'
+          ])
+          const meterText = String(meterVal || '').trim() || 'نصف انج'
+
+          // استخراج الهاتف
+          const phoneVal = extractFieldValue(row, [
+            'الهاتف', 'رقم الهاتف', 'الموبايل', 'الجوال', 'phone', 'mobile'
+          ])
+          const phoneText = String(phoneVal || '').trim()
+
+          // استخراج الدين السابق
+          const debtVal = extractFieldValue(row, [
+            'الدين السابق', 'الديون السابقة', 'المتبقي السابق', 'الرصيد السابق', 'المتبقي', 'الدين', 'الذمة', 'debt', 'balance'
+          ])
+          const cleanDebt = parseFloat(String(debtVal).replace(/[^\d.-]/g, '')) || 0
+
+          // استخراج الحالات (مغلق، مهدوم، إيقاف حساب، إلخ)
+          const allRowText = Object.values(row).join(' ')
+          const statuses: string[] = []
+
+          if (allRowText.includes('مغلق')) statuses.push('مغلق')
+          if (allRowText.includes('مهدوم')) statuses.push('مهدوم')
+          if (allRowText.includes('إيقاف') || allRowText.includes('ايقاف')) statuses.push('إيقاف حساب')
+          if (allRowText.includes('متجاوز')) statuses.push('متجاوز')
+          if (allRowText.includes('لا يوجد عداد')) statuses.push('لا يوجد عداد')
+          if (allRowText.includes('عشوائي')) statuses.push('عشوائي')
+          if (allRowText.includes('متروك')) statuses.push('متروك')
+
+          const existingSub = subscriberIdMap.get(subId)
+          if (existingSub) {
+            // تحديث بيانات المشترك
+            existingSub.name = finalName
+            if (phoneText) existingSub.phone = phoneText
+            if (assignedAreaId) existingSub.areaId = assignedAreaId
+            existingSub.propertyType = propertyType
+            existingSub.meterType = meterText as any
+            if (cleanDebt > 0) existingSub.remainingPrev = cleanDebt
+            if (statuses.length > 0) {
+              existingSub.statuses = Array.from(new Set([...(existingSub.statuses || []), ...statuses]))
+            }
+            updatedSubscribersCount++
+          } else {
+            // إنشاء مشترك جديد
+            maxOrder++
+            const newSub: Subscriber = {
+              id: subId,
+              name: finalName,
+              phone: phoneText,
+              areaId: assignedAreaId,
+              branchId: branch.id,
+              propertyType,
+              meterType: meterText as any,
+              detailedAddress: areaName ? `المنطقة: ${areaName}` : 'تم الاستيراد من ملف إكسل',
+              remainingPrev: cleanDebt,
+              fee: 0,
+              order: maxOrder,
+              statuses,
+              createdAt: new Date().toISOString()
+            }
+            subscriberIdMap.set(subId, newSub)
+            currentSubscribers.push(newSub)
+            newSubscribersCount++
+          }
+
+          if (previewRows.length < 8) {
+            previewRows.push({
+              id: subId,
+              name: finalName,
+              area: areaName || 'بدون منطقة',
+              writer: writerName || 'بدون كاتب',
+              property: propertyType,
+              meter: meterText,
+              debt: cleanDebt,
+              statuses: statuses.join(', ') || 'طبيعي'
+            })
+          }
+        })
+
+        if (newSubscribersCount === 0 && updatedSubscribersCount === 0) {
+          throw new Error('لم يتم العثور على أي مشتركين صالحين للاستيراد في الملف.')
+        }
+
+        setExcelPreviewResult({
+          subscribers: Array.from(subscriberIdMap.values()),
+          areas: currentAreas,
+          writers: currentWriters,
+          newSubscribersCount,
+          updatedSubscribersCount,
+          newAreasCount,
+          newWritersCount,
+          previewRows
+        })
+      } catch (err: any) {
+        console.error('خطأ أثناء قراءة ملف الإكسل:', err)
+        setExcelError(err?.message || 'حدث خطأ غير متوقع أثناء معالجة ملف الإكسل.')
+      } finally {
+        setIsProcessingExcel(false)
+        e.target.value = ''
+      }
+    }
+
+    reader.onerror = () => {
+      setExcelError('فشلت قراءة الملف، يرجى المحاولة مرة أخرى.')
+      setIsProcessingExcel(false)
+    }
+
+    reader.readAsArrayBuffer(file)
+  }
+
+  // تأكيد حفظ بيانات الإكسل في الفرع
+  const handleConfirmExcelImport = () => {
+    if (!excelPreviewResult) return
+
+    onUpdateBranch({
+      ...branch,
+      areas: excelPreviewResult.areas,
+      writers: excelPreviewResult.writers,
+      subscribers: excelPreviewResult.subscribers
+    })
+
+    const msg = `تم الاستيراد بنجاح!
+• المشتركون الجدد: ${excelPreviewResult.newSubscribersCount}
+• المشتركون المحدثون: ${excelPreviewResult.updatedSubscribersCount}
+• المناطق الجديدة المضافة: ${excelPreviewResult.newAreasCount}
+• حسابات الكتاب الجديدة المنشأة: ${excelPreviewResult.newWritersCount}`
+
+    alert(msg)
+    setShowExcelModal(false)
+    setExcelPreviewResult(null)
   }
 
   // ------------------ إدارة المحصلين ------------------
@@ -560,11 +874,23 @@ export default function BranchManagerDashboard({
                   </button>
 
                   <button
-                    onClick={() => setShowImportModal(true)}
+                    onClick={() => {
+                      setExcelPreviewResult(null)
+                      setExcelError(null)
+                      setShowExcelModal(true)
+                    }}
                     className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
                   >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>استيراد ملف إكسل شامل</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-200"
+                  >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>استيراد</span>
+                    <span>لصق نصي</span>
                   </button>
                 </div>
               </div>
@@ -647,6 +973,18 @@ export default function BranchManagerDashboard({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setExcelPreviewResult(null)
+                      setExcelError(null)
+                      setShowExcelModal(true)
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>استيراد من إكسل</span>
+                  </button>
+
                   {/* زر إضافة قائمة مناطق بسطور متعددة */}
                   <button
                     onClick={() => setShowAreasListModal(true)}
@@ -1101,6 +1439,186 @@ export default function BranchManagerDashboard({
                 بدء الاستيراد
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة استيراد ملف إكسل شامل (Excel) */}
+      {showExcelModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 md:p-6 max-w-3xl w-full space-y-5 shadow-2xl my-8 border border-slate-100">
+            {/* الترويسة */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-2xl">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-black text-slate-900">
+                    استيراد شامل من ملف إكسل (Excel)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    استيراد المشتركين، إنشاء المناطق تلقائياً، وإنشاء حسابات الكتّاب وربطهم
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowExcelModal(false)
+                  setExcelPreviewResult(null)
+                  setExcelError(null)
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition font-black text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* حالة حدوث خطأ */}
+            {excelError && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-bold">
+                <XCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>{excelError}</span>
+              </div>
+            )}
+
+            {/* صندوق اختيار الملف (إذا لم تكن هناك معاينة جاهزة بعد) */}
+            {!excelPreviewResult ? (
+              <div className="space-y-4">
+                <div className="p-5 md:p-8 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-3xl bg-emerald-50/40 text-center transition flex flex-col items-center justify-center space-y-3 relative">
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleExcelFileUpload}
+                    disabled={isProcessingExcel}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <div className="p-4 bg-emerald-100 text-emerald-700 rounded-2xl">
+                    <FileSpreadsheet className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-black text-slate-800">
+                      {isProcessingExcel ? 'جاري قراءة وتحليل بيانات الملف...' : 'اضغط لاختيار ملف الإكسل أو اسحبه هنا'}
+                    </p>
+                    <p className="text-xs text-slate-500 font-bold">
+                      يدعم الملفات بصيغة (xlsx, xls, csv)
+                    </p>
+                  </div>
+                  {isProcessingExcel && (
+                    <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-700 pt-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping" />
+                      <span>يرجى الانتظار، جاري تصنيف وفهرسة المشتركين والمناطق...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* تعليمات وتوضيحات الاستيراد الذكي */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-2 leading-relaxed">
+                  <p className="font-black text-slate-900 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>ميزات الاستيراد الذكي التلقائي:</span>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 pr-1 font-bold">
+                    <li>يتم استيراد المشترك حتى لو كان بلا اسم منطقة أو بلا كاتب.</li>
+                    <li>المناطق المذكورة في الملف غير المسجلة سيتم إنشاؤها تلقائياً بالفرع.</li>
+                    <li>أسماء الكتاب غير المسجلين سيتم إنشاء حسابات كتاب جديدة لهم تلقائياً برمز دخول مباشر.</li>
+                    <li>التعرف التلقائي على نوع العقار (سكني / تجاري)، نوع العداد (4 متر أو غيره)، والديون السابقة.</li>
+                    <li>التعرف على حالات المشتركين الخاصة مثل (مغلق، مهدوم، إيقاف حساب، متجاوز، بدون عداد).</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              /* شاشة المعاينة قبل التأكيد */
+              <div className="space-y-5">
+                {/* ملخص الأرقام المكتشفة */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
+                    <p className="text-[10px] font-bold text-emerald-700">مشتركون جدد</p>
+                    <p className="text-lg font-black text-emerald-800">{excelPreviewResult.newSubscribersCount}</p>
+                  </div>
+
+                  <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+                    <p className="text-[10px] font-bold text-blue-700">مشتركون محدثون</p>
+                    <p className="text-lg font-black text-blue-800">{excelPreviewResult.updatedSubscribersCount}</p>
+                  </div>
+
+                  <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 text-center">
+                    <p className="text-[10px] font-bold text-purple-700">مناطق جديدة ستنشأ</p>
+                    <p className="text-lg font-black text-purple-800">{excelPreviewResult.newAreasCount}</p>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100 text-center">
+                    <p className="text-[10px] font-bold text-amber-700">حسابات كتاب ستنشأ</p>
+                    <p className="text-lg font-black text-amber-800">{excelPreviewResult.newWritersCount}</p>
+                  </div>
+                </div>
+
+                {/* جدول معاينة السطور */}
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-slate-800">
+                    معاينة عينة من المشتركين المستخرجين (أول {excelPreviewResult.previewRows.length} سجلات):
+                  </p>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-56">
+                    <table className="w-full text-right text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
+                          <th className="p-2.5">رقم المشترك</th>
+                          <th className="p-2.5">الاسم</th>
+                          <th className="p-2.5">المنطقة</th>
+                          <th className="p-2.5">الكاتب</th>
+                          <th className="p-2.5">العقار/العداد</th>
+                          <th className="p-2.5">الحالة</th>
+                          <th className="p-2.5">الدين السابق</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {excelPreviewResult.previewRows.map((r, i) => (
+                          <tr key={i} className="hover:bg-slate-50 font-bold">
+                            <td className="p-2 font-mono text-blue-700">{r.id}</td>
+                            <td className="p-2 text-slate-900">{r.name}</td>
+                            <td className="p-2 text-slate-600">{r.area}</td>
+                            <td className="p-2 text-slate-600">{r.writer}</td>
+                            <td className="p-2 text-slate-500">{r.property} - {r.meter}</td>
+                            <td className="p-2 text-amber-700">{r.statuses}</td>
+                            <td className="p-2 font-mono text-rose-600">{r.debt.toLocaleString('ar-IQ')} د.ع</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* أزرار الإجراءات */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setExcelPreviewResult(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                  >
+                    اختيار ملف آخر
+                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowExcelModal(false)
+                        setExcelPreviewResult(null)
+                      }}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      onClick={handleConfirmExcelImport}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>تأكيد واستيراد البيانات الآن</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
