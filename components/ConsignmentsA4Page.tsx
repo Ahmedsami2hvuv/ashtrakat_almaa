@@ -92,10 +92,10 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
   // نسبة البلدية الافتراضية المأخوذة من المبلغ (بالنسبة المئوية %)
   const [municipalityRatio, setMunicipalityRatio] = useState<number>(20)
 
-  // إنشاء 20 صفاً افتراضياً لورقة A4
+  // إنشاء 23 صفاً افتراضياً لورقة A4 الرسمية كما طلب المستخدم
   const [rows, setRows] = useState<RowData[]>(() => {
     const today = new Date().toISOString().split('T')[0]
-    return Array.from({ length: 20 }, () => ({
+    return Array.from({ length: 23 }, () => ({
       subscriberId: '',
       subscriberName: '',
       areaName: '',
@@ -136,8 +136,33 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
       if (!isNaN(numId) && subscriberMap.has(numId)) {
         const foundSub = subscriberMap.get(numId)!
         newRows[index].subscriberName = foundSub.name || ''
-        const areaNameFound = foundSub.areaId ? (areasMap.get(foundSub.areaId) || '') : ''
-        newRows[index].areaName = areaNameFound
+        
+        let areaFound = ''
+        // أ. فحص الربط الصريح برقم المنطقة areaId
+        if (foundSub.areaId && areasMap.has(foundSub.areaId)) {
+          areaFound = areasMap.get(foundSub.areaId)!
+        }
+        
+        // ب. إذا لم توجد، فحص العنوان التفصيلي detailedAddress
+        if (!areaFound && foundSub.detailedAddress && foundSub.detailedAddress.trim()) {
+          const cleanAddr = foundSub.detailedAddress.trim()
+          for (const area of (branch.areas || [])) {
+            if (cleanAddr.includes(area.name)) {
+              areaFound = area.name
+              break
+            }
+          }
+          if (!areaFound && cleanAddr !== 'قرب') {
+            areaFound = cleanAddr
+          }
+        }
+
+        // ج. إذا كانت لا تزال فارغة، خذ منطقة الصف السابق إن وجدت
+        if (!areaFound && index > 0 && newRows[index - 1]?.areaName) {
+          areaFound = newRows[index - 1].areaName
+        }
+
+        newRows[index].areaName = areaFound
       } else if (value.trim() === '') {
         newRows[index].subscriberName = ''
         newRows[index].areaName = ''
@@ -203,25 +228,25 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     }
   }
 
-  // إضافة 10 أسطر إضافية
-  const handleAddMoreRows = () => {
+  // إضافة سطر واحد إضافي بنقرة زر
+  const handleAddSingleRow = () => {
     const lastRow = rows[rows.length - 1]
     const lastNum = parseInt(lastRow?.receiptNumber || '0', 10)
-    const newAdded: RowData[] = Array.from({ length: 10 }, (_, i) => ({
+    const newRow: RowData = {
       subscriberId: '',
       subscriberName: '',
-      areaName: '',
+      areaName: lastRow?.areaName || '',
       amount: '',
       waterAmount: '',
       municipalityAmount: '',
-      receiptNumber: !isNaN(lastNum) && lastNum > 0 ? String(lastNum + i + 1) : '',
+      receiptNumber: !isNaN(lastNum) && lastNum > 0 ? String(lastNum + 1) : '',
       paymentDate: consignmentDate,
       paymentTime: ''
-    }))
-    setRows([...rows, ...newAdded])
+    }
+    setRows([...rows, newRow])
   }
 
-  // توليد رقم تسلسلي عشوائي جديد للورقة
+  // توليد رقم تسلسلي جديد للورقة
   const handleGenerateNewSerial = () => {
     const nextNum = Math.floor(1000 + Math.random() * 90000).toString().padStart(5, '0')
     setSerialNumber(nextNum)
@@ -286,15 +311,13 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
       createdAt: new Date().toISOString()
     }
 
-    // ترحيل الدفعات تلقائياً وتنزيلها من ديون المشتركين
+    // ترحيل الدفعات وتحديث ديون المشتركين ومناطقهم المسجلة
     const updatedBilling = { ...(branch.billing || {}) }
     const updatedSubscribers = branch.subscribers.map(sub => {
       const paymentsForSub = consignmentItems.filter(item => item.subscriberId === sub.id)
       if (paymentsForSub.length === 0) return sub
 
       const totalPaidInConsignment = paymentsForSub.reduce((s, p) => s + p.amount, 0)
-
-      // خصم من الدين السابق
       const currentPrev = sub.remainingPrev || 0
       const newRemainingPrev = Math.max(0, currentPrev - totalPaidInConsignment)
 
@@ -315,8 +338,19 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         periods[0].paid = (periods[0].paid || 0) + totalPaidInConsignment
       }
 
+      // إذا كانت المنطقة مدخلة ولم تكن مسجلة للمشترك سابقاً، نربطها به
+      let updatedAreaId = sub.areaId
+      const itemRow = paymentsForSub[0]
+      if (!updatedAreaId && itemRow.areaName) {
+        const matchedArea = (branch.areas || []).find(a => a.name === itemRow.areaName)
+        if (matchedArea) {
+          updatedAreaId = matchedArea.id
+        }
+      }
+
       return {
         ...sub,
+        areaId: updatedAreaId,
         remainingPrev: newRemainingPrev
       }
     })
@@ -334,12 +368,19 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-3 sm:p-6 print:p-0 print:bg-white text-slate-800 font-sans" dir="rtl">
+    <div className="min-h-screen bg-slate-100 p-2 sm:p-6 print:p-0 print:bg-white text-slate-800 font-sans" dir="rtl">
       
+      {/* قائمة اقتراحات المناطق */}
+      <datalist id="branch-areas-list">
+        {(branch.areas || []).map(a => (
+          <option key={a.id} value={a.name} />
+        ))}
+      </datalist>
+
       {/* ========================================================
           شريط الإجراءات والتحكم العلوي (يُخفى بالكامل أثناء الطباعة)
           ======================================================== */}
-      <div className="max-w-6xl mx-auto mb-6 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden space-y-4">
+      <div className="no-print print:hidden max-w-6xl mx-auto mb-5 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -403,7 +444,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
               onChange={(e) => handleUpdateRatio(Number(e.target.value) || 0)}
               className="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-black text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
             />
-            <span className="text-[11px] text-slate-500">% من المبلغ</span>
+            <span className="text-[11px] text-slate-500">% من المبلغ المستلم</span>
           </div>
 
           <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 justify-between">
@@ -429,7 +470,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
 
       {/* رسالة نجاح الحفظ */}
       {savedSuccessMessage && (
-        <div className="max-w-6xl mx-auto mb-4 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl font-bold text-center shadow-sm print:hidden">
+        <div className="no-print print:hidden max-w-6xl mx-auto mb-4 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl font-bold text-center shadow-sm">
           {savedSuccessMessage}
         </div>
       )}
@@ -438,14 +479,14 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
           ورقة A4 الرسمية المطابقة تماماً للاستمارة
           ======================================================== */}
       <div 
-        className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-xl border border-slate-300 print:shadow-none print:border-none print:m-0 print:p-4 print:rounded-none"
+        className="max-w-5xl mx-auto bg-white p-4 sm:p-8 rounded-2xl shadow-xl border border-slate-300 print:shadow-none print:border-none print:m-0 print:p-2 print:rounded-none"
         style={{ minHeight: '297mm' }}
       >
         
-        {/* الرقم التسلسلي المطبوع أعلى الورقة */}
+        {/* الترويسة الرسمية لورقة الإرسالية */}
         <div className="flex justify-between items-start mb-2">
+          {/* الجانب الأيمن */}
           <div className="text-right">
-            {/* جهة محافظة البصرة والمديرية */}
             <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">محافظة البصرة</h2>
             <h3 className="text-sm sm:text-base font-black text-slate-800 leading-tight mt-0.5">مديرية ماء البصرة</h3>
             <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-slate-900 mt-1">
@@ -459,10 +500,9 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
             </div>
           </div>
 
-          {/* الرقم التسلسلي المطبوع باللون الكلاسيكي مع حقول الرقم وإرسالية الجباية */}
+          {/* الجانب الأيسر (الرقم التسلسلي + الرقم + إرسالية جباية) */}
           <div className="text-left" dir="ltr">
             <div className="text-right font-mono text-base sm:text-lg font-black tracking-widest text-slate-900 print:text-black mb-1">
-              <span className="text-xs font-sans text-slate-400 mr-2 print:hidden">ت:</span>
               {serialNumber}
             </div>
             <div className="text-right space-y-1 text-xs sm:text-sm font-bold text-slate-900" dir="rtl">
@@ -490,7 +530,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
                   {branch.collectors.length > 0 && (
                     <select
                       onChange={(e) => setSelectedCollectorName(e.target.value)}
-                      className="text-[11px] p-0.5 border border-slate-300 rounded bg-white print:hidden"
+                      className="no-print print:hidden text-[11px] p-0.5 border border-slate-300 rounded bg-white"
                     >
                       <option value="">اختر</option>
                       {branch.collectors.map(c => (
@@ -504,7 +544,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
           </div>
         </div>
 
-        {/* تاريخ الإرسالية في الهامش */}
+        {/* تاريخ الإرسالية في الهامش (بدون إظهار نسبة البلدية بالطباعة) */}
         <div className="flex justify-between items-center text-[11px] text-slate-600 mb-2 border-b border-slate-300 pb-1">
           <div className="flex items-center gap-2">
             <span>تاريخ الإرسالية:</span>
@@ -515,19 +555,16 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
               className="font-bold text-slate-800 bg-transparent border-0 focus:outline-none"
             />
           </div>
-          <div className="print:hidden text-slate-500">
-            نسبة البلدية المعتمدة: {municipalityRatio}%
-          </div>
         </div>
 
         {/* ========================================================
-            جدول استمارة الإرساليات الرسمي
+            جدول استمارة الإرساليات الرسمي (23 سطراً)
             ======================================================== */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-slate-900 text-right text-[11px] sm:text-xs">
             <thead>
               <tr className="bg-slate-100 text-slate-900 font-black text-center border-b border-slate-900">
-                <th className="border border-slate-900 p-1 w-10 sm:w-12" rowSpan={2}>ت (رقم المشترك)</th>
+                <th className="border border-slate-900 p-1 w-10 sm:w-12" rowSpan={2}>ت</th>
                 <th className="border border-slate-900 p-1 w-32 sm:w-44" rowSpan={2}>أسم المشترك</th>
                 <th className="border border-slate-900 p-1 w-24 sm:w-32" rowSpan={2}>المنطقة</th>
                 <th className="border border-slate-900 p-1 w-24 sm:w-28" rowSpan={2}>المبلغ المستلم</th>
@@ -542,91 +579,89 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
             </thead>
             <tbody>
               {rows.map((row, index) => (
-                <tr key={index} className="hover:bg-slate-50 border-b border-slate-800 h-8">
+                <tr key={index} className="hover:bg-slate-50 border-b border-slate-800 h-7">
                   {/* رقم المشترك */}
-                  <td className="border border-slate-800 p-0.5 text-center font-bold">
+                  <td className="border border-slate-800 p-0 text-center font-bold">
                     <input
                       type="text"
                       value={row.subscriberId}
                       onChange={(e) => handleCellChange(index, 'subscriberId', e.target.value)}
-                      placeholder="رقم"
                       className="w-full h-full text-center font-black text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
 
                   {/* اسم المشترك */}
-                  <td className="border border-slate-800 p-0.5">
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="text"
                       value={row.subscriberName}
                       onChange={(e) => handleCellChange(index, 'subscriberName', e.target.value)}
-                      placeholder="اسم المشترك"
                       className="w-full h-full px-1 font-bold text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
 
-                  {/* المنطقة (تلقائية وقابلة للتعديل) */}
-                  <td className="border border-slate-800 p-0.5">
+                  {/* المنطقة (تلقائية وقابلة للاختيار والتعديل) */}
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="text"
+                      list="branch-areas-list"
                       value={row.areaName}
                       onChange={(e) => handleCellChange(index, 'areaName', e.target.value)}
-                      placeholder="المنطقة"
-                      className="w-full h-full px-1 text-center font-bold text-slate-700 bg-transparent focus:bg-amber-50 focus:outline-none"
+                      className="w-full h-full px-1 text-center font-bold text-slate-800 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
 
                   {/* المبلغ الإجمالي المستلم */}
-                  <td className="border border-slate-800 p-0.5">
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="number"
                       value={row.amount}
                       onChange={(e) => handleCellChange(index, 'amount', e.target.value)}
-                      placeholder="0"
+                      placeholder=""
                       className="w-full h-full px-1 text-center font-black text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
 
                   {/* حصة الماء */}
-                  <td className="border border-slate-800 p-0.5">
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="number"
                       value={row.waterAmount}
                       onChange={(e) => handleCellChange(index, 'waterAmount', e.target.value)}
-                      placeholder="0"
+                      placeholder=""
                       className="w-full h-full px-1 text-center font-bold text-blue-900 bg-transparent focus:bg-blue-50 focus:outline-none"
                     />
                   </td>
 
                   {/* حصة البلدية */}
-                  <td className="border border-slate-800 p-0.5">
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="number"
                       value={row.municipalityAmount}
                       onChange={(e) => handleCellChange(index, 'municipalityAmount', e.target.value)}
-                      placeholder="0"
+                      placeholder=""
                       className="w-full h-full px-1 text-center font-bold text-amber-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
 
                   {/* رقم الوصل */}
-                  <td className="border border-slate-800 p-0.5">
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="text"
                       value={row.receiptNumber}
                       onChange={(e) => handleCellChange(index, 'receiptNumber', e.target.value)}
-                      placeholder="رقم الوصل"
+                      placeholder=""
                       className="w-full h-full px-1 text-center font-mono font-bold text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
 
                   {/* وقت / تاريخ الوصل */}
-                  <td className="border border-slate-800 p-0.5">
+                  <td className="border border-slate-800 p-0">
                     <input
                       type="text"
                       value={row.paymentTime || row.paymentDate}
                       onChange={(e) => handleCellChange(index, 'paymentTime', e.target.value)}
-                      placeholder="الوقت/التاريخ"
+                      placeholder=""
                       className="w-full h-full px-1 text-center text-[10px] font-bold text-slate-600 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
@@ -636,16 +671,16 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
             <tfoot>
               {/* صف المجاميع الكلية */}
               <tr className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-900">
-                <td colSpan={3} className="border border-slate-900 p-2 text-center text-xs sm:text-sm">
+                <td colSpan={3} className="border border-slate-900 p-1.5 text-center text-xs sm:text-sm">
                   المجموع الكلي ({validRowsCount} وصل):
                 </td>
-                <td className="border border-slate-900 p-2 text-center text-xs sm:text-sm font-black">
+                <td className="border border-slate-900 p-1.5 text-center text-xs sm:text-sm font-black">
                   {totalAmount > 0 ? totalAmount.toLocaleString('ar-IQ') : '—'}
                 </td>
-                <td className="border border-slate-900 p-2 text-center text-xs font-black text-blue-900">
+                <td className="border border-slate-900 p-1.5 text-center text-xs font-black text-blue-900">
                   {totalWater > 0 ? totalWater.toLocaleString('ar-IQ') : '—'}
                 </td>
-                <td className="border border-slate-900 p-2 text-center text-xs font-black text-amber-900">
+                <td className="border border-slate-900 p-1.5 text-center text-xs font-black text-amber-900">
                   {totalMunicipality > 0 ? totalMunicipality.toLocaleString('ar-IQ') : '—'}
                 </td>
                 <td colSpan={2} className="border border-slate-900 p-1 text-center text-[11px] text-slate-600">
@@ -656,15 +691,15 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
           </table>
         </div>
 
-        {/* زر إضافة أسطر إضافية (يُخفى في الطباعة) */}
-        <div className="mt-3 flex justify-between items-center print:hidden">
+        {/* زر إضافة سطر إضافي واحد (مخفي تماماً في الطباعة) */}
+        <div className="no-print print:hidden mt-3 flex justify-between items-center">
           <button
-            onClick={handleAddMoreRows}
+            onClick={handleAddSingleRow}
             style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
             className="px-4 py-2 border rounded-xl font-bold text-xs hover:bg-slate-200 transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
           >
             <Plus className="w-4 h-4 text-slate-700" />
-            <span>إضافة 10 أسطر جديدة</span>
+            <span>إضافة سطر</span>
           </button>
 
           <span className="text-xs text-slate-500 font-bold">
@@ -673,7 +708,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         </div>
 
         {/* سطر التفقيط الرسمي (فقط) */}
-        <div className="mt-6 pt-3 border-t-2 border-slate-900 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-900">
+        <div className="mt-5 pt-3 border-t-2 border-slate-900 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-900">
           <span className="whitespace-nowrap underline underline-offset-4">فـقـط :</span>
           <span className="flex-1 border-b border-dotted border-slate-700 pb-1 font-bold text-slate-800">
             {totalAmount > 0 ? `${tafqeet(totalAmount)} دينار عراقي لا غير.` : '.......................................................................................................................................................................'}
@@ -683,7 +718,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         {/* ========================================================
             التواقيع الرسمية الأربعة المعتمدة كما في الاستمارة
             ======================================================== */}
-        <div className="mt-8 pt-4 grid grid-cols-4 text-center text-[11px] sm:text-xs font-black text-slate-900 gap-2">
+        <div className="mt-7 pt-4 grid grid-cols-4 text-center text-[11px] sm:text-xs font-black text-slate-900 gap-2">
           {/* 1. الجابي */}
           <div>
             <p className="font-black text-slate-900 mb-8 sm:mb-10">الـجـابـي</p>
