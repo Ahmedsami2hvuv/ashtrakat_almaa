@@ -6,7 +6,6 @@ import {
   BranchManager,
   BranchCollector,
   BranchWriter,
-  TreasuryManager,
   Consignment
 } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
@@ -18,7 +17,6 @@ import {
   MapPin,
   Wallet,
   BookOpen,
-  Vault,
   Building2,
   Settings,
   Plus,
@@ -49,7 +47,7 @@ interface BranchManagerDashboardProps {
   }) => void
 }
 
-type TabType = 'subscribers' | 'areas' | 'collectors' | 'writers' | 'treasury' | 'branch_info' | 'settings'
+type TabType = 'subscribers' | 'areas' | 'collectors' | 'writers' | 'settings'
 
 export default function BranchManagerDashboard({
   branch,
@@ -100,10 +98,6 @@ export default function BranchManagerDashboard({
   const [writerPhone, setWriterPhone] = useState('')
   const [selectedWriterAreas, setSelectedWriterAreas] = useState<string[]>([])
 
-  // حالات الخزنة
-  const [showTreasuryModal, setShowTreasuryModal] = useState(false)
-  const [treasuryName, setTreasuryName] = useState('')
-  const [treasuryPhone, setTreasuryPhone] = useState('')
 
   // حالات الذكاء الاصطناعي
   const [newApiKey, setNewApiKey] = useState('')
@@ -670,22 +664,7 @@ export default function BranchManagerDashboard({
     window.open(waUrl, '_blank')
   }
 
-  // ------------------ إدارة الخزنة ------------------
-  const handleSaveTreasury = () => {
-    if (!treasuryName.trim() || !treasuryPhone.trim()) return
-    const newTreasury: TreasuryManager = {
-      id: 'trs_' + Date.now().toString(36),
-      name: treasuryName.trim(),
-      phone: treasuryPhone.trim(),
-      token: generateSecureToken('trs'),
-      createdAt: new Date().toISOString()
-    }
-    const updated = [...(branch.treasuryManagers || []), newTreasury]
-    onUpdateBranch({ ...branch, treasuryManagers: updated })
-    setShowTreasuryModal(false)
-    setTreasuryName('')
-    setTreasuryPhone('')
-  }
+
 
   // ------------------ حفظ وترحيل الإرسالية A4 ------------------
   const handleSaveConsignmentA4 = (
@@ -737,8 +716,6 @@ export default function BranchManagerDashboard({
     { id: 'areas', label: 'المناطق', icon: MapPin, count: stats.totalAreas },
     { id: 'collectors', label: 'المحصلون', icon: Wallet, count: stats.totalCollectors },
     { id: 'writers', label: 'الكتّاب', icon: BookOpen, count: stats.totalWriters },
-    { id: 'treasury', label: 'الخزنة', icon: Vault, count: branch.treasuryManagers?.length || 0 },
-    { id: 'branch_info', label: 'بيانات الفرع', icon: Building2 },
     { id: 'settings', label: 'الإعدادات و AI', icon: Settings }
   ]
 
@@ -1244,56 +1221,7 @@ export default function BranchManagerDashboard({
             </div>
           )}
 
-          {/* تبويب مدير الخزنة */}
-          {activeTab === 'treasury' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div>
-                  <h3 className="text-base md:text-lg font-black text-slate-900">مسؤولو الخزنة والصندوق</h3>
-                  <p className="text-xs text-slate-500">إدارة وتدقيق السجلات المالية</p>
-                </div>
 
-                <button
-                  onClick={() => setShowTreasuryModal(true)}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>مسؤول خزنة</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(branch.treasuryManagers || []).map((tr) => (
-                  <div key={tr.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3">
-                    <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
-                      <Vault className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-black text-slate-900 text-sm">{tr.name}</h4>
-                      <p className="text-xs font-mono text-slate-500 dir-ltr text-right">{tr.phone}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* تبويب بيانات الفرع */}
-          {activeTab === 'branch_info' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-4">
-              <h3 className="text-base md:text-lg font-black text-slate-900">بيانات الفرع التفصيلية</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-slate-500 font-bold block mb-1">اسم الفرع</span>
-                  <span className="font-black text-slate-900 text-sm">{branch.name}</span>
-                </div>
-                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-slate-500 font-bold block mb-1">تاريخ الإنشاء</span>
-                  <span className="font-bold text-slate-900">{new Date(branch.createdAt).toLocaleDateString('ar-IQ')}</span>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* تبويب الإعدادات والذكاء الاصطناعي */}
           {activeTab === 'settings' && (
@@ -1868,48 +1796,7 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
-      {/* نافذة إضافة مسؤول خزنة */}
-      {showTreasuryModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-xl">
-            <h3 className="text-base font-black text-slate-900">إضافة مسؤول خزنة جديد</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الاسم:</label>
-                <input
-                  type="text"
-                  value={treasuryName}
-                  onChange={(e) => setTreasuryName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
-                <input
-                  type="text"
-                  value={treasuryPhone}
-                  onChange={(e) => setTreasuryPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end pt-2">
-              <button
-                onClick={() => setShowTreasuryModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleSaveTreasury}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
-              >
-                حفظ
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }
