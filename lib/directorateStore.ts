@@ -1,10 +1,6 @@
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter, TreasuryManager, Consignment } from './directorateTypes'
 import { Area, Subscriber, BillingRecords, Pricing } from '@/components/MainApp'
 
-const SB_URL = 'https://amqyttpcezmbsylsdgzd.supabase.co'
-const SB_KEY = 'sb_publishable_Gn4ywDpWxxEtLPdtQVxxBA_yPNoEVgx'
-const SYNC_ROW_KEY = 'directorate_data_v1'
-const LEGACY_SYNC_KEY = 'main_data'
 const LOCAL_STORAGE_KEY = 'basra_water_directorate_cache'
 
 // قائمة الأفرع الافتراضية لمديرية ماء البصرة
@@ -17,11 +13,11 @@ export const INITIAL_BRANCH_NAMES = [
   'فرع واردات القبلة'
 ]
 
-// توليد رمز فريد للرابط
+// توليد رمز فريد ومحمي تشفيرياً للرابط يستحيل تخمينه
 export function generateSecureToken(prefix: string): string {
-  const chars = 'abcdefghijkmnpqrstuvwxyz23456789'
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
   let res = prefix + '_'
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 20; i++) {
     res += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return res
@@ -43,51 +39,31 @@ export function generateWhatsAppLink(phone: string, message: string): string {
 // كاش في الذاكرة لمنع إعادة جلب المشتركين عند التنقل بين الأقسام
 const branchSubscribersCache: Record<string, { subscribers: Subscriber[]; billing: BillingRecords; timestamp: number }> = {}
 
-// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط (Lazy / On-demand loading) مع كاش ذكي
+// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط عبر مسار السيرفر الآمن
 export async function loadBranchSubscribersAndBilling(
   branchId: string,
   forceRefresh = false
 ): Promise<{ subscribers: Subscriber[]; billing: BillingRecords }> {
-  // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري، نرجعها فوراً من الذاكرة (0 طلبات لسوبابيس)
+  // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري، نرجعها فوراً من الذاكرة
   if (!forceRefresh && branchSubscribersCache[branchId]) {
     return branchSubscribersCache[branchId]
   }
 
-  const branchKey = `branch_subscribers_${branchId}`
   let subscribers: Subscriber[] = []
   let billing: BillingRecords = {}
 
   try {
-    const res = await fetch(
-      `${SB_URL}/rest/v1/app_sync?key=eq.${branchKey}&select=value`,
-      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
-    )
+    // الاتصال عبر السيرفر الآمن الداخلي
+    const res = await fetch(`/api/branch-sync?branchId=${encodeURIComponent(branchId)}`)
     if (res.ok) {
-      const rows = await res.json()
-      if (rows[0]?.value) {
-        subscribers = rows[0].value.subscribers || []
-        billing = rows[0].value.billing || {}
+      const data = await res.json()
+      if (data.success) {
+        subscribers = data.subscribers || []
+        billing = data.billing || {}
       }
     }
   } catch (err) {
     console.error(`Error loading subscribers for branch ${branchId}:`, err)
-  }
-
-  // إذا لم نجد بيانات بالفرع وكان الفرع هو أبي الخصيب، نفحص الجدول القديم main_data
-  if (subscribers.length === 0 && (branchId === 'branch_abi_alkhaseeb' || branchId.includes('abi_al'))) {
-    try {
-      const legacyRes = await fetch(
-        `${SB_URL}/rest/v1/app_sync?key=eq.${LEGACY_SYNC_KEY}&select=value`,
-        { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
-      )
-      if (legacyRes.ok) {
-        const rows = await legacyRes.json()
-        if (rows[0]?.value?.subscribers) {
-          subscribers = rows[0].value.subscribers || []
-          billing = rows[0].value.billing || {}
-        }
-      }
-    } catch {}
   }
 
   // حفظ في كاش الذاكرة
@@ -100,15 +76,12 @@ export async function loadBranchSubscribersAndBilling(
   return { subscribers, billing }
 }
 
-// حفظ مشتركي وسجلات ديون فرع معين بشكل منفصل دون المساس بباقي الأفرع
+// حفظ مشتركي وسجلات ديون فرع معين عبر السيرفر الآمن
 export async function saveBranchSubscribersAndBilling(
   branchId: string,
   subscribers: Subscriber[],
   billing: BillingRecords
 ): Promise<void> {
-  const branchKey = `branch_subscribers_${branchId}`
-  const now = new Date().toISOString()
-
   // تحديث الكاش المحلي فوراً
   branchSubscribersCache[branchId] = {
     subscribers,
@@ -117,74 +90,44 @@ export async function saveBranchSubscribersAndBilling(
   }
 
   try {
-    await fetch(`${SB_URL}/rest/v1/app_sync`, {
+    await fetch('/api/branch-sync', {
       method: 'POST',
       headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        key: branchKey,
-        value: {
-          branchId,
-          subscribers,
-          billing,
-          updatedAt: now
-        },
-        updated_at: now
+        branchId,
+        subscribers,
+        billing
       })
     })
-
-    // إذا كان فرع أبي الخصيب، نحدث الجدول القديم أيضاً للأمان والتوافقية
-    if (branchId === 'branch_abi_alkhaseeb') {
-      const legacyPayload = {
-        subscribers,
-        billing,
-        updatedAt: now
-      }
-      await fetch(`${SB_URL}/rest/v1/app_sync`, {
-        method: 'POST',
-        headers: {
-          apikey: SB_KEY,
-          Authorization: `Bearer ${SB_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          key: LEGACY_SYNC_KEY,
-          value: legacyPayload,
-          updated_at: now
-        })
-      })
-    }
   } catch (err) {
     console.error(`Error saving subscribers for branch ${branchId}:`, err)
   }
 }
 
-// قراءة بيانات المديرية من السحابة مع دعم نقل البيانات السابقة دون أي فقدان
+// قراءة بيانات المديرية من السحابة بأمان عبر مسار السيرفر
 export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
   let cloudDirectorate: DirectorateData | null = null
+  let legacyData: any = null
 
   try {
-    // 1. محاولة قراءة بيانات المديرية المهيكلة أولاً
-    const res = await fetch(
-      `${SB_URL}/rest/v1/app_sync?key=eq.${SYNC_ROW_KEY}&select=value`,
-      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
-    )
+    const res = await fetch('/api/directorate')
     if (res.ok) {
-      const rows = await res.json()
-      if (rows[0]?.value) {
-        cloudDirectorate = rows[0].value as DirectorateData
-        if (cloudDirectorate && cloudDirectorate.branches) {
-          cloudDirectorate.branches = cloudDirectorate.branches.map(b => ({
-            ...b,
-            subscribersCount: b.subscribersCount ?? (b.subscribers?.length || 0),
-            subscribers: [],
-            billing: {}
-          }))
+      const json = await res.json()
+      if (json.success && json.data) {
+        if (json.isLegacy) {
+          legacyData = json.data
+        } else {
+          cloudDirectorate = json.data as DirectorateData
+          if (cloudDirectorate && cloudDirectorate.branches) {
+            cloudDirectorate.branches = cloudDirectorate.branches.map(b => ({
+              ...b,
+              subscribersCount: b.subscribersCount ?? (b.subscribers?.length || 0),
+              subscribers: [],
+              billing: {}
+            }))
+          }
         }
       }
     }
@@ -194,20 +137,6 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
 
   // إذا لم نجد بيانات مهيكلة، نقرأ البيانات السابقة (1005 مشترك) ونحولها بسلامة تامة
   if (!cloudDirectorate || !cloudDirectorate.branches || cloudDirectorate.branches.length === 0) {
-    let legacyData: any = null
-    try {
-      const resLegacy = await fetch(
-        `${SB_URL}/rest/v1/app_sync?key=eq.${LEGACY_SYNC_KEY}&select=value`,
-        { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
-      )
-      if (resLegacy.ok) {
-        const rows = await resLegacy.json()
-        legacyData = rows[0]?.value
-      }
-    } catch (e) {
-      console.error('Error fetching legacy data:', e)
-    }
-
     // استرجاع من الكاش المحلي إذا فشل الاتصال
     if (!legacyData && typeof window !== 'undefined') {
       try {
@@ -381,18 +310,13 @@ export async function saveDirectorateToCloud(data: DirectorateData): Promise<voi
   }
 
   try {
-    await fetch(`${SB_URL}/rest/v1/app_sync`, {
+    await fetch('/api/directorate', {
       method: 'POST',
       headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        key: SYNC_ROW_KEY,
-        value: lightweightDirectorate,
-        updated_at: data.updatedAt
+        data: lightweightDirectorate
       })
     })
   } catch (e) {

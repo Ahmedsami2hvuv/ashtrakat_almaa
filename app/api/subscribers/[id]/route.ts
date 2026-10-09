@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { isAuthorizedRequest } from '@/lib/authHelper'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!isAuthorizedRequest(request)) {
+      return NextResponse.json({ error: 'غير مصرح لك بإجراء هذا التعديل' }, { status: 401 })
+    }
+
     const body = await request.json()
     const id = parseInt(params.id)
 
@@ -52,6 +57,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!isAuthorizedRequest(request)) {
+      return NextResponse.json({ error: 'غير مصرح لك بحذف المشترك' }, { status: 401 })
+    }
+
     const id = parseInt(params.id)
 
     const { error } = await supabase

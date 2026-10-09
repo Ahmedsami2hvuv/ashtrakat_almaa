@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { isAuthorizedRequest } from '@/lib/authHelper'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,10 @@ export async function GET(request: Request) {
 // إضافة مشترك جديد
 export async function POST(request: Request) {
   try {
+    if (!isAuthorizedRequest(request)) {
+      return NextResponse.json({ error: 'غير مصرح لك بإضافة مشترك' }, { status: 401 })
+    }
+
     const body = await request.json()
 
     const { data, error } = await supabase
