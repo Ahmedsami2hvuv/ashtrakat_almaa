@@ -739,87 +739,95 @@ export default function BranchManagerDashboard({
     { id: 'writers', label: 'الكتّاب', icon: BookOpen, count: stats.totalWriters },
     { id: 'treasury', label: 'الخزنة', icon: Vault, count: branch.treasuryManagers?.length || 0 },
     { id: 'branch_info', label: 'بيانات الفرع', icon: Building2 },
-    { id: 'settings', label: 'الإعدادات AI', icon: Settings }
+    { id: 'settings', label: 'الإعدادات و AI', icon: Settings }
   ]
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans" dir="rtl">
-      {/* الترويسة العلوية الفاتحة الواضحة */}
+      {/* الترويسة العلوية الفاتحة والمنسقة تماماً للموبايل والكمبيوتر */}
       <header className="bg-white border-b border-slate-200 text-slate-900 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-3.5 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm shrink-0">
               <Building2 className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-black text-slate-900">{branch.name}</h1>
-                <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold px-2.5 py-0.5 rounded-md">
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-base font-black text-slate-900 truncate">
+                {branch.name}
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-[130px] sm:max-w-none">
                   {currentManager ? currentManager.name : 'مسؤول الفرع'}
                 </span>
+                <span className="hidden sm:inline text-[11px] text-slate-400 font-bold">• لوحة التحكم</span>
               </div>
-              <p className="text-[11px] text-slate-500">لوحة التحكم التنفيذية للجباية والكوادر</p>
             </div>
           </div>
 
           <button
             onClick={() => setIsConsignmentA4Open(true)}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
+            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0"
           >
-            <FileText className="w-4 h-4" />
-            <span>تنزيل الإرساليات (A4)</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>طباعة الإرساليات (A4)</span>
           </button>
         </div>
       </header>
 
       {/* المحتوى الرئيسي */}
-      <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6">
+      <div className="flex-1 max-w-7xl mx-auto w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
         
-        {/* بطاقات الإحصائيات الفاتحة الناصعة */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <Users className="w-5 h-5" />
+        {/* شبكة الإحصائيات المدمجة والمريحة للموبايل */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
+          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
+            <div className="p-2 sm:p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-500">إجمالي المشتركين</p>
-              <p className="text-base md:text-lg font-black text-slate-900">{stats.totalSubscribers.toLocaleString('ar-IQ')}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
-              <Wallet className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-500">مجموع الديون والذمم</p>
-              <p className="text-sm md:text-base font-black text-rose-600">{stats.totalDebt.toLocaleString('ar-IQ')} <span className="text-[10px]">د.ع</span></p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">إجمالي المشتركين</p>
+              <p className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                {stats.totalSubscribers.toLocaleString('ar-IQ')}
+              </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <MapPin className="w-5 h-5" />
+          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
+            <div className="p-2 sm:p-2.5 bg-rose-50 text-rose-600 rounded-xl shrink-0">
+              <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-500">المناطق المشمولة</p>
-              <p className="text-base md:text-lg font-black text-slate-900">{stats.totalAreas}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">مجموع الديون</p>
+              <p className="text-xs sm:text-sm font-black text-rose-600 leading-tight truncate">
+                {stats.totalDebt.toLocaleString('ar-IQ')} <span className="text-[9px]">د.ع</span>
+              </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
-              <BookOpen className="w-5 h-5" />
+          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
+            <div className="p-2 sm:p-2.5 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-500">الكوادر (محصلين وكتاب)</p>
-              <p className="text-base md:text-lg font-black text-slate-900">{stats.totalCollectors + stats.totalWriters}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">المناطق المشمولة</p>
+              <p className="text-sm sm:text-base font-black text-slate-900 leading-tight">{stats.totalAreas}</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
+            <div className="p-2 sm:p-2.5 bg-purple-50 text-purple-600 rounded-xl shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">الكوادر المسجلة</p>
+              <p className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                {stats.totalCollectors + stats.totalWriters}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* شريط الأقسام (Tabs) أبيض واضح وبأيقونات وأرقام بارزة */}
-        <div className="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm overflow-x-auto flex items-center gap-1.5">
+        {/* شريط الأقسام (Tabs) انسيابي وخفيف للموبايل */}
+        <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto flex items-center gap-1">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -827,16 +835,16 @@ export default function BranchManagerDashboard({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as TabType)}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 whitespace-nowrap transition-all ${
+                className={`px-3 sm:px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                     isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
                   }`}>
                     {item.count}
@@ -849,50 +857,22 @@ export default function BranchManagerDashboard({
 
         {/* جسم الشاشة الرئيسي */}
         <main className="space-y-6">
-          {/* تبويب المشتركين */}
+          {/* تبويب المشتركين: نظيف وخفيف وخالٍ من الأزرار المزدحمة */}
           {activeTab === 'subscribers' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <h3 className="text-base md:text-lg font-black text-slate-900">مشتركو {branch.name}</h3>
-                  <p className="text-xs text-slate-500">قاعدة بيانات المشتركين المسجلين في هذا الفرع</p>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900">سجل المشتركين ({filteredSubscribers.length})</h3>
+                  <p className="text-[11px] text-slate-500">قائمة المشتركين المسجلين في {branch.name}</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() =>
-                      onOpenSubscriberApp({
-                        role: 'manager',
-                        userTitle: `مسؤول فرع (${branch.name})`,
-                        canEdit: true
-                      })
-                    }
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>تطبيق المشتركين</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setExcelPreviewResult(null)
-                      setExcelError(null)
-                      setShowExcelModal(true)
-                    }}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                    <span>استيراد ملف إكسل شامل</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowImportModal(true)}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-200"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>لصق نصي</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  <Settings className="w-3.5 h-3.5 text-slate-500" />
+                  <span>الاستيراد والإعدادات</span>
+                </button>
               </div>
 
               {/* شريط البحث */}
@@ -1318,8 +1298,90 @@ export default function BranchManagerDashboard({
           {/* تبويب الإعدادات والذكاء الاصطناعي */}
           {activeTab === 'settings' && (
             <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-6">
+              {/* قسم إدارة واستيراد المشتركين */}
+              <div className="space-y-3 pb-6 border-b border-slate-200">
+                <div>
+                  <h3 className="text-sm md:text-base font-black text-slate-900">
+                    إدارة واستيراد بيانات المشتركين
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    أدوات استيراد السجلات وفتح التطبيق الميداني
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* زر فتح تطبيق المشتركين */}
+                  <button
+                    onClick={() =>
+                      onOpenSubscriberApp({
+                        role: 'manager',
+                        userTitle: `مسؤول فرع (${branch.name})`,
+                        canEdit: true
+                      })
+                    }
+                    className="p-4 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+                        <ExternalLink className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] bg-blue-200/60 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                        مباشر
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">تطبيق المشتركين</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">فتح واجهة المشتركين وإدارة الجباية</p>
+                    </div>
+                  </button>
+
+                  {/* زر استيراد ملف إكسل شامل */}
+                  <button
+                    onClick={() => {
+                      setExcelPreviewResult(null)
+                      setExcelError(null)
+                      setShowExcelModal(true)
+                    }}
+                    className="p-4 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs">
+                        <FileSpreadsheet className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] bg-emerald-200/60 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                        Excel
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">استيراد ملف إكسل شامل</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">استخراج المشتركين والمناطق والكتاب تلقائياً</p>
+                    </div>
+                  </button>
+
+                  {/* زر استيراد نصي سريع */}
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-slate-700 text-white rounded-xl shadow-xs">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-full">
+                        لصق
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">استيراد نصي (لصق)</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">لصق قائمة أرقام وأسماء سطر بسطر</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* قسم الذكاء الاصطناعي */}
               <div>
-                <h3 className="text-base md:text-lg font-black text-slate-900">إعدادات الذكاء الاصطناعي (AI)</h3>
+                <h3 className="text-sm md:text-base font-black text-slate-900">إعدادات الذكاء الاصطناعي (AI)</h3>
                 <p className="text-xs text-slate-500">إدارة مفاتيح Gemini API لاستخراج بيانات الوصولات إلكترونياً</p>
               </div>
 
