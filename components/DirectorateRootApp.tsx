@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
-import { loadDirectorateFromCloud, saveDirectorateToCloud } from '@/lib/directorateStore'
+import { loadDirectorateFromCloud, saveDirectorateToCloud, loadBranchSubscribersAndBilling, saveBranchSubscribersAndBilling } from '@/lib/directorateStore'
+import { Subscriber, BillingRecords } from '@/components/MainApp'
 
 const DirectorDashboard = dynamic(() => import('./DirectorDashboard'), {
   ssr: false,
@@ -54,6 +55,13 @@ export default function DirectorateRootApp() {
   const [selectedBranch, setSelectedBranch] = useState<DirectorateBranch | null>(null)
   const [selectedManager, setSelectedManager] = useState<BranchManager | null>(null)
 
+  // بيانات المشتركين الخاصة بالفرع المحملة عند الطلب فقط
+  const [subscriberAppData, setSubscriberAppData] = useState<{
+    subscribers: Subscriber[]
+    billing: BillingRecords
+  }>({ subscribers: [], billing: {} })
+  const [isLoadingSubscriberApp, setIsLoadingSubscriberApp] = useState(false)
+
   // حالة المشتركين المنفصلة
   const [subscriberAppProps, setSubscriberAppProps] = useState<{
     role: 'manager' | 'collector' | 'writer'
@@ -62,6 +70,25 @@ export default function DirectorateRootApp() {
     assignedAreaIds?: string[]
     assignedSubscriberIds?: number[]
   } | null>(null)
+
+  // دالة فتح تطبيق المشتركين مع جلب بيانات هذا الفرع حصراً عند الطلب
+  const handleOpenSubscriberApp = async (branch: DirectorateBranch, params: any) => {
+    setIsLoadingSubscriberApp(true)
+    setSelectedBranch(branch)
+    setSubscriberAppProps(params)
+    try {
+      const data = await loadBranchSubscribersAndBilling(branch.id)
+      setSubscriberAppData({
+        subscribers: data.subscribers,
+        billing: data.billing
+      })
+      setActiveView('subscriber_app')
+    } catch (err) {
+      console.error('Failed to load subscriber app data:', err)
+    } finally {
+      setIsLoadingSubscriberApp(false)
+    }
+  }
 
   // 1. تحميل بيانات المديرية من السحابة وفحص الرابط المباشر
   useEffect(() => {
@@ -109,6 +136,8 @@ export default function DirectorateRootApp() {
 
             if (matchedBranch && matchedCollector) {
               setSelectedBranch(matchedBranch)
+              const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
+              setSubscriberAppData(subsData)
               setSubscriberAppProps({
                 role: 'collector',
                 userTitle: `محصل: ${matchedCollector.name} (${matchedBranch.name})`,
@@ -138,6 +167,8 @@ export default function DirectorateRootApp() {
 
             if (matchedBranch && matchedWriter) {
               setSelectedBranch(matchedBranch)
+              const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
+              setSubscriberAppData(subsData)
               setSubscriberAppProps({
                 role: 'writer',
                 userTitle: `كاتب: ${matchedWriter.name} (${matchedBranch.name})`,
@@ -268,10 +299,22 @@ export default function DirectorateRootApp() {
         currentManager={selectedManager || selectedBranch.managers[0]}
         onUpdateBranch={handleUpdateBranch}
         onOpenSubscriberApp={(params) => {
-          setSubscriberAppProps(params)
-          setActiveView('subscriber_app')
+          handleOpenSubscriberApp(selectedBranch, params)
         }}
       />
+    )
+  }
+
+  // شاشة تحميل نظام المشتركين عند الطلب
+  if (isLoadingSubscriberApp) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white font-sans" dir="rtl">
+        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-2xl shadow-xl animate-pulse mb-4">
+          ماء
+        </div>
+        <h2 className="text-xl font-black">جارِ تحميل قاعدة بيانات المشتركين...</h2>
+        <p className="text-sm text-slate-400 mt-2">يتم استدعاء بيانات الفرع المختار فقط من السحابة</p>
+      </div>
     )
   }
 
@@ -280,18 +323,25 @@ export default function DirectorateRootApp() {
     return (
       <MainApp
         branchId={selectedBranch?.id}
-        initialSubscribers={selectedBranch?.subscribers || []}
+        initialSubscribers={subscriberAppData.subscribers}
         initialAreas={selectedBranch?.areas || []}
-        initialBilling={selectedBranch?.billing || {}}
+        initialBilling={subscriberAppData.billing}
         initialPricing={selectedBranch?.pricing}
         initialAiApiKeys={selectedBranch?.aiApiKeys || []}
-        onSaveBranchData={(branchData) => {
+        onSaveBranchData={async (branchData) => {
           if (!selectedBranch) return
+          // حفظ المشتركين في المفتاح السحابي المنفصل للفرع حصراً دون إثقال قاعدة البيانات
+          await saveBranchSubscribersAndBilling(selectedBranch.id, branchData.subscribers, branchData.billing)
+          setSubscriberAppData({
+            subscribers: branchData.subscribers,
+            billing: branchData.billing
+          })
           const updatedBranch: DirectorateBranch = {
             ...selectedBranch,
-            subscribers: branchData.subscribers,
+            subscribersCount: branchData.subscribers.length,
+            subscribers: [],
             areas: branchData.areas,
-            billing: branchData.billing,
+            billing: {},
             pricing: branchData.pricing,
             aiApiKeys: branchData.aiApiKeys
           }

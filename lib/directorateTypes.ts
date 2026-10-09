@@ -80,6 +80,7 @@ export interface DirectorateBranch {
   consignments: Consignment[]
   pricing?: Pricing
   aiApiKeys?: string[]
+  subscribersCount?: number
 }
 
 export interface DirectorateData {

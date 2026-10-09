@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   DirectorateBranch,
   BranchManager,
@@ -8,7 +8,12 @@ import {
   BranchWriter,
   Consignment
 } from '@/lib/directorateTypes'
-import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
+import {
+  generateSecureToken,
+  generateWhatsAppLink,
+  loadBranchSubscribersAndBilling,
+  saveBranchSubscribersAndBilling
+} from '@/lib/directorateStore'
 import { Area, Subscriber, BillingRecords } from '@/components/MainApp'
 import ConsignmentsA4Page from './ConsignmentsA4Page'
 import * as XLSX from 'xlsx'
@@ -55,9 +60,39 @@ export default function BranchManagerDashboard({
   onUpdateBranch,
   onOpenSubscriberApp
 }: BranchManagerDashboardProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('subscribers')
+  // التبويب الافتراضي يبدأ بالمناطق لمنع تحميل ملايين المشتركين تلقائياً عند فتح الحساب
+  const [activeTab, setActiveTab] = useState<TabType>('areas')
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // حالات المشتركين المحملين عند الطلب فقط مع كاش ذكي
+  const [loadedSubscribers, setLoadedSubscribers] = useState<Subscriber[]>(() => branch.subscribers || [])
+  const [loadedBilling, setLoadedBilling] = useState<BillingRecords>(() => branch.billing || {})
+  const [isLoadingSubscribers, setIsLoadingSubscribers] = useState(false)
+  const [hasLoadedSubscribers, setHasLoadedSubscribers] = useState(false)
+
+  // دالة جلب المشتركين عند الطلب
+  const fetchBranchSubscribers = async (force = false) => {
+    if (!force && hasLoadedSubscribers && loadedSubscribers.length > 0) return
+    setIsLoadingSubscribers(true)
+    try {
+      const data = await loadBranchSubscribersAndBilling(branch.id, force)
+      setLoadedSubscribers(data.subscribers)
+      setLoadedBilling(data.billing)
+      setHasLoadedSubscribers(true)
+    } catch (err) {
+      console.error('Failed to load branch subscribers:', err)
+    } finally {
+      setIsLoadingSubscribers(false)
+    }
+  }
+
+  // تحميل المشتركين تلقائياً فقط إذا فتح المسؤول تبويب المشتركين
+  useEffect(() => {
+    if (activeTab === 'subscribers' && !hasLoadedSubscribers) {
+      fetchBranchSubscribers()
+    }
+  }, [activeTab, hasLoadedSubscribers])
 
   // حالات المناطق
   const [newAreaName, setNewAreaName] = useState('')
@@ -102,24 +137,24 @@ export default function BranchManagerDashboard({
   // حالات الذكاء الاصطناعي
   const [newApiKey, setNewApiKey] = useState('')
 
-  // حساب الإحصائيات
+  // حساب الإحصائيات (سريعة وخفيفة بالاعتماد على subscribersCount أو المشتركين المحملين)
   const stats = useMemo(() => {
-    const totalSubscribers = branch.subscribers?.length || 0
-    const totalDebt = branch.subscribers?.reduce((sum, s) => sum + (s.remainingPrev || 0), 0) || 0
+    const totalSubscribers = branch.subscribersCount ?? (hasLoadedSubscribers ? loadedSubscribers.length : (branch.subscribers?.length || 0))
+    const totalDebt = loadedSubscribers.reduce((sum, s) => sum + (s.remainingPrev || 0), 0)
     const totalAreas = branch.areas?.length || 0
     const totalCollectors = branch.collectors?.length || 0
     const totalWriters = branch.writers?.length || 0
     return { totalSubscribers, totalDebt, totalAreas, totalCollectors, totalWriters }
-  }, [branch])
+  }, [branch, loadedSubscribers, hasLoadedSubscribers])
 
-  // فلترة المشتركين
+  // فلترة المشتركين المحملين فقط
   const filteredSubscribers = useMemo(() => {
-    if (!searchQuery.trim()) return branch.subscribers || []
+    if (!searchQuery.trim()) return loadedSubscribers
     const q = searchQuery.toLowerCase()
-    return (branch.subscribers || []).filter(
+    return loadedSubscribers.filter(
       s => s.name.toLowerCase().includes(q) || s.id.toString().includes(q)
     )
-  }, [branch.subscribers, searchQuery])
+  }, [loadedSubscribers, searchQuery])
 
   // ------------------ إدارة المناطق ------------------
   const handleAddArea = (e?: React.FormEvent) => {
@@ -202,8 +237,8 @@ export default function BranchManagerDashboard({
     const newSubscribers: Subscriber[] = []
     let addedCount = 0
 
-    const existingIds = new Set(branch.subscribers.map(s => s.id))
-    const startOrder = branch.subscribers.length + 1
+    const existingIds = new Set(loadedSubscribers.map(s => s.id))
+    const startOrder = loadedSubscribers.length + 1
 
     lines.forEach((line, idx) => {
       const trimmed = line.trim()
@@ -221,7 +256,7 @@ export default function BranchManagerDashboard({
             name,
             phone: '',
             areaId: '',
-            branchId: '',
+            branchId: branch.id,
             propertyType: 'سكني',
             meterType: '4 متر',
             detailedAddress: 'تم الاستيراد حديثاً',
@@ -241,13 +276,19 @@ export default function BranchManagerDashboard({
       return
     }
 
+    const allSubscribers = [...loadedSubscribers, ...newSubscribers]
+    setLoadedSubscribers(allSubscribers)
+    setHasLoadedSubscribers(true)
+    saveBranchSubscribersAndBilling(branch.id, allSubscribers, loadedBilling)
+
     onUpdateBranch({
       ...branch,
-      subscribers: [...branch.subscribers, ...newSubscribers]
+      subscribersCount: allSubscribers.length,
+      subscribers: []
     })
     setShowImportModal(false)
     setImportText('')
-    alert(`تم استيراد ${addedCount} مشترك بنجاح.`)
+    alert(`تم استيراد ${addedCount} مشترك بنجاح وحفظهم في قاعدة بيانات الفرع.`)
   }
 
   // ------------------ استيراد ملف إكسل شامل (Excel) ------------------
@@ -300,7 +341,7 @@ export default function BranchManagerDashboard({
         const writerMap = new Map<string, BranchWriter>()
         currentWriters.forEach(w => writerMap.set(w.name.trim().toLowerCase(), w))
 
-        const currentSubscribers = [...(branch.subscribers || [])]
+        const currentSubscribers = [...(loadedSubscribers || [])]
         const subscriberIdMap = new Map<number, Subscriber>()
         currentSubscribers.forEach(s => subscriberIdMap.set(s.id, s))
 
@@ -529,11 +570,17 @@ export default function BranchManagerDashboard({
   const handleConfirmExcelImport = () => {
     if (!excelPreviewResult) return
 
+    const newSubs = excelPreviewResult.subscribers
+    setLoadedSubscribers(newSubs)
+    setHasLoadedSubscribers(true)
+    saveBranchSubscribersAndBilling(branch.id, newSubs, loadedBilling)
+
     onUpdateBranch({
       ...branch,
       areas: excelPreviewResult.areas,
       writers: excelPreviewResult.writers,
-      subscribers: excelPreviewResult.subscribers
+      subscribersCount: newSubs.length,
+      subscribers: []
     })
 
     const msg = `تم الاستيراد بنجاح!
@@ -793,29 +840,48 @@ export default function BranchManagerDashboard({
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-sm sm:text-base font-black text-slate-900">سجل المشتركين ({filteredSubscribers.length})</h3>
-                  <p className="text-[11px] text-slate-500">قائمة المشتركين المسجلين في {branch.name}</p>
+                  <p className="text-[11px] text-slate-500">قائمة المشتركين المسجلين في {branch.name} (يتم تحميلها عند الطلب لحفظ أداء النظام)</p>
                 </div>
 
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                >
-                  <Settings className="w-3.5 h-3.5 text-slate-500" />
-                  <span>الاستيراد والإعدادات</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fetchBranchSubscribers(true)}
+                    disabled={isLoadingSubscribers}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <span>🔄</span>
+                    <span>{isLoadingSubscribers ? 'جارِ التحميل...' : 'تحديث البيانات'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-500" />
+                    <span>الاستيراد والإعدادات</span>
+                  </button>
+                </div>
               </div>
 
-              {/* شريط البحث */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث برقم المشترك أو اسمه..."
-                  className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                />
-              </div>
+              {isLoadingSubscribers ? (
+                <div className="py-12 text-center text-blue-600 font-bold bg-blue-50/50 rounded-xl">
+                  <div className="text-xl mb-2">⏳</div>
+                  <p className="text-xs">جارِ تحميل قاعدة بيانات مشتركي الفرع من السحابة...</p>
+                </div>
+              ) : (
+                <>
+                  {/* شريط البحث */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="ابحث برقم المشترك أو اسمه..."
+                      className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                    />
+                  </div>
 
               {/* جدول المشتركين النظيف والمقروء */}
               <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -869,6 +935,8 @@ export default function BranchManagerDashboard({
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                 </div>
+              )}
+                </>
               )}
             </div>
           )}

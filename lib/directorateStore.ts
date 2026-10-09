@@ -40,6 +40,130 @@ export function generateWhatsAppLink(phone: string, message: string): string {
   return `https://wa.me/${cleanPhone}?text=${encodedMsg}`
 }
 
+// كاش في الذاكرة لمنع إعادة جلب المشتركين عند التنقل بين الأقسام
+const branchSubscribersCache: Record<string, { subscribers: Subscriber[]; billing: BillingRecords; timestamp: number }> = {}
+
+// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط (Lazy / On-demand loading) مع كاش ذكي
+export async function loadBranchSubscribersAndBilling(
+  branchId: string,
+  forceRefresh = false
+): Promise<{ subscribers: Subscriber[]; billing: BillingRecords }> {
+  // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري، نرجعها فوراً من الذاكرة (0 طلبات لسوبابيس)
+  if (!forceRefresh && branchSubscribersCache[branchId]) {
+    return branchSubscribersCache[branchId]
+  }
+
+  const branchKey = `branch_subscribers_${branchId}`
+  let subscribers: Subscriber[] = []
+  let billing: BillingRecords = {}
+
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/app_sync?key=eq.${branchKey}&select=value`,
+      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
+    )
+    if (res.ok) {
+      const rows = await res.json()
+      if (rows[0]?.value) {
+        subscribers = rows[0].value.subscribers || []
+        billing = rows[0].value.billing || {}
+      }
+    }
+  } catch (err) {
+    console.error(`Error loading subscribers for branch ${branchId}:`, err)
+  }
+
+  // إذا لم نجد بيانات بالفرع وكان الفرع هو أبي الخصيب، نفحص الجدول القديم main_data
+  if (subscribers.length === 0 && (branchId === 'branch_abi_alkhaseeb' || branchId.includes('abi_al'))) {
+    try {
+      const legacyRes = await fetch(
+        `${SB_URL}/rest/v1/app_sync?key=eq.${LEGACY_SYNC_KEY}&select=value`,
+        { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
+      )
+      if (legacyRes.ok) {
+        const rows = await legacyRes.json()
+        if (rows[0]?.value?.subscribers) {
+          subscribers = rows[0].value.subscribers || []
+          billing = rows[0].value.billing || {}
+        }
+      }
+    } catch {}
+  }
+
+  // حفظ في كاش الذاكرة
+  branchSubscribersCache[branchId] = {
+    subscribers,
+    billing,
+    timestamp: Date.now()
+  }
+
+  return { subscribers, billing }
+}
+
+// حفظ مشتركي وسجلات ديون فرع معين بشكل منفصل دون المساس بباقي الأفرع
+export async function saveBranchSubscribersAndBilling(
+  branchId: string,
+  subscribers: Subscriber[],
+  billing: BillingRecords
+): Promise<void> {
+  const branchKey = `branch_subscribers_${branchId}`
+  const now = new Date().toISOString()
+
+  // تحديث الكاش المحلي فوراً
+  branchSubscribersCache[branchId] = {
+    subscribers,
+    billing,
+    timestamp: Date.now()
+  }
+
+  try {
+    await fetch(`${SB_URL}/rest/v1/app_sync`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        key: branchKey,
+        value: {
+          branchId,
+          subscribers,
+          billing,
+          updatedAt: now
+        },
+        updated_at: now
+      })
+    })
+
+    // إذا كان فرع أبي الخصيب، نحدث الجدول القديم أيضاً للأمان والتوافقية
+    if (branchId === 'branch_abi_alkhaseeb') {
+      const legacyPayload = {
+        subscribers,
+        billing,
+        updatedAt: now
+      }
+      await fetch(`${SB_URL}/rest/v1/app_sync`, {
+        method: 'POST',
+        headers: {
+          apikey: SB_KEY,
+          Authorization: `Bearer ${SB_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          key: LEGACY_SYNC_KEY,
+          value: legacyPayload,
+          updated_at: now
+        })
+      })
+    }
+  } catch (err) {
+    console.error(`Error saving subscribers for branch ${branchId}:`, err)
+  }
+}
+
 // قراءة بيانات المديرية من السحابة مع دعم نقل البيانات السابقة دون أي فقدان
 export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
   let cloudDirectorate: DirectorateData | null = null
@@ -54,6 +178,14 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
       const rows = await res.json()
       if (rows[0]?.value) {
         cloudDirectorate = rows[0].value as DirectorateData
+        if (cloudDirectorate && cloudDirectorate.branches) {
+          cloudDirectorate.branches = cloudDirectorate.branches.map(b => ({
+            ...b,
+            subscribersCount: b.subscribersCount ?? (b.subscribers?.length || 0),
+            subscribers: [],
+            billing: {}
+          }))
+        }
       }
     }
   } catch (e) {
@@ -218,14 +350,33 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
   return cloudDirectorate
 }
 
-// حفظ بيانات المديرية إلى السحابة في سوبابيس
+// حفظ بيانات المديرية إلى السحابة في سوبابيس (هيكل إداري خفيف وسريع)
 export async function saveDirectorateToCloud(data: DirectorateData): Promise<void> {
   data.updatedAt = new Date().toISOString()
 
-  // حفظ في الكاش المحلي أولاً
+  // حفظ المشتركين لأي فرع يحتوي على بيانات مشتركين في جدوله المنفصل أولاً
+  for (const b of data.branches) {
+    if (b.subscribers && b.subscribers.length > 0) {
+      b.subscribersCount = b.subscribers.length
+      await saveBranchSubscribersAndBilling(b.id, b.subscribers, b.billing || {})
+    }
+  }
+
+  // إنشاء نسخة نظيفة وخفيفة جداً من هيكل المديرية بدون مصفوفات المشتركين العملاقة
+  const lightweightDirectorate: DirectorateData = {
+    ...data,
+    branches: data.branches.map(b => ({
+      ...b,
+      subscribersCount: b.subscribersCount ?? (b.subscribers?.length || 0),
+      subscribers: [], // إبقاء المصفوفة فارغة في الهيكل العام لمنع استهلاك السيرفر والقاعدة
+      billing: {}
+    }))
+  }
+
+  // حفظ في الكاش المحلي
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data))
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(lightweightDirectorate))
     } catch {}
   }
 
@@ -240,38 +391,10 @@ export async function saveDirectorateToCloud(data: DirectorateData): Promise<voi
       },
       body: JSON.stringify({
         key: SYNC_ROW_KEY,
-        value: data,
+        value: lightweightDirectorate,
         updated_at: data.updatedAt
       })
     })
-
-    // الحفاظ أيضاً على مزامنة الفرع الأول (أبي الخصيب) في الجدول القديم لضمان أمان التوافقية العكسية 100%
-    const mainBranch = data.branches.find(b => b.id === 'branch_abi_alkhaseeb') || data.branches[0]
-    if (mainBranch) {
-      const legacyPayload = {
-        subscribers: mainBranch.subscribers,
-        areas: mainBranch.areas,
-        billing: mainBranch.billing,
-        pricing: mainBranch.pricing,
-        aiApiKeys: mainBranch.aiApiKeys,
-        collectorName: mainBranch.collectors[0]?.name || 'المحصل العام',
-        collectorPhone: mainBranch.collectors[0]?.phone || '07700000000'
-      }
-      await fetch(`${SB_URL}/rest/v1/app_sync`, {
-        method: 'POST',
-        headers: {
-          apikey: SB_KEY,
-          Authorization: `Bearer ${SB_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          key: LEGACY_SYNC_KEY,
-          value: legacyPayload,
-          updated_at: data.updatedAt
-        })
-      })
-    }
   } catch (e) {
     console.error('Error saving directorate data:', e)
   }

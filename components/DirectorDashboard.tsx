@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
-import { generateSecureToken, generateWhatsAppLink } from '@/lib/directorateStore'
+import { generateSecureToken, generateWhatsAppLink, loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Area, Subscriber, calculateBilling, PERIODS, formatInputDisplay } from '@/components/MainApp'
 
 interface DirectorDashboardProps {
@@ -35,8 +35,18 @@ export default function DirectorDashboard({
   // حالات النسخ
   const [copiedManagerId, setCopiedManagerId] = useState<string | null>(null)
 
-  // التبويب النشط داخل صفحة الفرع المستقلة
-  const [branchDetailTab, setBranchDetailTab] = useState<'subscribers' | 'areas' | 'collectors' | 'writers' | 'managers'>('subscribers')
+  // التبويب النشط داخل صفحة الفرع المستقلة (يبدأ بالمناطق لمنع تحميل المشتركين تلقائياً)
+  const [branchDetailTab, setBranchDetailTab] = useState<'subscribers' | 'areas' | 'collectors' | 'writers' | 'managers'>('areas')
+
+  // حالات المشتركين عند الطلب لقسم المشتركين المركزي
+  const [selectedSubscribersBranch, setSelectedSubscribersBranch] = useState<DirectorateBranch | null>(null)
+  const [loadedSubscribers, setLoadedSubscribers] = useState<Subscriber[]>([])
+  const [loadedBilling, setLoadedBilling] = useState<any>({})
+  const [isLoadingSubscribers, setIsLoadingSubscribers] = useState(false)
+
+  // حالات المشتركين عند الطلب لصفحة الفرع المستقلة
+  const [branchDetailSubscribers, setBranchDetailSubscribers] = useState<Subscriber[]>([])
+  const [isLoadingBranchDetailSubscribers, setIsLoadingBranchDetailSubscribers] = useState(false)
 
   // بحث المشتركين داخل الفرع
   const [branchSubscriberSearch, setBranchSubscriberSearch] = useState('')
@@ -59,15 +69,39 @@ export default function DirectorDashboard({
   const [showAddBranchModal, setShowAddBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
 
+  // دالة تحميل مشتركي الفرع عند الطلب لقسم المشتركين المركزي
+  const handleSelectBranchForSubscribers = async (branch: DirectorateBranch, force = false) => {
+    setSelectedSubscribersBranch(branch)
+    setIsLoadingSubscribers(true)
+    try {
+      const data = await loadBranchSubscribersAndBilling(branch.id, force)
+      setLoadedSubscribers(data.subscribers)
+      setLoadedBilling(data.billing)
+    } finally {
+      setIsLoadingSubscribers(false)
+    }
+  }
+
+  // دالة تحميل مشتركي الفرع لصفحة الفرع المستقلة
+  const handleLoadBranchDetailSubscribers = async (branchId: string, force = false) => {
+    setIsLoadingBranchDetailSubscribers(true)
+    try {
+      const data = await loadBranchSubscribersAndBilling(branchId, force)
+      setBranchDetailSubscribers(data.subscribers)
+    } finally {
+      setIsLoadingBranchDetailSubscribers(false)
+    }
+  }
+
   // الفرع المختار حالياً
   const selectedBranch = useMemo(() => {
     if (!selectedBranchId) return null
     return directorateData.branches.find(b => b.id === selectedBranchId) || null
   }, [selectedBranchId, directorateData.branches])
 
-  // الإحصائيات العامة المجمعة
+  // الإحصائيات العامة المجمعة (سريعة جداً وخفيفة بدون جلب مصفوفات المشتركين)
   const totalSubscribers = useMemo(() => {
-    return directorateData.branches.reduce((sum, b) => sum + (b.subscribers?.length || 0), 0)
+    return directorateData.branches.reduce((sum, b) => sum + (b.subscribersCount ?? b.subscribers?.length ?? 0), 0)
   }, [directorateData.branches])
 
   const totalCollectors = useMemo(() => {
@@ -124,32 +158,18 @@ export default function DirectorDashboard({
     return list
   }, [directorateData.branches])
 
-  // قائمة بجميع المشتركين عبر كافة الأفرع
-  const allSubscribersList = useMemo(() => {
-    const list: { subscriber: Subscriber; branch: DirectorateBranch }[] = []
-    directorateData.branches.forEach(b => {
-      ;(b.subscribers || []).forEach(s => {
-        list.push({ subscriber: s, branch: b })
-      })
-    })
-    return list
-  }, [directorateData.branches])
-
-  // تصفية جميع المشتركين حسب البحث
-  const filteredAllSubscribers = useMemo(() => {
+  // تصفية مشتركي الفرع المختار حالياً حسب البحث (عند الطلب فقط)
+  const filteredBranchSubscribers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return allSubscribersList
-    return allSubscribersList.filter(item => {
-      const s = item.subscriber
-      const b = item.branch
+    if (!q) return loadedSubscribers
+    return loadedSubscribers.filter(s => {
       return (
         s.name?.toLowerCase().includes(q) ||
         s.phone?.includes(q) ||
-        s.id?.toString().includes(q) ||
-        b.name?.toLowerCase().includes(q)
+        s.id?.toString().includes(q)
       )
     })
-  }, [allSubscribersList, searchQuery])
+  }, [loadedSubscribers, searchQuery])
 
   // قائمة بجميع المحصلين والكُتّاب عبر كافة الأفرع
   const allStaffList = useMemo(() => {
@@ -1001,7 +1021,7 @@ export default function DirectorDashboard({
                 {selectedBranch.name}
               </h2>
               <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px' }}>
-                كود الفرع: {selectedBranch.id} • المشتركون: {selectedBranch.subscribers?.length || 0}
+                كود الفرع: {selectedBranch.id} • المشتركون: {(selectedBranch.subscribersCount ?? selectedBranch.subscribers?.length ?? 0).toLocaleString('ar-IQ')}
               </p>
 
               {/* أزرار التبويبات الخمسة التفاعلية بالأعلى */}
@@ -1016,7 +1036,12 @@ export default function DirectorDashboard({
               >
                 {/* 1. المشتركون */}
                 <button
-                  onClick={() => setBranchDetailTab('subscribers')}
+                  onClick={() => {
+                    setBranchDetailTab('subscribers')
+                    if (branchDetailSubscribers.length === 0) {
+                      handleLoadBranchDetailSubscribers(selectedBranch.id)
+                    }
+                  }}
                   style={{
                     background: branchDetailTab === 'subscribers' ? '#eff6ff' : '#ffffff',
                     border: branchDetailTab === 'subscribers' ? '2px solid #0056b3' : '1px solid #cbd5e1',
@@ -1033,7 +1058,7 @@ export default function DirectorDashboard({
                     <span style={{ fontSize: '1.1rem' }}>👥</span>
                   </div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
-                    {(selectedBranch.subscribers?.length || 0).toLocaleString('ar-IQ')}
+                    {(selectedBranch.subscribersCount ?? selectedBranch.subscribers?.length ?? 0).toLocaleString('ar-IQ')}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: branchDetailTab === 'subscribers' ? '#0056b3' : '#94a3b8', fontWeight: 700, marginTop: '4px' }}>
                     قاعدة بيانات المشتركين
@@ -1162,39 +1187,67 @@ export default function DirectorDashboard({
                       </p>
                     </div>
 
-                    {/* بحث في المشتركين */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
-                        padding: '8px 14px',
-                        border: '1px solid #cbd5e1',
-                        width: '260px'
-                      }}
-                    >
-                      <svg style={{ width: '16px', height: '16px', color: '#64748b', marginLeft: '8px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <input
-                        type="text"
-                        placeholder="بحث بالاسم أو الهاتف..."
-                        value={branchSubscriberSearch}
-                        onChange={(e) => setBranchSubscriberSearch(e.target.value)}
+                    {/* زر تحديث وبحث في المشتركين */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleLoadBranchDetailSubscribers(selectedBranch.id, true)}
+                        disabled={isLoadingBranchDetailSubscribers}
                         style={{
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          outline: 'none',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                          width: '100%'
+                          padding: '8px 12px',
+                          background: '#f8fafc',
+                          color: '#0056b3',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          fontWeight: 800,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
-                      />
+                      >
+                        <span>🔄</span>
+                        <span>تحديث</span>
+                      </button>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '8px',
+                          padding: '8px 14px',
+                          border: '1px solid #cbd5e1',
+                          width: '240px'
+                        }}
+                      >
+                        <svg style={{ width: '16px', height: '16px', color: '#64748b', marginLeft: '8px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="بحث بالاسم أو الهاتف..."
+                          value={branchSubscriberSearch}
+                          onChange={(e) => setBranchSubscriberSearch(e.target.value)}
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            outline: 'none',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            width: '100%'
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {(!selectedBranch.subscribers || selectedBranch.subscribers.length === 0) ? (
+                  {isLoadingBranchDetailSubscribers ? (
+                    <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#0056b3', fontWeight: 800 }}>
+                      ⏳ جارِ جلب قاعدة بيانات مشتركي الفرع من السحابة...
+                    </div>
+                  ) : (!branchDetailSubscribers || branchDetailSubscribers.length === 0) ? (
                     <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
                       لا يوجد مشتركون مسجلون في هذا الفرع حالياً
                     </div>
@@ -1213,7 +1266,7 @@ export default function DirectorDashboard({
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedBranch.subscribers
+                          {branchDetailSubscribers
                             .filter(s => {
                               const q = branchSubscriberSearch.trim().toLowerCase()
                               if (!q) return true
@@ -2280,130 +2333,323 @@ export default function DirectorDashboard({
             )}
 
             {/* ======================================================== */}
-            {/* 4. صفحة المشتركين المركزية (المشتركين)                   */}
+            {/* 4. صفحة المشتركين المركزية (باختيار الفرع عند الطلب)      */}
             {/* ======================================================== */}
             {activeSection === 'subscribers' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div
-                  style={{
-                    background: '#ffffff',
-                    padding: '20px 25px',
-                    borderRadius: '12px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '12px'
-                  }}
-                >
-                  <div>
-                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
-                      قاعدة بيانات المشتركين المركزية ({allSubscribersList.length} مشترك)
-                    </h2>
-                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
-                      معاينة المشتركين وسجلات ديونهم وفترات الجباية (للقراءة فقط للمدير)
-                    </p>
-                  </div>
-
-                  {/* بحث في المشتركين */}
-                  <div style={{ width: '260px' }}>
-                    <input
-                      type="text"
-                      placeholder="بحث بالاسم أو الهاتف أو الحساب..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                {!selectedSubscribersBranch ? (
+                  /* شاشة اختيار الفرع للوصول إلى قاعدة بيانات المشتركين الخاصة به */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div
                       style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                        boxSizing: 'border-box'
+                        background: '#ffffff',
+                        padding: '24px 28px',
+                        borderRadius: '16px',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                        border: '1px solid #e2e8f0'
                       }}
-                    />
-                  </div>
-                </div>
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0056b3', fontSize: '1.3rem' }}>
+                          🏢
+                        </div>
+                        <div>
+                          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                            قواعد بيانات المشتركين في فروع المديرية
+                          </h2>
+                          <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                            للحفاظ على سرعة الخوادم وتجنب التحميل الضخم لملايين السجلات، يرجى اختيار الفرع المطلوب لعرض قاعدة بيانات المشتركين الخاصة به مباشرة:
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-                <div
-                  style={{
-                    background: '#ffffff',
-                    padding: '20px',
-                    borderRadius: '12px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                    overflowX: 'auto'
-                  }}
-                >
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>اسم المشترك</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>الفرع</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الحساب</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الهاتف</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>نوع العقار</th>
-                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>سجل الديون والمعاينة</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAllSubscribers.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
-                            {searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد مشتركون مسجلون في أي فرع بعد'}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAllSubscribers.map(({ subscriber, branch }) => (
-                          <tr key={subscriber.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
-                              {subscriber.name}
-                            </td>
-                            <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }}>
-                              {branch.name}
-                            </td>
-                            <td style={{ padding: '12px 15px', fontWeight: 700, color: '#475569' }}>
-                              #{subscriber.id}
-                            </td>
-                            <td style={{ padding: '12px 15px', fontWeight: 600, color: '#64748b', direction: 'ltr', textAlign: 'right' }}>
-                              {subscriber.phone || '—'}
-                            </td>
-                            <td style={{ padding: '12px 15px', fontWeight: 700 }}>
-                              <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
-                                {subscriber.propertyType || 'سكني'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
-                              <button
-                                onClick={() => {
-                                  setSelectedBranchId(branch.id)
-                                  setViewingSubscriber(subscriber)
-                                  setViewingSubscriberYear(2026)
-                                }}
-                                style={{
-                                  backgroundColor: '#0056b3',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  padding: '7px 14px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 800,
-                                  fontSize: '0.82rem',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px'
-                                }}
-                              >
-                                <span>معاينة وسجل الديون</span>
-                                <span>👁️</span>
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                    {/* شبكة بطاقات الأفرع */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+                      {directorateData.branches.map((branch) => {
+                        const count = branch.subscribersCount ?? branch.subscribers?.length ?? 0
+                        const areasCount = branch.areas?.length || 0
+                        const collectorsCount = branch.collectors?.length || 0
+
+                        return (
+                          <div
+                            key={branch.id}
+                            style={{
+                              background: '#ffffff',
+                              borderRadius: '16px',
+                              padding: '22px',
+                              border: '1px solid #e2e8f0',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              gap: '16px',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                                  {branch.name}
+                                </div>
+                                <span style={{ background: '#eff6ff', color: '#0056b3', fontSize: '0.75rem', fontWeight: 800, padding: '4px 10px', borderRadius: '20px' }}>
+                                  فرع مفعل
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', background: '#f8fafc', padding: '12px', borderRadius: '12px', textAlign: 'center' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>المشتركين</div>
+                                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0056b3', marginTop: '2px' }}>
+                                    {count.toLocaleString('ar-IQ')}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>المناطق</div>
+                                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                                    {areasCount}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>المحصلين</div>
+                                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                                    {collectorsCount}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSelectBranchForSubscribers(branch)}
+                              style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: '#0056b3',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 800,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                transition: 'background 0.2s'
+                              }}
+                            >
+                              <span>فتح قاعدة بيانات المشتركين للفرع</span>
+                              <span>←</span>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* شاشة المشتركين الخاصة بالفرع المختار فقط */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div
+                      style={{
+                        background: '#ffffff',
+                        padding: '20px 25px',
+                        borderRadius: '16px',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                        border: '1px solid #e2e8f0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '14px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSubscribersBranch(null)
+                            setSearchQuery('')
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#f1f5f9',
+                            color: '#334155',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>→</span>
+                          <span>العودة لاختيار فرع آخر</span>
+                        </button>
+
+                        <div>
+                          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                            قاعدة بيانات مشتركي: {selectedSubscribersBranch.name}
+                          </h2>
+                          <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '3px', margin: 0 }}>
+                            إجمالي المشتركين المحملين: ({loadedSubscribers.length.toLocaleString('ar-IQ')} مشترك)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* زر تحديث يدوي من السحابة */}
+                        <button
+                          type="button"
+                          onClick={() => handleSelectBranchForSubscribers(selectedSubscribersBranch, true)}
+                          disabled={isLoadingSubscribers}
+                          style={{
+                            padding: '9px 14px',
+                            background: '#f8fafc',
+                            color: '#0056b3',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            fontWeight: 800,
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>🔄</span>
+                          <span>تحديث البيانات</span>
+                        </button>
+
+                        {/* بحث في المشتركين لهذا الفرع */}
+                        <div style={{ width: '240px' }}>
+                          <input
+                            type="text"
+                            placeholder="بحث بالاسم أو الهاتف أو الحساب..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '9px 14px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '0.85rem',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {isLoadingSubscribers ? (
+                      <div
+                        style={{
+                          background: '#ffffff',
+                          padding: '60px 20px',
+                          borderRadius: '16px',
+                          border: '1px solid #e2e8f0',
+                          textAlign: 'center',
+                          color: '#0056b3',
+                          fontWeight: 800
+                        }}
+                      >
+                        <div style={{ fontSize: '2rem', marginBottom: '12px' }}>⏳</div>
+                        <div>جارِ جلب قاعدة بيانات مشتركي الفرع من السحابة...</div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          background: '#ffffff',
+                          padding: '20px',
+                          borderRadius: '16px',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                          border: '1px solid #e2e8f0',
+                          overflowX: 'auto'
+                        }}
+                      >
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>ت</th>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>اسم المشترك</th>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الحساب</th>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الهاتف</th>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المنطقة</th>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>نوع العقار</th>
+                              <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>سجل الديون والمعاينة</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredBranchSubscribers.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 700 }}>
+                                  {searchQuery ? 'لا توجد نتائج مطابقة للبحث داخل هذا الفرع' : 'لا يوجد مشتركون مسجلون في هذا الفرع بعد'}
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredBranchSubscribers.map((subscriber, idx) => {
+                                const areaName = selectedSubscribersBranch.areas?.find(a => a.id === subscriber.areaId)?.name || 'غير محدد'
+                                return (
+                                  <tr key={subscriber.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: '12px 15px', color: '#64748b', fontWeight: 700 }}>
+                                      {idx + 1}
+                                    </td>
+                                    <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
+                                      {subscriber.name}
+                                    </td>
+                                    <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }}>
+                                      #{subscriber.id}
+                                    </td>
+                                    <td style={{ padding: '12px 15px', fontWeight: 600, color: '#64748b', direction: 'ltr', textAlign: 'right' }}>
+                                      {subscriber.phone || '—'}
+                                    </td>
+                                    <td style={{ padding: '12px 15px', fontWeight: 700, color: '#475569' }}>
+                                      {areaName}
+                                    </td>
+                                    <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                                      <span style={{ backgroundColor: subscriber.propertyType === 'تجاري' ? '#fef3c7' : '#e0f2fe', color: subscriber.propertyType === 'تجاري' ? '#b45309' : '#0369a1', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                        {subscriber.propertyType || 'سكني'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedBranchId(selectedSubscribersBranch.id)
+                                          setViewingSubscriber(subscriber)
+                                          setViewingSubscriberYear(2026)
+                                        }}
+                                        style={{
+                                          backgroundColor: '#0056b3',
+                                          color: '#ffffff',
+                                          border: 'none',
+                                          padding: '7px 14px',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          fontWeight: 800,
+                                          fontSize: '0.82rem',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '6px'
+                                        }}
+                                      >
+                                        <span>معاينة وسجل الديون</span>
+                                        <span>👁️</span>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                )
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
