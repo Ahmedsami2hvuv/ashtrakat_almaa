@@ -61,6 +61,8 @@ export default function BranchManagerDashboard({
 
   // حالات المناطق
   const [newAreaName, setNewAreaName] = useState('')
+  const [showAreasListModal, setShowAreasListModal] = useState(false)
+  const [areasListText, setAreasListText] = useState('')
 
   // حالات استيراد المشتركين
   const [showImportModal, setShowImportModal] = useState(false)
@@ -109,16 +111,66 @@ export default function BranchManagerDashboard({
   }, [branch.subscribers, searchQuery])
 
   // ------------------ إدارة المناطق ------------------
-  const handleAddArea = () => {
-    if (!newAreaName.trim()) return
+  const handleAddArea = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const trimmed = newAreaName.trim()
+    if (!trimmed) {
+      alert('يرجى كتابة اسم المنطقة')
+      return
+    }
+    const exists = (branch.areas || []).some(
+      a => a.name.trim().toLowerCase() === trimmed.toLowerCase()
+    )
+    if (exists) {
+      alert('هذه المنطقة مضافة مسبقاً!')
+      return
+    }
     const newArea: Area = {
       id: 'area_' + Date.now().toString(36),
-      name: newAreaName.trim(),
+      name: trimmed,
       branches: []
     }
     const updatedAreas = [...(branch.areas || []), newArea]
     onUpdateBranch({ ...branch, areas: updatedAreas })
     setNewAreaName('')
+  }
+
+  // إضافة قائمة مناطق دفعة واحدة (كل منطقة بسطر)
+  const handleAddAreasList = () => {
+    if (!areasListText.trim()) {
+      alert('يرجى كتابة أو لصق أسماء المناطق')
+      return
+    }
+
+    const lines = areasListText.split('\n')
+    const existingAreaNames = new Set((branch.areas || []).map(a => a.name.trim().toLowerCase()))
+    const newAreas: Area[] = []
+    let addedCount = 0
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim()
+      if (!trimmed) return
+      if (!existingAreaNames.has(trimmed.toLowerCase())) {
+        existingAreaNames.add(trimmed.toLowerCase())
+        newAreas.push({
+          id: 'area_' + Date.now().toString(36) + '_' + idx,
+          name: trimmed,
+          branches: []
+        })
+        addedCount++
+      }
+    })
+
+    if (addedCount === 0) {
+      alert('لم يتم العثور على مناطق جديدة، أو جميع المناطق المكتوبة مسجلة مسبقاً.')
+      return
+    }
+
+    const updatedAreas = [...(branch.areas || []), ...newAreas]
+    onUpdateBranch({ ...branch, areas: updatedAreas })
+    setShowAreasListModal(false)
+    setAreasListText('')
+    alert(`تمت إضافة ${addedCount} منطقة بنجاح.`)
   }
 
   const handleDeleteArea = (areaId: string, areaName: string) => {
@@ -591,24 +643,36 @@ export default function BranchManagerDashboard({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-base md:text-lg font-black text-slate-900">المناطق المشمولة بالفرع</h3>
-                  <p className="text-xs text-slate-500">إدارة وتقسيم مناطق الجباية</p>
+                  <p className="text-xs text-slate-500">إدارة وتقسيم مناطق الجباية (إجمالي المناطق: {(branch.areas || []).length})</p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newAreaName}
-                    onChange={(e) => setNewAreaName(e.target.value)}
-                    placeholder="اسم المنطقة الجديد..."
-                    className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* زر إضافة قائمة مناطق بسطور متعددة */}
                   <button
-                    onClick={handleAddArea}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0"
+                    onClick={() => setShowAreasListModal(true)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>إضافة</span>
+                    <Upload className="w-4 h-4" />
+                    <span>إضافة قائمة مناطق (كل منطقة بسطر)</span>
                   </button>
+
+                  {/* نموذج إضافة سريعة لمنطقة واحدة */}
+                  <form onSubmit={handleAddArea} className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={newAreaName}
+                      onChange={(e) => setNewAreaName(e.target.value)}
+                      placeholder="اسم منطقة مفردة..."
+                      className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>إضافة</span>
+                    </button>
+                  </form>
                 </div>
               </div>
 
@@ -959,6 +1023,55 @@ export default function BranchManagerDashboard({
       </div>
 
       {/* النوافذ المنبثقة (Modals) */}
+      {/* نافذة إضافة قائمة مناطق (كل منطقة بسطر) */}
+      {showAreasListModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-slate-900">إضافة قائمة مناطق دفعة واحدة</h3>
+              <button
+                onClick={() => setShowAreasListModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-black text-lg p-1"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              اكتب أو الصق أسماء المناطق في المربع أدناه بحيث تكون <strong>كل منطقة في سطر مستقل</strong>:
+            </p>
+
+            <textarea
+              rows={8}
+              value={areasListText}
+              onChange={(e) => setAreasListText(e.target.value)}
+              placeholder={"العصفورية\nشارع الكهرباء\nحي الشهداء\nالدريهمية"}
+              className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed"
+            />
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-slate-400 font-bold">
+                عدد الأسطر المكتوبة: {areasListText.split('\n').filter(s => s.trim()).length} منطقة
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAreasListModal(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleAddAreasList}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>حفظ وإضافة المناطق</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* نافذة استيراد المشتركين */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
