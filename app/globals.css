@@ -555,13 +555,27 @@ body {
   }
   @page {
     size: A4 portrait;
-    margin: 6mm;
+    margin: 5mm 6mm;
   }
-  body {
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .a4-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  table, tr, td, th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 .bg-slate-50 { --tw-bg-opacity: 1; background-color: rgb(248 250 252/var(--tw-bg-opacity,1)); }
