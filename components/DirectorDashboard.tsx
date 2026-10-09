@@ -256,6 +256,153 @@ export default function DirectorDashboard({
       }}
     >
       {/* ======================================================== */}
+      {/* تنسيقات الجوال المتجاوبة وتصميم مديرية ماء البصرة        */}
+      {/* ======================================================== */}
+      <style>{`
+        /* القائمة السفلية للموبايل (تختفي بالحاسبة وتظهر بالهاتف) */
+        .mobile-nav {
+          display: none;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: #1e293b;
+          justify-content: space-around;
+          align-items: center;
+          padding: 8px 4px;
+          box-shadow: 0 -3px 15px rgba(0,0,0,0.2);
+          z-index: 1000;
+          border-top: 1px solid #334155;
+        }
+
+        .mobile-nav-item {
+          color: #94a3b8;
+          text-decoration: none;
+          font-size: 0.72rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 5px 8px;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+          font-weight: 700;
+          font-family: inherit;
+        }
+
+        .mobile-nav-item.active, .mobile-nav-item:hover {
+          color: #38bdf8;
+        }
+
+        .mobile-nav-item.active {
+          background-color: rgba(56, 189, 248, 0.12);
+        }
+
+        /* تنسيقات مخصصة عند فتح الصفحة من الموبايل (الشاشات أصغر من 768px) */
+        @media (max-width: 768px) {
+          .mobile-nav {
+            display: flex !important;
+          }
+
+          .director-main-content {
+            padding: 14px 12px !important;
+            padding-bottom: 85px !important; /* مساحة للقائمة السفلية بالموبايل */
+          }
+
+          .director-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            padding: 14px 16px !important;
+          }
+
+          .director-header-left {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+          }
+
+          .director-header-right {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            gap: 10px !important;
+          }
+
+          .director-search-bar {
+            flex: 1 !important;
+            width: 100% !important;
+          }
+
+          .director-search-bar input {
+            width: 100% !important;
+          }
+
+          .director-stats-cards {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 10px !important;
+            margin-bottom: 20px !important;
+          }
+
+          .director-stat-card {
+            padding: 12px !important;
+            gap: 10px !important;
+          }
+
+          .director-stat-icon {
+            width: 38px !important;
+            height: 38px !important;
+            font-size: 1.1rem !important;
+          }
+
+          .director-stat-title {
+            font-size: 0.78rem !important;
+          }
+
+          .director-stat-val {
+            font-size: 1.05rem !important;
+          }
+
+          .charts-section {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+            margin-bottom: 20px !important;
+          }
+
+          .section-header-wrap {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+          }
+
+          .director-branch-tabs-scroll {
+            display: flex !important;
+            overflow-x: auto !important;
+            flex-wrap: nowrap !important;
+            padding-bottom: 6px !important;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .director-branch-tabs-scroll button {
+            flex-shrink: 0 !important;
+            font-size: 0.82rem !important;
+            padding: 8px 14px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .director-stats-cards {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+
+      {/* ======================================================== */}
       {/* 1. القائمة الجانبية العائمة (Floating Sidebar)           */}
       {/* ======================================================== */}
       {/* خلفية شبه شفافة عند فتح القائمة الجانبية لإغلاقها بالنقر في أي مكان */}
@@ -571,6 +718,7 @@ export default function DirectorDashboard({
       {/* 2. المحتوى الرئيسي (Main Content)                        */}
       {/* ======================================================== */}
       <main
+        className="director-main-content"
         style={{
           width: '100%',
           padding: '30px',
@@ -580,6 +728,7 @@ export default function DirectorDashboard({
       >
         {/* =================== الهيدر =================== */}
         <div
+          className="director-header"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -591,7 +740,7 @@ export default function DirectorDashboard({
             boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div className="director-header-left" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             {/* زر فتح / إغلاق القائمة الجانبية */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -622,15 +771,16 @@ export default function DirectorDashboard({
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
                 أهلاً بك، المدير العام
               </h2>
-              <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px', margin: 0 }}>
-                متابعة نظام الجباية والواردات لمحافظة البصرة
+              <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                نظام واردات ماء البصرة
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div className="director-header-right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             {/* بحث سريع */}
             <div
+              className="director-search-bar"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -640,7 +790,7 @@ export default function DirectorDashboard({
                 border: '1px solid #e2e8f0'
               }}
             >
-              <svg style={{ width: '16px', height: '16px', color: '#64748b', marginLeft: '8px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{ width: '16px', height: '16px', color: '#64748b', marginLeft: '8px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -660,7 +810,7 @@ export default function DirectorDashboard({
             </div>
 
             {/* أيقونة المستخدم */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
               <div
                 style={{
                   width: '42px',
@@ -767,6 +917,7 @@ export default function DirectorDashboard({
 
               {/* أزرار التبويبات الخمسة التفاعلية بالأعلى */}
               <div
+                className="director-branch-tabs-scroll"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -1350,6 +1501,7 @@ export default function DirectorDashboard({
           <>
             {/* بطاقات الإحصائيات الأربعة السريعة */}
             <div
+              className="director-stats-cards"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -1359,6 +1511,7 @@ export default function DirectorDashboard({
             >
               {/* كارت 1: مجموع واردات الشهر */}
               <div
+                className="director-stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1370,6 +1523,7 @@ export default function DirectorDashboard({
                 }}
               >
                 <div
+                  className="director-stat-icon"
                   style={{
                     width: '50px',
                     height: '50px',
@@ -1379,7 +1533,8 @@ export default function DirectorDashboard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.5rem'
+                    fontSize: '1.5rem',
+                    flexShrink: 0
                   }}
                 >
                   <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1387,8 +1542,8 @@ export default function DirectorDashboard({
                   </svg>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>مجموع واردات الشهر</h3>
-                  <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>مجموع واردات الشهر</h3>
+                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
                     {totalRevenue > 0 ? `${totalRevenue.toLocaleString('ar-IQ')} د.ع` : '450,000,000 د.ع'}
                   </p>
                 </div>
@@ -1396,6 +1551,7 @@ export default function DirectorDashboard({
 
               {/* كارت 2: عدد الأفرع */}
               <div
+                className="director-stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1407,6 +1563,7 @@ export default function DirectorDashboard({
                 }}
               >
                 <div
+                  className="director-stat-icon"
                   style={{
                     width: '50px',
                     height: '50px',
@@ -1416,7 +1573,8 @@ export default function DirectorDashboard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.5rem'
+                    fontSize: '1.5rem',
+                    flexShrink: 0
                   }}
                 >
                   <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1424,8 +1582,8 @@ export default function DirectorDashboard({
                   </svg>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>عدد الأفرع</h3>
-                  <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>عدد الأفرع</h3>
+                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
                     {directorateData.branches.length} أفرع
                   </p>
                 </div>
@@ -1433,6 +1591,7 @@ export default function DirectorDashboard({
 
               {/* كارت 3: الكُتّاب والمحصلين */}
               <div
+                className="director-stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1444,6 +1603,7 @@ export default function DirectorDashboard({
                 }}
               >
                 <div
+                  className="director-stat-icon"
                   style={{
                     width: '50px',
                     height: '50px',
@@ -1453,7 +1613,8 @@ export default function DirectorDashboard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.5rem'
+                    fontSize: '1.5rem',
+                    flexShrink: 0
                   }}
                 >
                   <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1461,8 +1622,8 @@ export default function DirectorDashboard({
                   </svg>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>الكُتّاب والمحصلين</h3>
-                  <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>الكُتّاب والمحصلين</h3>
+                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
                     {totalStaff > 0 ? `${totalStaff} موظف` : '120 محصّل'}
                   </p>
                 </div>
@@ -1470,6 +1631,7 @@ export default function DirectorDashboard({
 
               {/* كارت 4: إجمالي المشتركين */}
               <div
+                className="director-stat-card"
                 style={{
                   background: '#ffffff',
                   padding: '20px',
@@ -1481,6 +1643,7 @@ export default function DirectorDashboard({
                 }}
               >
                 <div
+                  className="director-stat-icon"
                   style={{
                     width: '50px',
                     height: '50px',
@@ -1490,7 +1653,8 @@ export default function DirectorDashboard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.5rem'
+                    fontSize: '1.5rem',
+                    flexShrink: 0
                   }}
                 >
                   <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1498,8 +1662,8 @@ export default function DirectorDashboard({
                   </svg>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>إجمالي المشتركين</h3>
-                  <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>إجمالي المشتركين</h3>
+                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
                     {totalSubscribers > 0 ? `${totalSubscribers.toLocaleString('ar-IQ')} مشترك` : '85,000 مشترك'}
                   </p>
                 </div>
@@ -1508,6 +1672,7 @@ export default function DirectorDashboard({
 
             {/* قسم الرسوم البيانية والجباية */}
             <div
+              className="charts-section"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '2fr 1fr',
@@ -1630,6 +1795,7 @@ export default function DirectorDashboard({
               }}
             >
               <div
+                className="section-header-wrap"
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -2416,6 +2582,85 @@ export default function DirectorDashboard({
           </div>
         </div>
       )}
+      {/* ======================================================== */}
+      {/* 4. القائمة السفلية للموبايل (Mobile Bottom Navigation)     */}
+      {/* ======================================================== */}
+      <nav className="mobile-nav">
+        {/* زر 1: الرئيسية */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('dashboard')
+            setSelectedBranchId(null)
+          }}
+          className={`mobile-nav-item ${activeSection === 'dashboard' && !selectedBranchId ? 'active' : ''}`}
+        >
+          <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+          </svg>
+          <span>الرئيسية</span>
+        </button>
+
+        {/* زر 2: الأفرع */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('branches')
+            setSelectedBranchId(null)
+          }}
+          className={`mobile-nav-item ${activeSection === 'branches' && !selectedBranchId ? 'active' : ''}`}
+        >
+          <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <span>الأفرع</span>
+        </button>
+
+        {/* زر 3: المسؤولين */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('managers')
+            setSelectedBranchId(null)
+          }}
+          className={`mobile-nav-item ${activeSection === 'managers' ? 'active' : ''}`}
+        >
+          <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span>المسؤولين</span>
+        </button>
+
+        {/* زر 4: المشتركين */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('subscribers')
+            setSelectedBranchId(null)
+          }}
+          className={`mobile-nav-item ${activeSection === 'subscribers' ? 'active' : ''}`}
+        >
+          <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>المشتركين</span>
+        </button>
+
+        {/* زر 5: المحصلين */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('staff')
+            setSelectedBranchId(null)
+          }}
+          className={`mobile-nav-item ${activeSection === 'staff' ? 'active' : ''}`}
+        >
+          <svg style={{ width: '22px', height: '22px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          <span>المحصلين</span>
+        </button>
+      </nav>
     </div>
   )
 }
