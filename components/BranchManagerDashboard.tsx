@@ -1102,38 +1102,152 @@ export default function BranchManagerDashboard({
 
               {/* شريط التحكم السريع بوضع التحديد */}
               {isSelectMode && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-blue-950">وضع التحديد نشط:</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-black text-[11px] shadow-sm">
-                      {selectedSubIds.size} مشترك محدد
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={selectAllVisibleSubscribers}
-                      className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold transition shadow-2xs"
-                    >
-                      تحديد الصفحة الحالية ({paginatedSubscribers.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={selectAllFilteredSubscribers}
-                      className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold transition shadow-2xs"
-                    >
-                      تحديد كل نتائج البحث ({filteredSubscribers.length})
-                    </button>
-                    {selectedSubIds.size > 0 && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-3.5 space-y-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-blue-950 text-sm">وضع التحديد نشط:</span>
+                      <span className="px-3 py-1 rounded-full bg-blue-600 text-white font-black text-xs shadow-sm">
+                        {selectedSubIds.size} مشترك محدد
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={clearSelectedSubscribers}
-                        className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold transition"
+                        onClick={selectAllVisibleSubscribers}
+                        className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-bold transition"
                       >
-                        إلغاء التحديد
+                        تحديد الصفحة الحالية ({paginatedSubscribers.length})
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        onClick={selectAllFilteredSubscribers}
+                        className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-xl font-bold transition"
+                      >
+                        تحديد كل نتائج البحث ({filteredSubscribers.length})
+                      </button>
+                      {selectedSubIds.size > 0 && (
+                        <button
+                          type="button"
+                          onClick={clearSelectedSubscribers}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold transition"
+                        >
+                          إلغاء التحديد
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* بلوك الأزرار التفاعلي للمشتركين المحددين (يظهر فوراً هنا أمام المسؤول) */}
+                  {selectedSubIds.size > 0 && (
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #3b82f6',
+                        borderRadius: '16px',
+                        boxShadow: '0 4px 16px rgba(59, 130, 246, 0.18)',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>⚡</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>
+                            خيارات التعامل مع المشتركين المحددين ({selectedSubIds.size} مشترك):
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
+                            انقر على أي خيار أدناه لتخصيصهم فوراً:
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                        {/* 1. تخصيص لمناطق */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkSelectedAreaIds([])
+                            setBulkAreaSearch('')
+                            setShowAssignAreasModal(true)
+                          }}
+                          style={{
+                            padding: '9px 18px',
+                            backgroundColor: '#059669',
+                            color: '#ffffff',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(5, 150, 105, 0.35)'
+                          }}
+                        >
+                          <MapPin style={{ width: '16px', height: '16px' }} />
+                          <span>تخصيص لمناطق</span>
+                        </button>
+
+                        {/* 2. تخصيص لكتّاب */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkSelectedWriterIds([])
+                            setShowAssignWritersModal(true)
+                          }}
+                          style={{
+                            padding: '9px 18px',
+                            backgroundColor: '#d97706',
+                            color: '#ffffff',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(217, 119, 6, 0.35)'
+                          }}
+                        >
+                          <BookOpen style={{ width: '16px', height: '16px' }} />
+                          <span>تخصيص لكتّاب</span>
+                        </button>
+
+                        {/* 3. تخصيص لمحصلين */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkSelectedCollectorIds([])
+                            setShowAssignCollectorsModal(true)
+                          }}
+                          style={{
+                            padding: '9px 18px',
+                            backgroundColor: '#2563eb',
+                            color: '#ffffff',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.35)'
+                          }}
+                        >
+                          <Wallet style={{ width: '16px', height: '16px' }} />
+                          <span>تخصيص لمحصلين</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1320,26 +1434,39 @@ export default function BranchManagerDashboard({
 
               {/* القائمة السفلية العائمة للمشتركين المحددين (Bottom Action Bar) */}
               {selectedSubIds.size > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md text-white border-t border-slate-700 shadow-2xl animate-in slide-in-from-bottom duration-200">
+                <div
+                  style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    width: '100%',
+                    zIndex: 99999,
+                    backgroundColor: '#0f172a',
+                    color: '#ffffff',
+                    borderTop: '3px solid #3b82f6',
+                    boxShadow: '0 -8px 30px rgba(0, 0, 0, 0.45)',
+                    padding: '12px 18px',
+                    boxSizing: 'border-box'
+                  }}
+                >
                   <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
                     {/* شارة عدد المشتركين المحددين */}
                     <div className="flex items-center gap-3">
-                      <span className="flex h-3 w-3 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-                      </span>
                       <div className="text-right">
-                        <p className="text-xs sm:text-sm font-black text-white">
-                          تم تحديد <span className="text-blue-400 text-base">{selectedSubIds.size}</span> مشترك
-                        </p>
-                        <p className="text-[10px] sm:text-[11px] text-slate-300">
-                          اختر الإجراء لتخصيص هؤلاء المشتركين لأكثر من منطقة أو كاتب أو محصل
-                        </p>
+                        <div className="text-sm font-black text-white flex items-center gap-2">
+                          <span>✅ تم تحديد</span>
+                          <span style={{ color: '#60a5fa', fontSize: '16px', fontWeight: 900 }}>{selectedSubIds.size}</span>
+                          <span>مشترك</span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 font-bold">
+                          اختر الإجراء لتخصيصهم لأكثر من منطقة أو كاتب أو محصل
+                        </div>
                       </div>
                     </div>
 
                     {/* خيارات القائمة السفلية */}
-                    <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center justify-center gap-2.5 w-full sm:w-auto">
                       {/* 1. خيار التخصيص للمناطق */}
                       <button
                         type="button"
@@ -1348,9 +1475,22 @@ export default function BranchManagerDashboard({
                           setBulkAreaSearch('')
                           setShowAssignAreasModal(true)
                         }}
-                        className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-emerald-950/40"
+                        style={{
+                          padding: '10px 18px',
+                          backgroundColor: '#059669',
+                          color: '#ffffff',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(5, 150, 105, 0.4)'
+                        }}
                       >
-                        <MapPin className="w-4 h-4 text-emerald-200" />
+                        <MapPin style={{ width: '16px', height: '16px' }} />
                         <span>تخصيص لمناطق</span>
                       </button>
 
@@ -1361,9 +1501,22 @@ export default function BranchManagerDashboard({
                           setBulkSelectedWriterIds([])
                           setShowAssignWritersModal(true)
                         }}
-                        className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-amber-950/40"
+                        style={{
+                          padding: '10px 18px',
+                          backgroundColor: '#d97706',
+                          color: '#ffffff',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)'
+                        }}
                       >
-                        <BookOpen className="w-4 h-4 text-amber-200" />
+                        <BookOpen style={{ width: '16px', height: '16px' }} />
                         <span>تخصيص لكتّاب</span>
                       </button>
 
@@ -1374,9 +1527,22 @@ export default function BranchManagerDashboard({
                           setBulkSelectedCollectorIds([])
                           setShowAssignCollectorsModal(true)
                         }}
-                        className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-blue-950/40"
+                        style={{
+                          padding: '10px 18px',
+                          backgroundColor: '#2563eb',
+                          color: '#ffffff',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.4)'
+                        }}
                       >
-                        <Wallet className="w-4 h-4 text-blue-200" />
+                        <Wallet style={{ width: '16px', height: '16px' }} />
                         <span>تخصيص لمحصلين</span>
                       </button>
 
@@ -1384,11 +1550,18 @@ export default function BranchManagerDashboard({
                       <button
                         type="button"
                         onClick={clearSelectedSubscribers}
-                        className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
-                        title="إلغاء التحديد"
+                        style={{
+                          padding: '10px 14px',
+                          backgroundColor: '#1e293b',
+                          color: '#e2e8f0',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          border: '1px solid #334155',
+                          cursor: 'pointer'
+                        }}
                       >
-                        <X className="w-4 h-4" />
-                        <span className="hidden sm:inline">إلغاء</span>
+                        إلغاء التحديد
                       </button>
                     </div>
                   </div>
@@ -2275,8 +2448,39 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تخصيص المشتركين للمناطق */}
       {showAssignAreasModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 999999,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+              boxSizing: 'border-box'
+            }}
+            className="space-y-4"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -2403,8 +2607,39 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تخصيص المشتركين للكتّاب */}
       {showAssignWritersModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 999999,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+              boxSizing: 'border-box'
+            }}
+            className="space-y-4"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
@@ -2521,8 +2756,39 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تخصيص المشتركين للمحصلين */}
       {showAssignCollectorsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 999999,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+              boxSizing: 'border-box'
+            }}
+            className="space-y-4"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
