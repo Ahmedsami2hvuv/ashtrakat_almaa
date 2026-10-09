@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Printer, Save, ArrowRight, Plus } from 'lucide-react'
-import { DirectorateBranch, Consignment, ConsignmentItem, BranchCollector } from '@/lib/directorateTypes'
+import React, { useState, useMemo } from 'react'
+import { Printer, Save, ArrowRight, Plus, RefreshCw, Hash, Percent } from 'lucide-react'
+import { DirectorateBranch, Consignment, ConsignmentItem } from '@/lib/directorateTypes'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
 
 interface ConsignmentsA4PageProps {
@@ -14,12 +14,73 @@ interface ConsignmentsA4PageProps {
 interface RowData {
   subscriberId: string
   subscriberName: string
+  areaName: string
   amount: string
+  waterAmount: string
+  municipalityAmount: string
   receiptNumber: string
   paymentDate: string
+  paymentTime: string
+}
+
+// دالة تفقيط الأرقام إلى كلمات عربية فصيحة لسطر "فقط"
+function tafqeet(num: number): string {
+  if (!num || isNaN(num) || num <= 0) return 'صفر'
+
+  const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر']
+  const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون']
+  const hundreds = ['', 'مائة', 'مئتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة']
+
+  function convertGroup(n: number): string {
+    let res = ''
+    const h = Math.floor(n / 100)
+    const rem = n % 100
+    if (h > 0) res += hundreds[h]
+    if (rem > 0) {
+      if (res) res += ' و'
+      if (rem < 20) {
+        res += ones[rem]
+      } else {
+        const o = rem % 10
+        const t = Math.floor(rem / 10)
+        if (o > 0) res += ones[o] + ' و'
+        res += tens[t]
+      }
+    }
+    return res
+  }
+
+  const millions = Math.floor(num / 1000000)
+  const thousands = Math.floor((num % 1000000) / 1000)
+  const remainder = Math.floor(num % 1000)
+
+  const parts: string[] = []
+  if (millions > 0) {
+    if (millions === 1) parts.push('مليون')
+    else if (millions === 2) parts.push('مليونان')
+    else if (millions >= 3 && millions <= 10) parts.push(convertGroup(millions) + ' ملايين')
+    else parts.push(convertGroup(millions) + ' مليون')
+  }
+  if (thousands > 0) {
+    if (thousands === 1) parts.push('ألف')
+    else if (thousands === 2) parts.push('ألفان')
+    else if (thousands >= 3 && thousands <= 10) parts.push(convertGroup(thousands) + ' آلاف')
+    else parts.push(convertGroup(thousands) + ' ألف')
+  }
+  if (remainder > 0) {
+    parts.push(convertGroup(remainder))
+  }
+
+  return parts.join(' و')
 }
 
 export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose }: ConsignmentsA4PageProps) {
+  // الرقم التسلسلي المطبوع في أعلى الورقة
+  const [serialNumber, setSerialNumber] = useState<string>('02951')
+  const [paperRefNumber, setPaperRefNumber] = useState<string>('')
+  const [branchNameDisplay, setBranchNameDisplay] = useState<string>(branch.name.replace(/^فرع\s*/, ''))
+  
+  // اسم المحصل وتاريخ الإرسالية
   const [selectedCollectorName, setSelectedCollectorName] = useState<string>(
     branch.collectors[0]?.name || ''
   )
@@ -27,25 +88,40 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     new Date().toISOString().split('T')[0]
   )
   const [baseReceiptNumber, setBaseReceiptNumber] = useState<string>('')
-  
+
+  // نسبة البلدية الافتراضية المأخوذة من المبلغ (بالنسبة المئوية %)
+  const [municipalityRatio, setMunicipalityRatio] = useState<number>(20)
+
   // إنشاء 20 صفاً افتراضياً لورقة A4
   const [rows, setRows] = useState<RowData[]>(() => {
+    const today = new Date().toISOString().split('T')[0]
     return Array.from({ length: 20 }, () => ({
       subscriberId: '',
       subscriberName: '',
+      areaName: '',
       amount: '',
+      waterAmount: '',
+      municipalityAmount: '',
       receiptNumber: '',
-      paymentDate: new Date().toISOString().split('T')[0]
+      paymentDate: today,
+      paymentTime: ''
     }))
   })
 
   const [savedSuccessMessage, setSavedSuccessMessage] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  // خريطة سريعة للبحث عن أسماء المشتركين
-  const subscriberMap = React.useMemo(() => {
+  // خريطة سريعة للمناطق
+  const areasMap = useMemo(() => {
+    const map = new Map<string, string>()
+    ;(branch.areas || []).forEach(a => map.set(a.id, a.name))
+    return map
+  }, [branch.areas])
+
+  // خريطة سريعة للبحث عن بيانات المشتركين
+  const subscriberMap = useMemo(() => {
     const map = new Map<number, Subscriber>()
-    branch.subscribers.forEach(sub => map.set(sub.id, sub))
+    ;(branch.subscribers || []).forEach(sub => map.set(sub.id, sub))
     return map
   }, [branch.subscribers])
 
@@ -54,17 +130,35 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     const newRows = [...rows]
     newRows[index] = { ...newRows[index], [field]: value }
 
-    // إذا تم تعديل رقم المشترك، استخرج الاسم تلقائياً فوراً
+    // 1. إذا تم تعديل رقم المشترك، استخرج الاسم والمنطقة تلقائياً فوراً
     if (field === 'subscriberId') {
       const numId = parseInt(value.trim(), 10)
       if (!isNaN(numId) && subscriberMap.has(numId)) {
-        newRows[index].subscriberName = subscriberMap.get(numId)!.name
-      } else {
+        const foundSub = subscriberMap.get(numId)!
+        newRows[index].subscriberName = foundSub.name || ''
+        const areaNameFound = foundSub.areaId ? (areasMap.get(foundSub.areaId) || '') : ''
+        newRows[index].areaName = areaNameFound
+      } else if (value.trim() === '') {
         newRows[index].subscriberName = ''
+        newRows[index].areaName = ''
       }
     }
 
-    // إذا تم تعديل رقم الوصل في هذا الصف، يتم إعادة تسلسل باقي الخانات التي تحته تلقائياً!
+    // 2. إذا تم تعديل المبلغ الإجمالي، وزّع المبلغ تلقائياً بين الماء والبلدية حسب النسبة
+    if (field === 'amount') {
+      const totalVal = parseFloat(value.trim())
+      if (!isNaN(totalVal) && totalVal > 0) {
+        const muni = Math.round(totalVal * (municipalityRatio / 100))
+        const water = totalVal - muni
+        newRows[index].municipalityAmount = String(muni)
+        newRows[index].waterAmount = String(water)
+      } else {
+        newRows[index].municipalityAmount = ''
+        newRows[index].waterAmount = ''
+      }
+    }
+
+    // 3. إذا تم تعديل رقم الوصل في هذا الصف، تسلسل باقي الخانات تحته تلقائياً
     if (field === 'receiptNumber') {
       const startNum = parseInt(value.trim(), 10)
       if (!isNaN(startNum)) {
@@ -75,6 +169,25 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     }
 
     setRows(newRows)
+  }
+
+  // إعادة احتساب تقسيم الماء والبلدية لجميع الصفوف عند تغيير نسبة البلدية
+  const handleUpdateRatio = (newRatio: number) => {
+    setMunicipalityRatio(newRatio)
+    const updated = rows.map(r => {
+      const totalVal = parseFloat(r.amount.trim())
+      if (!isNaN(totalVal) && totalVal > 0) {
+        const muni = Math.round(totalVal * (newRatio / 100))
+        const water = totalVal - muni
+        return {
+          ...r,
+          municipalityAmount: String(muni),
+          waterAmount: String(water)
+        }
+      }
+      return r
+    })
+    setRows(updated)
   }
 
   // تطبيق رقم وصل البداية على كامل الجدول
@@ -94,21 +207,43 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
   const handleAddMoreRows = () => {
     const lastRow = rows[rows.length - 1]
     const lastNum = parseInt(lastRow?.receiptNumber || '0', 10)
-    const newAdded = Array.from({ length: 10 }, (_, i) => ({
+    const newAdded: RowData[] = Array.from({ length: 10 }, (_, i) => ({
       subscriberId: '',
       subscriberName: '',
+      areaName: '',
       amount: '',
+      waterAmount: '',
+      municipalityAmount: '',
       receiptNumber: !isNaN(lastNum) && lastNum > 0 ? String(lastNum + i + 1) : '',
-      paymentDate: consignmentDate
+      paymentDate: consignmentDate,
+      paymentTime: ''
     }))
     setRows([...rows, ...newAdded])
   }
 
-  // حساب المجموع الكلي
+  // توليد رقم تسلسلي عشوائي جديد للورقة
+  const handleGenerateNewSerial = () => {
+    const nextNum = Math.floor(1000 + Math.random() * 90000).toString().padStart(5, '0')
+    setSerialNumber(nextNum)
+  }
+
+  // حساب المجاميع
   const totalAmount = rows.reduce((sum, r) => {
     const val = parseFloat(r.amount)
     return !isNaN(val) ? sum + val : sum
   }, 0)
+
+  const totalWater = rows.reduce((sum, r) => {
+    const val = parseFloat(r.waterAmount)
+    return !isNaN(val) ? sum + val : sum
+  }, 0)
+
+  const totalMunicipality = rows.reduce((sum, r) => {
+    const val = parseFloat(r.municipalityAmount)
+    return !isNaN(val) ? sum + val : sum
+  }, 0)
+
+  const validRowsCount = rows.filter(r => r.subscriberId.trim() !== '' && parseFloat(r.amount) > 0).length
 
   // ترحيل وحفظ الإرسالية
   const handleSaveAndPost = async () => {
@@ -129,25 +264,31 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
     const consignmentItems: ConsignmentItem[] = validRows.map(r => ({
       subscriberId: parseInt(r.subscriberId.trim(), 10),
       subscriberName: r.subscriberName || 'مشترك رقم ' + r.subscriberId,
+      areaName: r.areaName,
       amount: parseFloat(r.amount),
+      waterAmount: parseFloat(r.waterAmount) || 0,
+      municipalityAmount: parseFloat(r.municipalityAmount) || 0,
       receiptNumber: r.receiptNumber,
       paymentDate: r.paymentDate || consignmentDate
     }))
 
     const newConsignment: Consignment = {
       id: 'cons_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      serialNumber,
+      paperRefNumber,
       branchId: branch.id,
       collectorName: selectedCollectorName,
       date: consignmentDate,
       items: consignmentItems,
       totalAmount,
+      totalWaterAmount: totalWater,
+      totalMunicipalityAmount: totalMunicipality,
       createdAt: new Date().toISOString()
     }
 
     // ترحيل الدفعات تلقائياً وتنزيلها من ديون المشتركين
     const updatedBilling = { ...(branch.billing || {}) }
     const updatedSubscribers = branch.subscribers.map(sub => {
-      // فحص إن كان للمشترك دفعة في هذه الإرسالية
       const paymentsForSub = consignmentItems.filter(item => item.subscriberId === sub.id)
       if (paymentsForSub.length === 0) return sub
 
@@ -169,7 +310,6 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         }))
       }
       
-      // إضافة المبلغ المدفوع لآخر فترة في السجل
       const periods = updatedBilling[sub.id][currentYear]
       if (periods && periods.length > 0) {
         periods[0].paid = (periods[0].paid || 0) + totalPaidInConsignment
@@ -181,257 +321,408 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
       }
     })
 
-    // حفظ واستدعاء رد النداء
     onSaveConsignment(newConsignment, updatedSubscribers, updatedBilling)
     setIsSaving(false)
-    setSavedSuccessMessage(`تم بنجاح حفظ وترحيل الإرسالية بإجمالي ${totalAmount.toLocaleString('ar-IQ')} دينار لـ (${validRows.length}) مشترك!`)
+    setSavedSuccessMessage(`تم بنجاح حفظ وترحيل الإرسالية رقم (${serialNumber}) بإجمالي ${totalAmount.toLocaleString('ar-IQ')} دينار لـ (${validRows.length}) مشترك!`)
     setTimeout(() => {
       setSavedSuccessMessage(null)
-    }, 4000)
+    }, 4500)
   }
 
-  // تشغيل الطباعة الرسمية
   const handlePrint = () => {
     window.print()
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-8 print:p-0 print:bg-white text-slate-800 font-sans" dir="rtl">
-      {/* شريط الإجراءات العلوي - يُخفى أثناء الطباعة */}
-      <div className="max-w-5xl mx-auto mb-6 flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 print:hidden">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onClose}
-            style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
-            className="px-4 py-2 hover:bg-slate-200 border rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 text-xs sm:text-sm"
-          >
-            <ArrowRight className="w-4 h-4 text-slate-700" />
-            <span>رجوع للوحة التحكم</span>
-          </button>
-          <div>
-            <h1 className="text-lg sm:text-xl font-black text-slate-900">تنزيل الإرساليات الرسمية</h1>
-            <p className="text-xs text-slate-500 font-bold">{branch.name}</p>
+    <div className="min-h-screen bg-slate-100 p-3 sm:p-6 print:p-0 print:bg-white text-slate-800 font-sans" dir="rtl">
+      
+      {/* ========================================================
+          شريط الإجراءات والتحكم العلوي (يُخفى بالكامل أثناء الطباعة)
+          ======================================================== */}
+      <div className="max-w-6xl mx-auto mb-6 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
+              className="px-4 py-2 hover:bg-slate-200 border rounded-xl font-bold transition flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 text-xs sm:text-sm"
+            >
+              <ArrowRight className="w-4 h-4 text-slate-700" />
+              <span>رجوع للوحة التحكم</span>
+            </button>
+            <div>
+              <h1 className="text-lg sm:text-xl font-black text-slate-900">استمارة تنزيل الإرساليات الرسمية</h1>
+              <p className="text-xs text-slate-500 font-bold">ورقة A4 الرسمية لمديرية ماء البصرة</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handlePrint}
+              style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+              className="px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-blue-700 transition flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Printer className="w-4 h-4 text-white" />
+              <span>طباعة الاستمارة (A4)</span>
+            </button>
+
+            <button
+              onClick={handleSaveAndPost}
+              disabled={isSaving}
+              style={{ backgroundColor: '#059669', color: '#ffffff' }}
+              className="px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
+            >
+              <Save className="w-4 h-4 text-white" />
+              <span>{isSaving ? 'جارِ الترحيل...' : 'حفظ وترحيل المبالغ'}</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={handlePrint}
-            style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
-            className="px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-blue-700 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-          >
-            <Printer className="w-4 h-4 text-white" />
-            <span>طباعة الاستمارة (A4)</span>
-          </button>
+        {/* أدوات الإعدادات السريعة (رقم الوصل المتسلسل + نسبة البلدية + الرقم التسلسلي) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700">
+          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <Hash className="w-4 h-4 text-blue-600" />
+            <span className="whitespace-nowrap">رقم أول وصل:</span>
+            <input
+              type="text"
+              value={baseReceiptNumber}
+              onChange={(e) => handleApplyBaseReceipt(e.target.value)}
+              placeholder="مثال: 4575068"
+              className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-bold text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
 
-          <button
-            onClick={handleSaveAndPost}
-            disabled={isSaving}
-            style={{ backgroundColor: '#059669', color: '#ffffff' }}
-            className="px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
-          >
-            <Save className="w-4 h-4 text-white" />
-            <span>{isSaving ? 'جارِ الترحيل...' : 'حفظ وترحيل المبالغ'}</span>
-          </button>
+          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <Percent className="w-4 h-4 text-amber-600" />
+            <span className="whitespace-nowrap">نسبة البلدية:</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={municipalityRatio}
+              onChange={(e) => handleUpdateRatio(Number(e.target.value) || 0)}
+              className="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-black text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+            <span className="text-[11px] text-slate-500">% من المبلغ</span>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-red-600 font-mono font-black text-sm">تسلسل الورقة:</span>
+              <input
+                type="text"
+                value={serialNumber}
+                onChange={(e) => setSerialNumber(e.target.value)}
+                className="w-24 px-2 py-1 bg-white border border-red-300 rounded-lg text-center font-mono font-black text-red-600 text-sm focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={handleGenerateNewSerial}
+              title="توليد رقم تسلسلي جديد للورقة التالية"
+              className="p-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* رسالة نجاح الحفظ */}
       {savedSuccessMessage && (
-        <div className="max-w-5xl mx-auto mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl font-bold text-center shadow-sm">
+        <div className="max-w-6xl mx-auto mb-4 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl font-bold text-center shadow-sm print:hidden">
           {savedSuccessMessage}
         </div>
       )}
 
-      {/* ورقة A4 الرسمية */}
-      <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-3xl shadow-xl border border-slate-200 print:shadow-none print:border-none print:m-0 print:p-6 print:rounded-none">
-        {/* الترويسة الرسمية لمديرية ماء محافظة البصرة */}
-        <div className="border-b-2 border-slate-900 pb-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="text-right">
-              <h2 className="text-sm font-bold text-slate-700">جمهورية العراق</h2>
-              <h3 className="text-sm font-bold text-slate-700">وزارة الإعمار والإسكان والبلديات</h3>
-              <h1 className="text-lg font-black text-slate-900 mt-1">مديرية ماء محافظة البصرة</h1>
-              <p className="text-xs font-bold text-blue-700">{branch.name}</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto rounded-full border-2 border-slate-900 flex items-center justify-center font-black text-slate-900 mb-1">
-                ماء البصرة
-              </div>
-              <span className="text-xs text-slate-500 font-bold">قسم الواردات والجباية</span>
-            </div>
-
-            <div className="text-left" dir="ltr">
-              <p className="text-xs font-bold text-slate-700">Republic of Iraq</p>
-              <p className="text-xs font-bold text-slate-700">Basra Water Directorate</p>
-              <p className="text-xs font-bold text-slate-700 mt-1">Revenues Department</p>
+      {/* ========================================================
+          ورقة A4 الرسمية المطابقة تماماً للاستمارة
+          ======================================================== */}
+      <div 
+        className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-xl border border-slate-300 print:shadow-none print:border-none print:m-0 print:p-4 print:rounded-none"
+        style={{ minHeight: '297mm' }}
+      >
+        
+        {/* الرقم التسلسلي المطبوع أعلى الورقة */}
+        <div className="flex justify-between items-start mb-2">
+          <div className="text-right">
+            {/* جهة محافظة البصرة والمديرية */}
+            <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">محافظة البصرة</h2>
+            <h3 className="text-sm sm:text-base font-black text-slate-800 leading-tight mt-0.5">مديرية ماء البصرة</h3>
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-slate-900 mt-1">
+              <span>واردات /</span>
+              <input
+                type="text"
+                value={branchNameDisplay}
+                onChange={(e) => setBranchNameDisplay(e.target.value)}
+                className="border-b border-dotted border-slate-700 bg-transparent px-1 font-black text-slate-900 focus:outline-none w-36 sm:w-48"
+              />
             </div>
           </div>
 
-          <div className="text-center mt-3">
-            <h2 className="text-xl font-black text-slate-900 tracking-wide underline underline-offset-8">
-              قائمة تنزيل الإرساليات والوصولات اليومية
-            </h2>
+          {/* الرقم التسلسلي المطبوع باللون الكلاسيكي مع حقول الرقم وإرسالية الجباية */}
+          <div className="text-left" dir="ltr">
+            <div className="text-right font-mono text-base sm:text-lg font-black tracking-widest text-slate-900 print:text-black mb-1">
+              <span className="text-xs font-sans text-slate-400 mr-2 print:hidden">ت:</span>
+              {serialNumber}
+            </div>
+            <div className="text-right space-y-1 text-xs sm:text-sm font-bold text-slate-900" dir="rtl">
+              <div className="flex items-center justify-end gap-1.5">
+                <span>الرقم :</span>
+                <input
+                  type="text"
+                  value={paperRefNumber}
+                  onChange={(e) => setPaperRefNumber(e.target.value)}
+                  placeholder="..................."
+                  className="border-b border-dotted border-slate-700 bg-transparent px-1 text-center font-bold text-slate-900 focus:outline-none w-32 sm:w-44"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-1.5">
+                <span>ارسالـيـة جبـايـة :</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={selectedCollectorName}
+                    onChange={(e) => setSelectedCollectorName(e.target.value)}
+                    placeholder="اسم المحصل..."
+                    className="border-b border-dotted border-slate-700 bg-transparent px-1 font-bold text-slate-900 focus:outline-none w-28 sm:w-36"
+                  />
+                  {branch.collectors.length > 0 && (
+                    <select
+                      onChange={(e) => setSelectedCollectorName(e.target.value)}
+                      className="text-[11px] p-0.5 border border-slate-300 rounded bg-white print:hidden"
+                    >
+                      <option value="">اختر</option>
+                      {branch.collectors.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* معلومات المحصل والتاريخ ورقم الوصل الأولي */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-300 print:bg-transparent print:p-2">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">اسم المحصل:</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={selectedCollectorName}
-                onChange={(e) => setSelectedCollectorName(e.target.value)}
-                placeholder="اكتب أو اختر اسم المحصل"
-                className="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-              />
-              {branch.collectors.length > 0 && (
-                <select
-                  onChange={(e) => setSelectedCollectorName(e.target.value)}
-                  className="px-2 py-1 text-xs border border-slate-300 rounded-lg bg-white print:hidden"
-                >
-                  <option value="">اختر محصل</option>
-                  {branch.collectors.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">تاريخ الإرسالية:</label>
+        {/* تاريخ الإرسالية في الهامش */}
+        <div className="flex justify-between items-center text-[11px] text-slate-600 mb-2 border-b border-slate-300 pb-1">
+          <div className="flex items-center gap-2">
+            <span>تاريخ الإرسالية:</span>
             <input
               type="date"
               value={consignmentDate}
               onChange={(e) => setConsignmentDate(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              className="font-bold text-slate-800 bg-transparent border-0 focus:outline-none"
             />
           </div>
-
-          <div className="print:hidden">
-            <label className="block text-xs font-bold text-slate-700 mb-1">تسلسل رقم أول وصل:</label>
-            <input
-              type="text"
-              value={baseReceiptNumber}
-              onChange={(e) => handleApplyBaseReceipt(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-            />
+          <div className="print:hidden text-slate-500">
+            نسبة البلدية المعتمدة: {municipalityRatio}%
           </div>
         </div>
 
-        {/* جدول الإرسالية A4 */}
+        {/* ========================================================
+            جدول استمارة الإرساليات الرسمي
+            ======================================================== */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse border-2 border-slate-900 text-right text-xs sm:text-sm">
+          <table className="w-full border-collapse border border-slate-900 text-right text-[11px] sm:text-xs">
             <thead>
-              <tr className="bg-slate-200 border-b-2 border-slate-900 text-slate-900 font-black text-center">
-                <th className="border border-slate-800 p-2 w-12">ت</th>
-                <th className="border border-slate-800 p-2 w-28">رقم المشترك</th>
-                <th className="border border-slate-800 p-2">اسم المشترك الثلاثي</th>
-                <th className="border border-slate-800 p-2 w-32">المبلغ المدفوع (د.ع)</th>
-                <th className="border border-slate-800 p-2 w-28">رقم الوصل</th>
-                <th className="border border-slate-800 p-2 w-28">تاريخ الدفع</th>
+              <tr className="bg-slate-100 text-slate-900 font-black text-center border-b border-slate-900">
+                <th className="border border-slate-900 p-1 w-10 sm:w-12" rowSpan={2}>ت (رقم المشترك)</th>
+                <th className="border border-slate-900 p-1 w-32 sm:w-44" rowSpan={2}>أسم المشترك</th>
+                <th className="border border-slate-900 p-1 w-24 sm:w-32" rowSpan={2}>المنطقة</th>
+                <th className="border border-slate-900 p-1 w-24 sm:w-28" rowSpan={2}>المبلغ المستلم</th>
+                <th className="border border-slate-900 p-1" colSpan={2}>تقسيم المبالغ</th>
+                <th className="border border-slate-900 p-1 w-24 sm:w-28" rowSpan={2}>رقم الوصل</th>
+                <th className="border border-slate-900 p-1 w-20 sm:w-24" rowSpan={2}>وقت / تاريخ الوصل</th>
+              </tr>
+              <tr className="bg-slate-100 text-slate-900 font-bold text-center border-b border-slate-900">
+                <th className="border border-slate-900 p-1 w-20 sm:w-24 text-blue-900">مـاء</th>
+                <th className="border border-slate-900 p-1 w-20 sm:w-24 text-amber-900">البلدية</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, index) => (
-                <tr key={index} className="hover:bg-slate-50 transition border-b border-slate-400">
-                  <td className="border border-slate-600 p-1 text-center font-bold text-slate-600 bg-slate-50 print:bg-transparent">
-                    {index + 1}
-                  </td>
-                  <td className="border border-slate-600 p-1">
+                <tr key={index} className="hover:bg-slate-50 border-b border-slate-800 h-8">
+                  {/* رقم المشترك */}
+                  <td className="border border-slate-800 p-0.5 text-center font-bold">
                     <input
                       type="text"
                       value={row.subscriberId}
                       onChange={(e) => handleCellChange(index, 'subscriberId', e.target.value)}
-                      placeholder="رقم المشترك"
-                      className="w-full px-2 py-1 text-center font-bold text-slate-900 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      placeholder="رقم"
+                      className="w-full h-full text-center font-black text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
-                  <td className="border border-slate-600 p-1">
+
+                  {/* اسم المشترك */}
+                  <td className="border border-slate-800 p-0.5">
                     <input
                       type="text"
                       value={row.subscriberName}
                       onChange={(e) => handleCellChange(index, 'subscriberName', e.target.value)}
-                      placeholder="يظهر تلقائياً أو يكتب"
-                      className="w-full px-2 py-1 font-bold text-slate-900 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      placeholder="اسم المشترك"
+                      className="w-full h-full px-1 font-bold text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
-                  <td className="border border-slate-600 p-1">
+
+                  {/* المنطقة (تلقائية وقابلة للتعديل) */}
+                  <td className="border border-slate-800 p-0.5">
+                    <input
+                      type="text"
+                      value={row.areaName}
+                      onChange={(e) => handleCellChange(index, 'areaName', e.target.value)}
+                      placeholder="المنطقة"
+                      className="w-full h-full px-1 text-center font-bold text-slate-700 bg-transparent focus:bg-amber-50 focus:outline-none"
+                    />
+                  </td>
+
+                  {/* المبلغ الإجمالي المستلم */}
+                  <td className="border border-slate-800 p-0.5">
                     <input
                       type="number"
                       value={row.amount}
                       onChange={(e) => handleCellChange(index, 'amount', e.target.value)}
                       placeholder="0"
-                      className="w-full px-2 py-1 text-center font-black text-emerald-800 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      className="w-full h-full px-1 text-center font-black text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
-                  <td className="border border-slate-600 p-1">
+
+                  {/* حصة الماء */}
+                  <td className="border border-slate-800 p-0.5">
+                    <input
+                      type="number"
+                      value={row.waterAmount}
+                      onChange={(e) => handleCellChange(index, 'waterAmount', e.target.value)}
+                      placeholder="0"
+                      className="w-full h-full px-1 text-center font-bold text-blue-900 bg-transparent focus:bg-blue-50 focus:outline-none"
+                    />
+                  </td>
+
+                  {/* حصة البلدية */}
+                  <td className="border border-slate-800 p-0.5">
+                    <input
+                      type="number"
+                      value={row.municipalityAmount}
+                      onChange={(e) => handleCellChange(index, 'municipalityAmount', e.target.value)}
+                      placeholder="0"
+                      className="w-full h-full px-1 text-center font-bold text-amber-900 bg-transparent focus:bg-amber-50 focus:outline-none"
+                    />
+                  </td>
+
+                  {/* رقم الوصل */}
+                  <td className="border border-slate-800 p-0.5">
                     <input
                       type="text"
                       value={row.receiptNumber}
                       onChange={(e) => handleCellChange(index, 'receiptNumber', e.target.value)}
                       placeholder="رقم الوصل"
-                      className="w-full px-2 py-1 text-center font-bold text-blue-900 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      className="w-full h-full px-1 text-center font-mono font-bold text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
-                  <td className="border border-slate-600 p-1">
+
+                  {/* وقت / تاريخ الوصل */}
+                  <td className="border border-slate-800 p-0.5">
                     <input
-                      type="date"
-                      value={row.paymentDate}
-                      onChange={(e) => handleCellChange(index, 'paymentDate', e.target.value)}
-                      className="w-full px-1 py-1 text-center text-xs font-bold text-slate-700 bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded"
+                      type="text"
+                      value={row.paymentTime || row.paymentDate}
+                      onChange={(e) => handleCellChange(index, 'paymentTime', e.target.value)}
+                      placeholder="الوقت/التاريخ"
+                      className="w-full h-full px-1 text-center text-[10px] font-bold text-slate-600 bg-transparent focus:bg-amber-50 focus:outline-none"
                     />
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
+              {/* صف المجاميع الكلية */}
               <tr className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-900">
-                <td colSpan={3} className="border border-slate-800 p-3 text-center text-base">
-                  المجموع الكلي للإرسالية:
+                <td colSpan={3} className="border border-slate-900 p-2 text-center text-xs sm:text-sm">
+                  المجموع الكلي ({validRowsCount} وصل):
                 </td>
-                <td className="border border-slate-800 p-3 text-center text-base text-emerald-700">
-                  {totalAmount.toLocaleString('ar-IQ')} د.ع
+                <td className="border border-slate-900 p-2 text-center text-xs sm:text-sm font-black">
+                  {totalAmount > 0 ? totalAmount.toLocaleString('ar-IQ') : '—'}
                 </td>
-                <td colSpan={2} className="border border-slate-800 p-3 text-center text-xs text-slate-600">
-                  عدد الوصولات: {rows.filter(r => r.subscriberId.trim() !== '' && parseFloat(r.amount) > 0).length}
+                <td className="border border-slate-900 p-2 text-center text-xs font-black text-blue-900">
+                  {totalWater > 0 ? totalWater.toLocaleString('ar-IQ') : '—'}
+                </td>
+                <td className="border border-slate-900 p-2 text-center text-xs font-black text-amber-900">
+                  {totalMunicipality > 0 ? totalMunicipality.toLocaleString('ar-IQ') : '—'}
+                </td>
+                <td colSpan={2} className="border border-slate-900 p-1 text-center text-[11px] text-slate-600">
+                  مديرية ماء البصرة
                 </td>
               </tr>
             </tfoot>
           </table>
         </div>
 
-        {/* زر إضافة أسطر إضافية */}
-        <div className="mt-4 flex justify-between items-center print:hidden">
+        {/* زر إضافة أسطر إضافية (يُخفى في الطباعة) */}
+        <div className="mt-3 flex justify-between items-center print:hidden">
           <button
             onClick={handleAddMoreRows}
             style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
-            className="px-4 py-2 border rounded-xl font-bold text-xs hover:bg-slate-200 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+            className="px-4 py-2 border rounded-xl font-bold text-xs hover:bg-slate-200 transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
           >
             <Plus className="w-4 h-4 text-slate-700" />
             <span>إضافة 10 أسطر جديدة</span>
           </button>
+
+          <span className="text-xs text-slate-500 font-bold">
+            عدد الأسطر الحالية في الورقة: {rows.length}
+          </span>
         </div>
 
-        {/* توقيعات المسؤولين المعتمدة في ورقة A4 */}
-        <div className="mt-12 pt-6 border-t border-slate-400 grid grid-cols-3 text-center text-xs sm:text-sm font-black text-slate-800">
+        {/* سطر التفقيط الرسمي (فقط) */}
+        <div className="mt-6 pt-3 border-t-2 border-slate-900 flex items-center gap-2 text-xs sm:text-sm font-black text-slate-900">
+          <span className="whitespace-nowrap underline underline-offset-4">فـقـط :</span>
+          <span className="flex-1 border-b border-dotted border-slate-700 pb-1 font-bold text-slate-800">
+            {totalAmount > 0 ? `${tafqeet(totalAmount)} دينار عراقي لا غير.` : '.......................................................................................................................................................................'}
+          </span>
+        </div>
+
+        {/* ========================================================
+            التواقيع الرسمية الأربعة المعتمدة كما في الاستمارة
+            ======================================================== */}
+        <div className="mt-8 pt-4 grid grid-cols-4 text-center text-[11px] sm:text-xs font-black text-slate-900 gap-2">
+          {/* 1. الجابي */}
           <div>
-            <p className="mb-8">توقيع المحصل</p>
-            <p className="text-slate-600">{selectedCollectorName || '..........................'}</p>
+            <p className="font-black text-slate-900 mb-8 sm:mb-10">الـجـابـي</p>
+            <p className="text-slate-600 font-bold text-[10px] sm:text-[11px]">
+              {selectedCollectorName || '..........................'}
+            </p>
           </div>
+
+          {/* 2. المدقق */}
           <div>
-            <p className="mb-8">توقيع مسؤول الخزنة / الصندوق</p>
-            <p className="text-slate-600">..........................</p>
+            <p className="font-black text-slate-900 mb-8 sm:mb-10">الـمـدقـق</p>
+            <p className="text-slate-600 font-bold text-[10px] sm:text-[11px]">
+              ..........................
+            </p>
           </div>
+
+          {/* 3. مسؤول الواردات */}
           <div>
-            <p className="mb-8">توقيع ومصادقة مسؤول الفرع</p>
-            <p className="text-slate-600">{branch.managers[0]?.name || '..........................'}</p>
+            <p className="font-black text-slate-900 mb-2">مسؤول الواردات</p>
+            <p className="text-[10px] text-slate-700 mb-4 sm:mb-6">
+              الاسم: {branch.managers[0]?.name || '...................'}
+            </p>
+            <p className="text-[10px] text-slate-700">
+              التوقيع: ...................
+            </p>
+          </div>
+
+          {/* 4. أمين الصندوق */}
+          <div>
+            <p className="font-black text-slate-900 mb-2">أمين الصندوق</p>
+            <p className="text-[10px] text-slate-700 mb-4 sm:mb-6">
+              توقيع أمين الصندوق باستلام المبلغ
+            </p>
+            <p className="text-slate-600 font-bold text-[10px] sm:text-[11px]">
+              ..........................
+            </p>
           </div>
         </div>
+
       </div>
     </div>
   )

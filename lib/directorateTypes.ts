@@ -41,13 +41,18 @@ export interface ConsignmentItem {
   id?: string
   subscriberId: number
   subscriberName: string
+  areaName?: string
   amount: number
+  waterAmount?: number
+  municipalityAmount?: number
   receiptNumber: string
   paymentDate: string
 }
 
 export interface Consignment {
   id: string
+  serialNumber?: string // رقم الورقة التسلسلي (مثال: 02951)
+  paperRefNumber?: string // الرقم
   branchId: string
   collectorId?: string
   collectorName: string
@@ -55,6 +60,8 @@ export interface Consignment {
   receiptNumberPrefix?: string
   items: ConsignmentItem[]
   totalAmount: number
+  totalWaterAmount?: number
+  totalMunicipalityAmount?: number
   createdAt: string
   printedAt?: string
 }
