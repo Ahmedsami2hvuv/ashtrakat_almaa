@@ -1574,7 +1574,7 @@ export default function DirectorDashboard({
                               <td style={{ padding: '12px 15px', textAlign: 'center' }}>
                                 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                                   <button
-                                    onClick={() => onVisitBranchManager(selectedBranch, manager)}
+                                    onClick={() => handleOpenManagerPage(manager, selectedBranch)}
                                     style={{
                                       backgroundColor: '#0056b3',
                                       color: '#fff',

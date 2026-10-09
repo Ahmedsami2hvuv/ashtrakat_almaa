@@ -105,23 +105,46 @@ export default function DirectorateRootApp() {
           const branchId = params.get('branch')
 
           // إذا كان الرابط رابطاً مباشراً لمسؤول فرع
-          if (role === 'manager' && token) {
-            const foundBranch = data.branches.find(b =>
-              b.managers?.some(m => m.token === token) || (branchId && b.id === branchId)
-            ) || data.branches[0]
+          if (role === 'manager') {
+            if (!token) {
+              window.history.replaceState({}, '', '/')
+              setActiveView('director_login')
+              setIsLoading(false)
+              return
+            }
 
-            const foundManager = foundBranch?.managers?.find(m => m.token === token)
-            if (foundBranch) {
+            // البحث الصارم عن الفرع الذي يحمل هذا التوكن السري حصراً
+            const foundBranch = data.branches.find(b =>
+              b.managers?.some(m => m.token === token)
+            )
+
+            // التحقق القاطع: يجب أن يتطابق التوكن مع الفرع المخصص له تحديداً
+            if (foundBranch && (!branchId || foundBranch.id === branchId)) {
+              const foundManager = foundBranch.managers?.find(m => m.token === token)
               setSelectedBranch(foundBranch)
               setSelectedManager(foundManager || null)
               setActiveView('branch_manager')
+              setIsLoading(false)
+              return
+            } else {
+              // تم التلاعب باسم الفرع أو أن التوكن غير صحيح: حظر الدخول فوراً
+              window.history.replaceState({}, '', '/')
+              alert('عفواً، رابط الدخول غير صالح أو تم التلاعب بمعلومات الفرع!')
+              setActiveView('director_login')
               setIsLoading(false)
               return
             }
           }
 
           // إذا كان الرابط رابطاً مباشراً لمحصل
-          if (role === 'collector' && token) {
+          if (role === 'collector') {
+            if (!token) {
+              window.history.replaceState({}, '', '/')
+              setActiveView('director_login')
+              setIsLoading(false)
+              return
+            }
+
             let matchedBranch: DirectorateBranch | null = null
             let matchedCollector: BranchCollector | null = null
 
@@ -134,7 +157,7 @@ export default function DirectorateRootApp() {
               }
             }
 
-            if (matchedBranch && matchedCollector) {
+            if (matchedBranch && matchedCollector && (!branchId || matchedBranch.id === branchId)) {
               setSelectedBranch(matchedBranch)
               const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
               setSubscriberAppData(subsData)
@@ -148,11 +171,24 @@ export default function DirectorateRootApp() {
               setActiveView('subscriber_app')
               setIsLoading(false)
               return
+            } else {
+              window.history.replaceState({}, '', '/')
+              alert('عفواً، رابط الدخول غير صالح أو تم التلاعب بمعلومات الفرع!')
+              setActiveView('director_login')
+              setIsLoading(false)
+              return
             }
           }
 
           // إذا كان الرابط رابطاً مباشراً لكاتب
-          if (role === 'writer' && token) {
+          if (role === 'writer') {
+            if (!token) {
+              window.history.replaceState({}, '', '/')
+              setActiveView('director_login')
+              setIsLoading(false)
+              return
+            }
+
             let matchedBranch: DirectorateBranch | null = null
             let matchedWriter: BranchWriter | null = null
 
@@ -165,7 +201,7 @@ export default function DirectorateRootApp() {
               }
             }
 
-            if (matchedBranch && matchedWriter) {
+            if (matchedBranch && matchedWriter && (!branchId || matchedBranch.id === branchId)) {
               setSelectedBranch(matchedBranch)
               const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
               setSubscriberAppData(subsData)
@@ -177,6 +213,12 @@ export default function DirectorateRootApp() {
                 assignedSubscriberIds: matchedWriter.assignedSubscriberIds
               })
               setActiveView('subscriber_app')
+              setIsLoading(false)
+              return
+            } else {
+              window.history.replaceState({}, '', '/')
+              alert('عفواً، رابط الدخول غير صالح أو تم التلاعب بمعلومات الفرع!')
+              setActiveView('director_login')
               setIsLoading(false)
               return
             }
@@ -278,9 +320,9 @@ export default function DirectorateRootApp() {
         directorateData={directorateData}
         onUpdateDirectorate={handleUpdateDirectorate}
         onVisitBranchManager={(branch, manager) => {
-          setSelectedBranch(branch)
-          setSelectedManager(manager)
-          setActiveView('branch_manager')
+          const origin = typeof window !== 'undefined' ? window.location.origin : ''
+          const directLink = `${origin}/?role=manager&token=${manager.token}&branch=${branch.id}`
+          window.open(directLink, '_blank')
         }}
         onLogout={() => {
           localStorage.removeItem('basra_director_session')
