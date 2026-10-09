@@ -113,6 +113,15 @@ export default function DirectorateRootApp() {
               return
             }
 
+            // حظر فوري وقاطع للرابط القديم الذي يحتوي على رقم الهاتف لأسباب أمنية
+            if (token === 'mgr_ali_07705666911' || token.includes('07705666911')) {
+              window.history.replaceState({}, '', '/')
+              alert('تم إلغاء وحرق هذا الرابط القديم المكشوف نهائياً لأسباب أمنية!\nيرجى استخدام الرابط الجديد المشفر من لوحة تحكم مدير الواردات.')
+              setActiveView('director_login')
+              setIsLoading(false)
+              return
+            }
+
             // البحث الصارم عن الفرع الذي يحمل هذا التوكن السري حصراً
             const foundBranch = data.branches.find(b =>
               b.managers?.some(m => m.token === token)
@@ -140,6 +149,15 @@ export default function DirectorateRootApp() {
           if (role === 'collector') {
             if (!token) {
               window.history.replaceState({}, '', '/')
+              setActiveView('director_login')
+              setIsLoading(false)
+              return
+            }
+
+            // حظر فوري وقاطع للرابط القديم الذي يحتوي على رقم الهاتف لأسباب أمنية
+            if (token === 'col_ahmed_07733921468' || token.includes('07733921468')) {
+              window.history.replaceState({}, '', '/')
+              alert('تم إلغاء وحرق هذا الرابط القديم المكشوف نهائياً لأسباب أمنية!\nيرجى استخدام الرابط الجديد المشفر من لوحة تحكم مدير الواردات.')
               setActiveView('director_login')
               setIsLoading(false)
               return

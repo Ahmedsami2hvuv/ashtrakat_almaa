@@ -121,12 +121,51 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
         } else {
           cloudDirectorate = json.data as DirectorateData
           if (cloudDirectorate && cloudDirectorate.branches) {
-            cloudDirectorate.branches = cloudDirectorate.branches.map(b => ({
-              ...b,
-              subscribersCount: b.subscribersCount ?? (b.subscribers?.length || 0),
-              subscribers: [],
-              billing: {}
-            }))
+            let hasUpdatedOldTokens = false
+
+            cloudDirectorate.branches = cloudDirectorate.branches.map(b => {
+              // فحص وترقية توكنات المدراء لمنع احتواء أي رقم هاتف
+              const updatedManagers = (b.managers || []).map(m => {
+                if (!m.token || m.token.includes('077') || m.token.includes('078') || m.token.includes('075') || m.token.length < 15) {
+                  hasUpdatedOldTokens = true
+                  return { ...m, token: generateSecureToken('mgr') }
+                }
+                return m
+              })
+
+              // فحص وترقية توكنات المحصلين
+              const updatedCollectors = (b.collectors || []).map(c => {
+                if (!c.token || c.token.includes('077') || c.token.includes('078') || c.token.includes('075') || c.token.length < 15) {
+                  hasUpdatedOldTokens = true
+                  return { ...c, token: generateSecureToken('col') }
+                }
+                return c
+              })
+
+              // فحص وترقية توكنات الكتاب
+              const updatedWriters = (b.writers || []).map(w => {
+                if (!w.token || w.token.includes('077') || w.token.includes('078') || w.token.includes('075') || w.token.length < 15) {
+                  hasUpdatedOldTokens = true
+                  return { ...w, token: generateSecureToken('wrt') }
+                }
+                return w
+              })
+
+              return {
+                ...b,
+                managers: updatedManagers,
+                collectors: updatedCollectors,
+                writers: updatedWriters,
+                subscribersCount: b.subscribersCount ?? (b.subscribers?.length || 0),
+                subscribers: [],
+                billing: {}
+              }
+            })
+
+            // إذا وُجدت توكنات قديمة تحتوي هواتف يتم حفظ التشفير الجديد سحابياً فوراً
+            if (hasUpdatedOldTokens) {
+              saveDirectorateToCloud(cloudDirectorate)
+            }
           }
         }
       }
@@ -164,7 +203,7 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
           id: 'mgr_ali_hussein',
           name: 'علي حسين لفتة',
           phone: '07705666911',
-          token: 'mgr_ali_07705666911',
+          token: generateSecureToken('mgr'),
           createdAt: new Date().toISOString()
         }
       ],
@@ -173,7 +212,7 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
           id: 'col_ahmed_sami',
           name: 'احمد سامي عباس',
           phone: '07733921468',
-          token: 'col_ahmed_07733921468',
+          token: generateSecureToken('col'),
           assignedAreaIds: abiAlKhaseebAreas.map(a => a.id),
           assignedSubscriberIds: abiAlKhaseebSubscribers.map(s => s.id),
           canEdit: true, // مسموح له بالتعديل للاستمرار في عمله بسلاسة

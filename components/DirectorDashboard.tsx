@@ -319,6 +319,22 @@ export default function DirectorDashboard({
     }
   }
 
+  // تجديد الرمز السري وإبطال الرابط القديم فوراً
+  const handleRegenerateManagerToken = (branchId: string, managerId: string, name: string) => {
+    if (confirm(`هل تريد تجديد الرمز السري للمسؤول (${name})؟ سيتم إبطال الرابط القديم فوراً ولن يعمل أبداً.`)) {
+      const newToken = generateSecureToken('mgr')
+      const updatedBranches = directorateData.branches.map(b => {
+        if (b.id !== branchId) return b
+        return {
+          ...b,
+          managers: (b.managers || []).map(m => m.id === managerId ? { ...m, token: newToken } : m)
+        }
+      })
+      onUpdateDirectorate({ ...directorateData, branches: updatedBranches })
+      alert('تم تجديد الرمز السري بنجاح وإلغاء الرابط القديم نهائياً! يمكنك الآن نسخ الرابط الجديد المشفر.')
+    }
+  }
+
   // فتح صفحة المسؤول في نافذة جديدة مستقلة
   const handleOpenManagerPage = (manager: BranchManager, branch: DirectorateBranch) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -1619,6 +1635,22 @@ export default function DirectorDashboard({
                                     {copiedManagerId === manager.id ? '✓ تم' : 'نسخ الرابط'}
                                   </button>
                                   <button
+                                    onClick={() => handleRegenerateManagerToken(selectedBranch.id, manager.id, manager.name)}
+                                    title="توليد رمز سري مشفر جديد وإلغاء الرابط القديم فوراً"
+                                    style={{
+                                      backgroundColor: '#d97706',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    تجديد الرمز
+                                  </button>
+                                  <button
                                     onClick={() => handleDeleteManager(selectedBranch.id, manager.id, manager.name)}
                                     style={{
                                       backgroundColor: '#dc2626',
@@ -2339,6 +2371,23 @@ export default function DirectorDashboard({
                                 }}
                               >
                                 {copiedManagerId === manager.id ? 'تم النسخ ✓' : 'نسخ الرابط'}
+                              </button>
+                              <button
+                                onClick={() => handleRegenerateManagerToken(branch.id, manager.id, manager.name)}
+                                title="توليد رمز سري مشفر جديد وإلغاء الرابط القديم فوراً"
+                                style={{
+                                  backgroundColor: '#d97706',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  fontSize: '0.8rem',
+                                  marginRight: '6px'
+                                }}
+                              >
+                                تجديد الرمز
                               </button>
                             </td>
                             <td style={{ padding: '12px 15px', textAlign: 'center' }}>
