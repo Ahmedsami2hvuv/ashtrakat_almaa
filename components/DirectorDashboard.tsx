@@ -113,6 +113,95 @@ export default function DirectorDashboard({
     return branchFinancialStats.reduce((sum, item) => sum + item.collected, 0)
   }, [branchFinancialStats])
 
+  // قائمة بجميع مسؤولي الأفرع عبر كافة الأفرع
+  const allManagersList = useMemo(() => {
+    const list: { manager: BranchManager; branch: DirectorateBranch }[] = []
+    directorateData.branches.forEach(b => {
+      ;(b.managers || []).forEach(m => {
+        list.push({ manager: m, branch: b })
+      })
+    })
+    return list
+  }, [directorateData.branches])
+
+  // قائمة بجميع المشتركين عبر كافة الأفرع
+  const allSubscribersList = useMemo(() => {
+    const list: { subscriber: Subscriber; branch: DirectorateBranch }[] = []
+    directorateData.branches.forEach(b => {
+      ;(b.subscribers || []).forEach(s => {
+        list.push({ subscriber: s, branch: b })
+      })
+    })
+    return list
+  }, [directorateData.branches])
+
+  // تصفية جميع المشتركين حسب البحث
+  const filteredAllSubscribers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return allSubscribersList
+    return allSubscribersList.filter(item => {
+      const s = item.subscriber
+      const b = item.branch
+      return (
+        s.name?.toLowerCase().includes(q) ||
+        s.phone?.includes(q) ||
+        s.id?.toString().includes(q) ||
+        b.name?.toLowerCase().includes(q)
+      )
+    })
+  }, [allSubscribersList, searchQuery])
+
+  // قائمة بجميع المحصلين والكُتّاب عبر كافة الأفرع
+  const allStaffList = useMemo(() => {
+    const list: {
+      id: string
+      name: string
+      phone: string
+      type: 'collector' | 'writer'
+      branch: DirectorateBranch
+      areasCount: number
+      collected: number
+      rawCollector?: BranchCollector
+      rawWriter?: BranchWriter
+    }[] = []
+
+    directorateData.branches.forEach(b => {
+      ;(b.collectors || []).forEach(c => {
+        let colSum = 0
+        if (b.consignments) {
+          b.consignments.filter(cons => cons.collectorId === c.id).forEach(cons => {
+            colSum += cons.totalAmount || 0
+          })
+        }
+        list.push({
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          type: 'collector',
+          branch: b,
+          areasCount: c.assignedAreaIds?.length || 0,
+          collected: colSum,
+          rawCollector: c
+        })
+      })
+
+      ;(b.writers || []).forEach(w => {
+        list.push({
+          id: w.id,
+          name: w.name,
+          phone: w.phone,
+          type: 'writer',
+          branch: b,
+          areasCount: w.assignedAreaIds?.length || 0,
+          collected: 0,
+          rawWriter: w
+        })
+      })
+    })
+
+    return list
+  }, [directorateData.branches])
+
   // إضافة فرع
   const handleAddBranch = () => {
     if (!newBranchName.trim()) {

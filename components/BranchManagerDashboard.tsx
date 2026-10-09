@@ -24,7 +24,6 @@ interface BranchManagerDashboardProps {
     assignedAreaIds?: string[]
     assignedSubscriberIds?: number[]
   }) => void
-  onBackToDirector?: () => void
 }
 
 type TabType = 'areas' | 'subscribers' | 'collectors' | 'writers' | 'treasury' | 'branch_info' | 'settings'
@@ -33,8 +32,7 @@ export default function BranchManagerDashboard({
   branch,
   currentManager,
   onUpdateBranch,
-  onOpenSubscriberApp,
-  onBackToDirector
+  onOpenSubscriberApp
 }: BranchManagerDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('subscribers')
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
@@ -336,14 +334,6 @@ export default function BranchManagerDashboard({
       <header className="bg-slate-900 text-white shadow-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {onBackToDirector && (
-              <button
-                onClick={onBackToDirector}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-1"
-              >
-                عودة للإدارة العامة
-              </button>
-            )}
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-white text-base">
               فرع
             </div>

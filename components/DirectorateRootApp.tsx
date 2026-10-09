@@ -271,14 +271,6 @@ export default function DirectorateRootApp() {
           setSubscriberAppProps(params)
           setActiveView('subscriber_app')
         }}
-        onBackToDirector={() => {
-          const dirSession = localStorage.getItem('basra_director_session')
-          if (dirSession) {
-            setActiveView('director_dashboard')
-          } else {
-            setActiveView('director_login')
-          }
-        }}
       />
     )
   }
