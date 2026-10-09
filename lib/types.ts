@@ -31,6 +31,7 @@ export interface Subscriber {
   id: number
   name: string
   areaId: string
+  areaIds?: string[]
   branchId: string
   phone: string
   propertyType: 'سكني' | 'تجاري'

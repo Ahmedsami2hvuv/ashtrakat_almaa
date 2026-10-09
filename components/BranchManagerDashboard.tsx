@@ -36,7 +36,12 @@ import {
   XCircle,
   Key,
   ExternalLink,
-  ChevronLeft
+  ChevronLeft,
+  ChevronRight,
+  CheckSquare,
+  Square,
+  Check,
+  X
 } from 'lucide-react'
 
 interface BranchManagerDashboardProps {
@@ -147,6 +152,26 @@ export default function BranchManagerDashboard({
     return { totalSubscribers, totalDebt, totalAreas, totalCollectors, totalWriters }
   }, [branch, loadedSubscribers, hasLoadedSubscribers])
 
+  // حالات وضع التحديد والتخصيص الجماعي في سجل المشتركين
+  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [selectedSubIds, setSelectedSubIds] = useState<Set<number>>(new Set())
+  const [subscribersPage, setSubscribersPage] = useState(1)
+  const [subscribersPageSize, setSubscribersPageSize] = useState<number>(30)
+
+  // حالات نوافذ التخصيص المنبثقة
+  const [showAssignAreasModal, setShowAssignAreasModal] = useState(false)
+  const [bulkSelectedAreaIds, setBulkSelectedAreaIds] = useState<string[]>([])
+  const [bulkAreaSearch, setBulkAreaSearch] = useState('')
+
+  const [showAssignWritersModal, setShowAssignWritersModal] = useState(false)
+  const [bulkSelectedWriterIds, setBulkSelectedWriterIds] = useState<string[]>([])
+
+  const [showAssignCollectorsModal, setShowAssignCollectorsModal] = useState(false)
+  const [bulkSelectedCollectorIds, setBulkSelectedCollectorIds] = useState<string[]>([])
+
+  const [isBulkSaving, setIsBulkSaving] = useState(false)
+  const [bulkFeedbackMessage, setBulkFeedbackMessage] = useState<string | null>(null)
+
   // فلترة المشتركين المحملين فقط
   const filteredSubscribers = useMemo(() => {
     if (!searchQuery.trim()) return loadedSubscribers
@@ -155,6 +180,189 @@ export default function BranchManagerDashboard({
       s => s.name.toLowerCase().includes(q) || s.id.toString().includes(q)
     )
   }, [loadedSubscribers, searchQuery])
+
+  // إعادة ضبط الصفحة عند تغيير البحث
+  useEffect(() => {
+    setSubscribersPage(1)
+  }, [searchQuery])
+
+  // المشتركون في الصفحة الحالية
+  const totalSubPages = Math.ceil(filteredSubscribers.length / subscribersPageSize) || 1
+  const paginatedSubscribers = useMemo(() => {
+    const start = (subscribersPage - 1) * subscribersPageSize
+    return filteredSubscribers.slice(start, start + subscribersPageSize)
+  }, [filteredSubscribers, subscribersPage, subscribersPageSize])
+
+  // دوال التحكم بالتحديد
+  const toggleSelectSubscriber = (id: number) => {
+    setSelectedSubIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const selectAllVisibleSubscribers = () => {
+    setSelectedSubIds(prev => {
+      const next = new Set(prev)
+      paginatedSubscribers.forEach(s => next.add(s.id))
+      return next
+    })
+  }
+
+  const selectAllFilteredSubscribers = () => {
+    setSelectedSubIds(new Set(filteredSubscribers.map(s => s.id)))
+  }
+
+  const clearSelectedSubscribers = () => {
+    setSelectedSubIds(new Set())
+  }
+
+  // 1. تنفيذ التخصيص للمناطق
+  const handleBulkAssignAreas = async () => {
+    if (bulkSelectedAreaIds.length === 0) {
+      alert('يرجى تحديد منطقة واحدة على الأقل')
+      return
+    }
+    if (selectedSubIds.size === 0) {
+      alert('يرجى تحديد مشترك واحد على الأقل')
+      return
+    }
+
+    setIsBulkSaving(true)
+    try {
+      const primaryAreaId = bulkSelectedAreaIds[0]
+      const updatedSubscribers = loadedSubscribers.map(sub => {
+        if (selectedSubIds.has(sub.id)) {
+          return {
+            ...sub,
+            areaId: primaryAreaId,
+            areaIds: [...bulkSelectedAreaIds]
+          }
+        }
+        return sub
+      })
+
+      // حفظ التعديلات في السحابة
+      await saveBranchSubscribersAndBilling(branch.id, updatedSubscribers, loadedBilling)
+
+      // تحديث الحالة للفرع والمكون الحالي
+      setLoadedSubscribers(updatedSubscribers)
+      onUpdateBranch({
+        ...branch,
+        subscribers: updatedSubscribers,
+        subscribersCount: updatedSubscribers.length
+      })
+
+      setShowAssignAreasModal(false)
+      setBulkSelectedAreaIds([])
+      setSelectedSubIds(new Set())
+      setIsSelectMode(false)
+      setBulkFeedbackMessage(`تم بنجاح تخصيص ${selectedSubIds.size} مشترك للمناطق المحددة (${bulkSelectedAreaIds.length} مناطق)`)
+      setTimeout(() => setBulkFeedbackMessage(null), 4500)
+    } catch (err) {
+      console.error('Error assigning areas:', err)
+      alert('حدث خطأ أثناء حفظ تخصيص المناطق، يرجى المحاولة ثانية')
+    } finally {
+      setIsBulkSaving(false)
+    }
+  }
+
+  // 2. تنفيذ التخصيص للكتّاب
+  const handleBulkAssignWriters = async () => {
+    if (bulkSelectedWriterIds.length === 0) {
+      alert('يرجى تحديد كاتب واحد على الأقل')
+      return
+    }
+    if (selectedSubIds.size === 0) {
+      alert('يرجى تحديد مشترك واحد على الأقل')
+      return
+    }
+
+    setIsBulkSaving(true)
+    try {
+      const idsToAdd = Array.from(selectedSubIds)
+      const currentWriters = branch.writers || []
+      const updatedWriters = currentWriters.map(writer => {
+        if (bulkSelectedWriterIds.includes(writer.id)) {
+          const existingIds = new Set(writer.assignedSubscriberIds || [])
+          idsToAdd.forEach(id => existingIds.add(id))
+          return {
+            ...writer,
+            assignedSubscriberIds: Array.from(existingIds)
+          }
+        }
+        return writer
+      })
+
+      onUpdateBranch({
+        ...branch,
+        writers: updatedWriters
+      })
+
+      setShowAssignWritersModal(false)
+      setBulkSelectedWriterIds([])
+      setSelectedSubIds(new Set())
+      setIsSelectMode(false)
+      setBulkFeedbackMessage(`تم بنجاح تخصيص المشتركين للكتّاب المحددين (${bulkSelectedWriterIds.length} كاتب)`)
+      setTimeout(() => setBulkFeedbackMessage(null), 4500)
+    } catch (err) {
+      console.error('Error assigning writers:', err)
+      alert('حدث خطأ أثناء حفظ تخصيص الكتّاب')
+    } finally {
+      setIsBulkSaving(false)
+    }
+  }
+
+  // 3. تنفيذ التخصيص للمحصلين
+  const handleBulkAssignCollectors = async () => {
+    if (bulkSelectedCollectorIds.length === 0) {
+      alert('يرجى تحديد محصل واحد على الأقل')
+      return
+    }
+    if (selectedSubIds.size === 0) {
+      alert('يرجى تحديد مشترك واحد على الأقل')
+      return
+    }
+
+    setIsBulkSaving(true)
+    try {
+      const idsToAdd = Array.from(selectedSubIds)
+      const currentCollectors = branch.collectors || []
+      const updatedCollectors = currentCollectors.map(collector => {
+        if (bulkSelectedCollectorIds.includes(collector.id)) {
+          const existingIds = new Set(collector.assignedSubscriberIds || [])
+          idsToAdd.forEach(id => existingIds.add(id))
+          return {
+            ...collector,
+            assignedSubscriberIds: Array.from(existingIds)
+          }
+        }
+        return collector
+      })
+
+      onUpdateBranch({
+        ...branch,
+        collectors: updatedCollectors
+      })
+
+      setShowAssignCollectorsModal(false)
+      setBulkSelectedCollectorIds([])
+      setSelectedSubIds(new Set())
+      setIsSelectMode(false)
+      setBulkFeedbackMessage(`تم بنجاح تخصيص المشتركين للمحصلين المحددين (${bulkSelectedCollectorIds.length} محصل)`)
+      setTimeout(() => setBulkFeedbackMessage(null), 4500)
+    } catch (err) {
+      console.error('Error assigning collectors:', err)
+      alert('حدث خطأ أثناء حفظ تخصيص المحصلين')
+    } finally {
+      setIsBulkSaving(false)
+    }
+  }
 
   // ------------------ إدارة المناطق ------------------
   const handleAddArea = (e?: React.FormEvent) => {
@@ -834,16 +1042,36 @@ export default function BranchManagerDashboard({
 
         {/* جسم الشاشة الرئيسي */}
         <main className="space-y-6">
-          {/* تبويب المشتركين: نظيف وخفيف وخالٍ من الأزرار المزدحمة */}
+          {/* تبويب المشتركين: سجل المشتركين مع وضع التحديد والتخصيص الجماعي */}
           {activeTab === 'subscribers' && (
             <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-sm sm:text-base font-black text-slate-900">سجل المشتركين ({filteredSubscribers.length})</h3>
-                  <p className="text-[11px] text-slate-500">قائمة المشتركين المسجلين في {branch.name} (يتم تحميلها عند الطلب لحفظ أداء النظام)</p>
+                  <p className="text-[11px] text-slate-500">قائمة المشتركين المسجلين في {branch.name} (يمكنك التحديد والتخصيص المباشر للمناطق والكُتّاب والمحصلين)</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* زر وضع التحديد */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMode = !isSelectMode
+                      setIsSelectMode(nextMode)
+                      if (!nextMode) {
+                        setSelectedSubIds(new Set())
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      isSelectMode
+                        ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-300'
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
+                    }`}
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>{isSelectMode ? 'إلغاء وضع التحديد' : 'تحديد المشتركين'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => fetchBranchSubscribers(true)}
@@ -864,6 +1092,51 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
+              {/* إشعار نجاح العمليات الجماعية */}
+              {bulkFeedbackMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{bulkFeedbackMessage}</span>
+                </div>
+              )}
+
+              {/* شريط التحكم السريع بوضع التحديد */}
+              {isSelectMode && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-blue-950">وضع التحديد نشط:</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-black text-[11px] shadow-sm">
+                      {selectedSubIds.size} مشترك محدد
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllVisibleSubscribers}
+                      className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold transition shadow-2xs"
+                    >
+                      تحديد الصفحة الحالية ({paginatedSubscribers.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={selectAllFilteredSubscribers}
+                      className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold transition shadow-2xs"
+                    >
+                      تحديد كل نتائج البحث ({filteredSubscribers.length})
+                    </button>
+                    {selectedSubIds.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearSelectedSubscribers}
+                        className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold transition"
+                      >
+                        إلغاء التحديد
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {isLoadingSubscribers ? (
                 <div className="py-12 text-center text-blue-600 font-bold bg-blue-50/50 rounded-xl">
                   <div className="text-xl mb-2">⏳</div>
@@ -871,72 +1144,255 @@ export default function BranchManagerDashboard({
                 </div>
               ) : (
                 <>
-                  {/* شريط البحث */}
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="ابحث برقم المشترك أو اسمه..."
-                      className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                    />
+                  {/* شريط البحث وخيارات العرض */}
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <div className="relative flex-1 w-full">
+                      <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="ابحث برقم المشترك أو اسمه أو منطقته..."
+                        className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                      <span className="text-[11px] font-bold text-slate-500">عرض بالصفحة:</span>
+                      <select
+                        value={subscribersPageSize}
+                        onChange={(e) => {
+                          setSubscribersPageSize(Number(e.target.value))
+                          setSubscribersPage(1)
+                        }}
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value={30}>30</option>
+                        <option value={60}>60</option>
+                        <option value={100}>100</option>
+                        <option value={10000}>الكل</option>
+                      </select>
+                    </div>
                   </div>
 
-              {/* جدول المشتركين النظيف والمقروء */}
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
-                <table className="w-full text-right text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
-                      <th className="p-3">رقم المشترك</th>
-                      <th className="p-3">اسم المشترك</th>
-                      <th className="p-3">المنطقة</th>
-                      <th className="p-3">النوع/العداد</th>
-                      <th className="p-3">الدين السابق</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredSubscribers.slice(0, 15).map((sub) => {
-                      const areaName = branch.areas?.find(a => a.id === sub.areaId)?.name || 'غير محدد'
-                      return (
-                        <tr key={sub.id} className="hover:bg-slate-50 font-bold transition">
-                          <td className="p-3 font-mono text-blue-700 bg-blue-50/50">{sub.id}</td>
-                          <td className="p-3 text-slate-900">{sub.name}</td>
-                          <td className="p-3 text-slate-600">{areaName}</td>
-                          <td className="p-3 text-slate-500">{sub.propertyType} - {sub.meterType}</td>
-                          <td className="p-3 text-rose-600 font-mono">{(sub.remainingPrev || 0).toLocaleString('ar-IQ')} د.ع</td>
+                  {/* جدول المشتركين مع مربعات التحديد ودعم التحديد المتعدد */}
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+                    <table className="w-full text-right text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
+                          {isSelectMode && (
+                            <th className="p-3 w-10 text-center">
+                              <input
+                                type="checkbox"
+                                checked={paginatedSubscribers.length > 0 && paginatedSubscribers.every(s => selectedSubIds.has(s.id))}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    selectAllVisibleSubscribers()
+                                  } else {
+                                    setSelectedSubIds(prev => {
+                                      const next = new Set(prev)
+                                      paginatedSubscribers.forEach(s => next.delete(s.id))
+                                      return next
+                                    })
+                                  }
+                                }}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                title="تحديد/إلغاء صفحة المشتركين الحالية"
+                              />
+                            </th>
+                          )}
+                          <th className="p-3">رقم المشترك</th>
+                          <th className="p-3">اسم المشترك</th>
+                          <th className="p-3">المنطقة</th>
+                          <th className="p-3">النوع/العداد</th>
+                          <th className="p-3">الدين السابق</th>
                         </tr>
-                      )
-                    })}
-                    {filteredSubscribers.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="text-center py-8 text-slate-400 font-bold">
-                          لا توجد نتائج مطابقة للبحث
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedSubscribers.map((sub) => {
+                          const isSelected = selectedSubIds.has(sub.id)
+                          // عرض كافة المناطق المخصصة للمشترك
+                          const assignedAreaNames = sub.areaIds && sub.areaIds.length > 0
+                            ? branch.areas?.filter(a => sub.areaIds?.includes(a.id)).map(a => a.name).join('، ')
+                            : (branch.areas?.find(a => a.id === sub.areaId)?.name || 'غير محدد')
 
-              {filteredSubscribers.length > 15 && (
-                <div className="text-center pt-2">
-                  <button
-                    onClick={() =>
-                      onOpenSubscriberApp({
-                        role: 'manager',
-                        userTitle: `مسؤول فرع (${branch.name})`,
-                        canEdit: true
-                      })
-                    }
-                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-2"
-                  >
-                    <span>عرض باقي المشتركين ({filteredSubscribers.length - 15}+)</span>
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+                          return (
+                            <tr
+                              key={sub.id}
+                              onClick={() => {
+                                if (isSelectMode) toggleSelectSubscriber(sub.id)
+                              }}
+                              className={`font-bold transition ${
+                                isSelectMode ? 'cursor-pointer select-none' : ''
+                              } ${
+                                isSelected
+                                  ? 'bg-blue-50/90 text-blue-950 ring-1 ring-inset ring-blue-300'
+                                  : 'hover:bg-slate-50'
+                              }`}
+                            >
+                              {isSelectMode && (
+                                <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleSelectSubscriber(sub.id)}
+                                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                  />
+                                </td>
+                              )}
+                              <td className="p-3 font-mono text-blue-700 bg-blue-50/40">#{sub.id}</td>
+                              <td className="p-3 text-slate-900">
+                                <div>{sub.name}</div>
+                                {sub.phone && <div className="text-[10px] text-slate-400 font-mono font-normal">{sub.phone}</div>}
+                              </td>
+                              <td className="p-3 text-slate-600">
+                                <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px]">
+                                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>{assignedAreaNames}</span>
+                                </span>
+                              </td>
+                              <td className="p-3 text-slate-500">{sub.propertyType} - {sub.meterType}</td>
+                              <td className="p-3 text-rose-600 font-mono">{(sub.remainingPrev || 0).toLocaleString('ar-IQ')} د.ع</td>
+                            </tr>
+                          )
+                        })}
+                        {filteredSubscribers.length === 0 && (
+                          <tr>
+                            <td colSpan={isSelectMode ? 6 : 5} className="text-center py-8 text-slate-400 font-bold">
+                              لا توجد نتائج مطابقة للبحث
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* أزرار ترقيم الصفحات (Pagination) والتنقل */}
+                  {filteredSubscribers.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs">
+                      <div className="text-slate-500 font-bold text-[11px]">
+                        عرض {((subscribersPage - 1) * subscribersPageSize) + 1} - {Math.min(subscribersPage * subscribersPageSize, filteredSubscribers.length)} من إجمالي {filteredSubscribers.length} مشترك
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {totalSubPages > 1 && (
+                          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                            <button
+                              type="button"
+                              onClick={() => setSubscribersPage(p => Math.max(1, p - 1))}
+                              disabled={subscribersPage === 1}
+                              className="px-2.5 py-1 bg-white hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-white text-slate-700 font-bold rounded-lg transition"
+                            >
+                              السابق
+                            </button>
+                            <span className="px-3 py-1 font-black text-slate-800 text-[11px]">
+                              {subscribersPage} / {totalSubPages}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSubscribersPage(p => Math.min(totalSubPages, p + 1))}
+                              disabled={subscribersPage === totalSubPages}
+                              className="px-2.5 py-1 bg-white hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-white text-slate-700 font-bold rounded-lg transition"
+                            >
+                              التالي
+                            </button>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenSubscriberApp({
+                              role: 'manager',
+                              userTitle: `مسؤول فرع (${branch.name})`,
+                              canEdit: true
+                            })
+                          }
+                          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5"
+                        >
+                          <span>فتح تطبيق المشتركين الكامل</span>
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
+              )}
+
+              {/* القائمة السفلية العائمة للمشتركين المحددين (Bottom Action Bar) */}
+              {selectedSubIds.size > 0 && (
+                <div className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md text-white border-t border-slate-700 shadow-2xl animate-in slide-in-from-bottom duration-200">
+                  <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+                    {/* شارة عدد المشتركين المحددين */}
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-3 w-3 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                      </span>
+                      <div className="text-right">
+                        <p className="text-xs sm:text-sm font-black text-white">
+                          تم تحديد <span className="text-blue-400 text-base">{selectedSubIds.size}</span> مشترك
+                        </p>
+                        <p className="text-[10px] sm:text-[11px] text-slate-300">
+                          اختر الإجراء لتخصيص هؤلاء المشتركين لأكثر من منطقة أو كاتب أو محصل
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* خيارات القائمة السفلية */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                      {/* 1. خيار التخصيص للمناطق */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBulkSelectedAreaIds([])
+                          setBulkAreaSearch('')
+                          setShowAssignAreasModal(true)
+                        }}
+                        className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-emerald-950/40"
+                      >
+                        <MapPin className="w-4 h-4 text-emerald-200" />
+                        <span>تخصيص لمناطق</span>
+                      </button>
+
+                      {/* 2. خيار التخصيص للكتّاب */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBulkSelectedWriterIds([])
+                          setShowAssignWritersModal(true)
+                        }}
+                        className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-amber-950/40"
+                      >
+                        <BookOpen className="w-4 h-4 text-amber-200" />
+                        <span>تخصيص لكتّاب</span>
+                      </button>
+
+                      {/* 3. خيار التخصيص للمحصلين */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBulkSelectedCollectorIds([])
+                          setShowAssignCollectorsModal(true)
+                        }}
+                        className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-blue-950/40"
+                      >
+                        <Wallet className="w-4 h-4 text-blue-200" />
+                        <span>تخصيص لمحصلين</span>
+                      </button>
+
+                      {/* زر إلغاء التحديد */}
+                      <button
+                        type="button"
+                        onClick={clearSelectedSubscribers}
+                        className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        title="إلغاء التحديد"
+                      >
+                        <X className="w-4 h-4" />
+                        <span className="hidden sm:inline">إلغاء</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -1817,6 +2273,369 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
+      {/* نافذة تخصيص المشتركين للمناطق */}
+      {showAssignAreasModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">تخصيص المشتركين للمناطق</h3>
+                  <p className="text-[11px] text-slate-500 font-bold">المشتركون المحددون: {selectedSubIds.size} مشترك</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignAreasModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed font-bold">
+              اختر منطقة واحدة أو ضع إشارة صح على أكثر من منطقة لتخصيص هؤلاء المشتركين إليها:
+            </p>
+
+            {/* فلتر البحث في المناطق وأزرار التحديد السريع */}
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={bulkAreaSearch}
+                onChange={(e) => setBulkAreaSearch(e.target.value)}
+                placeholder="ابحث عن منطقة..."
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+                <span>المناطق المحددة: ({bulkSelectedAreaIds.length})</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allIds = (branch.areas || []).map(a => a.id)
+                      setBulkSelectedAreaIds(allIds)
+                    }}
+                    className="text-emerald-700 hover:underline"
+                  >
+                    تحديد الكل
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => setBulkSelectedAreaIds([])}
+                    className="text-rose-600 hover:underline"
+                  >
+                    إلغاء التحديد
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* قائمة المناطق */}
+            <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+              {(branch.areas || [])
+                .filter(a => !bulkAreaSearch || a.name.toLowerCase().includes(bulkAreaSearch.toLowerCase()))
+                .map(area => {
+                  const isChecked = bulkSelectedAreaIds.includes(area.id)
+                  const countInArea = loadedSubscribers.filter(s => s.areaId === area.id || s.areaIds?.includes(area.id)).length
+                  return (
+                    <label
+                      key={area.id}
+                      className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer font-bold transition border ${
+                        isChecked
+                          ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950 shadow-2xs'
+                          : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setBulkSelectedAreaIds(prev => [...prev, area.id])
+                            } else {
+                              setBulkSelectedAreaIds(prev => prev.filter(id => id !== area.id))
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        />
+                        <span>{area.name}</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">
+                        {countInArea} مشترك
+                      </span>
+                    </label>
+                  )
+                })}
+              {(branch.areas || []).length === 0 && (
+                <div className="text-center py-6 text-slate-400 font-bold">
+                  لا توجد مناطق مسجلة في هذا الفرع بعد
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowAssignAreasModal(false)}
+                disabled={isBulkSaving}
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkAssignAreas}
+                disabled={isBulkSaving || bulkSelectedAreaIds.length === 0}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-900/20"
+              >
+                {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>تطبيق التخصيص للمناطق ({bulkSelectedAreaIds.length})</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تخصيص المشتركين للكتّاب */}
+      {showAssignWritersModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">تخصيص المشتركين للكتّاب</h3>
+                  <p className="text-[11px] text-slate-500 font-bold">المشتركون المحددون: {selectedSubIds.size} مشترك</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignWritersModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed font-bold">
+              اختر كاتباً أو ضع إشارة صح على أكثر من كاتب لتعيين هؤلاء المشتركين إليهم في نفس الوقت:
+            </p>
+
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+              <span>الكتّاب المحددون: ({bulkSelectedWriterIds.length})</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allIds = (branch.writers || []).map(w => w.id)
+                    setBulkSelectedWriterIds(allIds)
+                  }}
+                  className="text-amber-700 hover:underline"
+                >
+                  تحديد الكل
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => setBulkSelectedWriterIds([])}
+                  className="text-rose-600 hover:underline"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
+            </div>
+
+            {/* قائمة الكتّاب */}
+            <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+              {(branch.writers || []).map(writer => {
+                const isChecked = bulkSelectedWriterIds.includes(writer.id)
+                const assignedCount = writer.assignedSubscriberIds?.length || 0
+                return (
+                  <label
+                    key={writer.id}
+                    className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer font-bold transition border ${
+                      isChecked
+                        ? 'bg-amber-50/80 border-amber-300 text-amber-950 shadow-2xs'
+                        : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setBulkSelectedWriterIds(prev => [...prev, writer.id])
+                          } else {
+                            setBulkSelectedWriterIds(prev => prev.filter(id => id !== writer.id))
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-black text-slate-900">{writer.name}</div>
+                        {writer.phone && <div className="text-[10px] text-slate-400 font-mono font-normal">{writer.phone}</div>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                      {assignedCount} مشترك مخصص
+                    </span>
+                  </label>
+                )
+              })}
+              {(branch.writers || []).length === 0 && (
+                <div className="text-center py-6 text-slate-400 font-bold">
+                  لا يوجد كتّاب مضافون في هذا الفرع بعد (يمكنك إضافتهم من تبويب الكُتّاب)
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowAssignWritersModal(false)}
+                disabled={isBulkSaving}
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkAssignWriters}
+                disabled={isBulkSaving || bulkSelectedWriterIds.length === 0}
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-amber-900/20"
+              >
+                {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>تطبيق التخصيص للكتّاب ({bulkSelectedWriterIds.length})</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تخصيص المشتركين للمحصلين */}
+      {showAssignCollectorsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">تخصيص المشتركين للمحصلين</h3>
+                  <p className="text-[11px] text-slate-500 font-bold">المشتركون المحددون: {selectedSubIds.size} مشترك</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignCollectorsModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed font-bold">
+              اختر محصلاً أو ضع إشارة صح على أكثر من محصل لتعيين هؤلاء المشتركين إليهم في نفس الوقت:
+            </p>
+
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+              <span>المحصلون المحددون: ({bulkSelectedCollectorIds.length})</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allIds = (branch.collectors || []).map(c => c.id)
+                    setBulkSelectedCollectorIds(allIds)
+                  }}
+                  className="text-blue-700 hover:underline"
+                >
+                  تحديد الكل
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => setBulkSelectedCollectorIds([])}
+                  className="text-rose-600 hover:underline"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
+            </div>
+
+            {/* قائمة المحصلين */}
+            <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+              {(branch.collectors || []).map(collector => {
+                const isChecked = bulkSelectedCollectorIds.includes(collector.id)
+                const assignedCount = collector.assignedSubscriberIds?.length || 0
+                return (
+                  <label
+                    key={collector.id}
+                    className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer font-bold transition border ${
+                      isChecked
+                        ? 'bg-blue-50/80 border-blue-300 text-blue-950 shadow-2xs'
+                        : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setBulkSelectedCollectorIds(prev => [...prev, collector.id])
+                          } else {
+                            setBulkSelectedCollectorIds(prev => prev.filter(id => id !== collector.id))
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div>
+                        <div className="font-black text-slate-900">{collector.name}</div>
+                        {collector.phone && <div className="text-[10px] text-slate-400 font-mono font-normal">{collector.phone}</div>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                      {assignedCount} مشترك مخصص
+                    </span>
+                  </label>
+                )
+              })}
+              {(branch.collectors || []).length === 0 && (
+                <div className="text-center py-6 text-slate-400 font-bold">
+                  لا يوجد محصلون مضافون في هذا الفرع بعد (يمكنك إضافتهم من تبويب المحصلين)
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowAssignCollectorsModal(false)}
+                disabled={isBulkSaving}
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkAssignCollectors}
+                disabled={isBulkSaving || bulkSelectedCollectorIds.length === 0}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-900/20"
+              >
+                {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>تطبيق التخصيص للمحصلين ({bulkSelectedCollectorIds.length})</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

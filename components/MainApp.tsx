@@ -26,6 +26,7 @@ export interface Subscriber {
   name: string
   phone: string
   areaId: string
+  areaIds?: string[]
   branchId: string
   propertyType: PropertyType
   meterType: MeterType
@@ -1119,13 +1120,23 @@ export default function MainApp({
       (Boolean(s.name) && s.name.trim() !== '' && s.name !== 'رقم شاغر')
     )
 
-    // إذا كان للمستخدم مناطق مخصصة حصراً
-    if (assignedAreaIds && assignedAreaIds.length > 0) {
-      list = list.filter((s) => s.areaId && assignedAreaIds.includes(s.areaId))
+    // إذا كان للمستخدم مناطق أو مشتركون مخصصون حصراً
+    const hasAssignedAreas = assignedAreaIds && assignedAreaIds.length > 0
+    const hasAssignedSubs = assignedSubscriberIds && assignedSubscriberIds.length > 0
+
+    if (hasAssignedAreas || hasAssignedSubs) {
+      list = list.filter((s) => {
+        const matchesArea = hasAssignedAreas && (
+          (s.areaId && assignedAreaIds.includes(s.areaId)) ||
+          (s.areaIds && s.areaIds.some(aid => assignedAreaIds.includes(aid)))
+        )
+        const matchesSubId = hasAssignedSubs && assignedSubscriberIds.includes(s.id)
+        return Boolean(matchesArea || matchesSubId)
+      })
     }
 
     return list
-  }, [subscribers, rangeFrom, rangeTo, assignedAreaIds])
+  }, [subscribers, rangeFrom, rangeTo, assignedAreaIds, assignedSubscriberIds])
 
   // فلترة المشتركين حسب النوع
   const typeFiltered = useMemo(() => {
