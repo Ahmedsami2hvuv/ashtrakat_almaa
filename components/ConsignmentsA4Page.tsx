@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { Printer, Save, ArrowRight, Plus, RefreshCw, Hash, Percent, Loader2 } from 'lucide-react'
+import { Printer, Save, ArrowRight, Plus } from 'lucide-react'
 import { DirectorateBranch, Consignment, ConsignmentItem } from '@/lib/directorateTypes'
 import { loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
@@ -511,8 +511,8 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
       {/* ========================================================
           شريط الإجراءات والتحكم العلوي (يُخفى بالكامل أثناء الطباعة)
           ======================================================== */}
-      <div className="no-print print:hidden max-w-6xl mx-auto mb-5 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="no-print print:hidden max-w-6xl mx-auto mb-4 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -549,40 +549,6 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
             </button>
           </div>
         </div>
-
-        {/* أدوات الإعدادات السريعة (رقم أول وصل + تسلسل الورقة فقط) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs font-bold text-slate-700">
-          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <Hash className="w-4 h-4 text-blue-600" />
-            <span className="whitespace-nowrap">رقم أول وصل:</span>
-            <input
-              type="text"
-              value={baseReceiptNumber}
-              onChange={(e) => handleApplyBaseReceipt(e.target.value)}
-              placeholder="مثال: 4575068"
-              className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-bold text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-red-600 font-mono font-black text-sm">تسلسل الورقة:</span>
-              <input
-                type="text"
-                value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
-                className="w-24 px-2 py-1 bg-white border border-red-300 rounded-lg text-center font-mono font-black text-red-600 text-sm focus:outline-none"
-              />
-            </div>
-            <button
-              onClick={handleGenerateNewSerial}
-              title="توليد رقم تسلسلي جديد للورقة التالية"
-              className="p-1.5 bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700 transition cursor-pointer active:scale-95"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* رسالة نجاح الحفظ */}
@@ -616,8 +582,15 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
 
           {/* الجانب الأيسر (الرقم التسلسلي + الرقم + إرسالية جباية + التاريخ مدمج) */}
           <div className="text-left" dir="ltr">
-            <div className="text-right font-mono text-base sm:text-lg font-black tracking-widest text-slate-900 print:text-black mb-0.5 print:text-sm">
-              {serialNumber}
+            <div className="text-right mb-0.5">
+              <input
+                type="text"
+                value={serialNumber}
+                onChange={(e) => setSerialNumber(e.target.value)}
+                title="تعديل تسلسل الورقة"
+                placeholder="02951"
+                className="font-mono text-base sm:text-lg font-black tracking-widest text-slate-900 border-b border-dotted border-slate-400 hover:border-slate-800 focus:border-blue-600 bg-transparent px-1 text-right focus:outline-none w-28 print:border-none print:p-0 print:text-black print:text-sm"
+              />
             </div>
             <div className="text-right space-y-0.5 text-xs sm:text-sm font-bold text-slate-900 print:text-[11px]" dir="rtl">
               <div className="flex items-center justify-end gap-1.5">
@@ -761,8 +734,8 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
                       type="text"
                       value={row.receiptNumber}
                       onChange={(e) => handleCellChange(index, 'receiptNumber', e.target.value)}
-                      placeholder=""
-                      className="w-full h-full px-1 text-center font-mono font-bold text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none print:text-[10px] print:px-0.5"
+                      placeholder={index === 0 ? 'رقم الوصل...' : ''}
+                      className="w-full h-full px-1 text-center font-mono font-bold text-slate-900 bg-transparent focus:bg-amber-50 focus:outline-none print:text-[10px] print:px-0.5 print:placeholder-transparent"
                     />
                   </td>
 
