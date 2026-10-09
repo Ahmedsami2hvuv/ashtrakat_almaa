@@ -1586,327 +1586,429 @@ export default function DirectorDashboard({
             </div>
           </div>
         ) : (
-          /* =================== الصفحة العامة / لوحة التحكم =================== */
+          /* =================== الصفحات المركزية حسب الاختيار =================== */
           <>
-            {/* بطاقات الإحصائيات الأربعة السريعة */}
-            <div
-              className="director-stats-cards"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '20px',
-                marginBottom: '30px'
-              }}
-            >
-              {/* كارت 1: مجموع واردات الشهر */}
-              <div
-                className="director-stat-card"
-                style={{
-                  background: '#ffffff',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-              >
+            {/* ======================================================== */}
+            {/* 1. صفحة لوحة التحكم العامة (الرئيسية)                    */}
+            {/* ======================================================== */}
+            {activeSection === 'dashboard' && (
+              <>
+                {/* بطاقات الإحصائيات الأربعة السريعة */}
                 <div
-                  className="director-stat-icon"
+                  className="director-stats-cards"
                   style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '10px',
-                    background: '#e0f2fe',
-                    color: '#0056b3',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.5rem',
-                    flexShrink: 0
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '20px',
+                    marginBottom: '30px'
                   }}
                 >
-                  <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>مجموع واردات الشهر</h3>
-                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
-                    {totalRevenue > 0 ? `${totalRevenue.toLocaleString('ar-IQ')} د.ع` : '450,000,000 د.ع'}
-                  </p>
-                </div>
-              </div>
-
-              {/* كارت 2: عدد الأفرع */}
-              <div
-                className="director-stat-card"
-                style={{
-                  background: '#ffffff',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-              >
-                <div
-                  className="director-stat-icon"
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '10px',
-                    background: '#e0f2fe',
-                    color: '#0056b3',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.5rem',
-                    flexShrink: 0
-                  }}
-                >
-                  <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>عدد الأفرع</h3>
-                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
-                    {directorateData.branches.length} أفرع
-                  </p>
-                </div>
-              </div>
-
-              {/* كارت 3: الكُتّاب والمحصلين */}
-              <div
-                className="director-stat-card"
-                style={{
-                  background: '#ffffff',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-              >
-                <div
-                  className="director-stat-icon"
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '10px',
-                    background: '#e0f2fe',
-                    color: '#0056b3',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.5rem',
-                    flexShrink: 0
-                  }}
-                >
-                  <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>الكُتّاب والمحصلين</h3>
-                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
-                    {totalStaff > 0 ? `${totalStaff} موظف` : '120 محصّل'}
-                  </p>
-                </div>
-              </div>
-
-              {/* كارت 4: إجمالي المشتركين */}
-              <div
-                className="director-stat-card"
-                style={{
-                  background: '#ffffff',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '15px'
-                }}
-              >
-                <div
-                  className="director-stat-icon"
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '10px',
-                    background: '#e0f2fe',
-                    color: '#0056b3',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.5rem',
-                    flexShrink: 0
-                  }}
-                >
-                  <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>إجمالي المشتركين</h3>
-                  <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
-                    {totalSubscribers > 0 ? `${totalSubscribers.toLocaleString('ar-IQ')} مشترك` : '85,000 مشترك'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* قسم الرسوم البيانية والجباية */}
-            <div
-              className="charts-section"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr',
-                gap: '20px',
-                marginBottom: '30px'
-              }}
-            >
-              {/* رسم بياني 1: نسبة الجباية حسب المناطق (Bar Chart) */}
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
-                }}
-              >
-                <h3 style={{ marginBottom: '15px', fontSize: '1.1rem', color: '#334155', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg style={{ width: '18px', height: '18px', color: '#0056b3' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span>نسبة الجباية حسب المناطق (بالعراقي)</span>
-                </h3>
-
-                {/* رسم بياني مخصص بالأعمدة بدون تأخير */}
-                <div style={{ height: '220px', display: 'flex', alignItems: 'flex-end', gap: '16px', padding: '10px 0 30px', borderBottom: '1px solid #e2e8f0' }}>
-                  {directorateData.branches.slice(0, 6).map((b, idx) => {
-                    const stats = branchFinancialStats.find(s => s.branch.id === b.id)
-                    const collected = stats ? stats.collected : 0
-                    // حساب ارتفاع تقريبي أو قيمة بيانية
-                    const fallbackValues = [120, 95, 80, 110, 45, 60]
-                    const heightPercent = collected > 0
-                      ? Math.max(15, Math.min(100, (collected / maxRevenue) * 100))
-                      : fallbackValues[idx % fallbackValues.length]
-                    return (
-                      <div key={b.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                        <div
-                          style={{
-                            width: '100%',
-                            height: `${heightPercent}%`,
-                            backgroundColor: '#0056b3',
-                            borderRadius: '6px 6px 0 0',
-                            transition: 'height 0.4s ease'
-                          }}
-                          title={`${b.name}: ${collected > 0 ? collected.toLocaleString('ar-IQ') + ' د.ع' : heightPercent + ' مليون'}`}
-                        />
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#64748b',
-                            fontWeight: 700,
-                            marginTop: '8px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxWidth: '75px',
-                            textAlign: 'center'
-                          }}
-                        >
-                          {b.name.replace('فرع واردات ', '').replace('فرع ', '')}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* رسم بياني 2: توزيع الكوادر والمشتركين (Doughnut) */}
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <h3 style={{ marginBottom: '15px', fontSize: '1.1rem', color: '#334155', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg style={{ width: '18px', height: '18px', color: '#0088fe' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                  </svg>
-                  <span>توزيع الكوادر والمشتركين</span>
-                </h3>
-
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '160px' }}>
-                  {/* دائرة الرسوم التوضيحية */}
-                  <svg width="140" height="140" viewBox="0 0 42 42">
-                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#0088fe" strokeWidth="6" strokeDasharray="65 35" strokeDashoffset="25" />
-                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#00c49f" strokeWidth="6" strokeDasharray="20 80" strokeDashoffset="90" />
-                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#ffbb28" strokeWidth="6" strokeDasharray="15 85" strokeDashoffset="70" />
-                  </svg>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: '0.8rem', fontWeight: 700, borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '10px', height: '10px', backgroundColor: '#0088fe', borderRadius: '50%', display: 'inline-block' }} />
-                    <span>المشتركين</span>
+                  {/* كارت 1: مجموع واردات الشهر */}
+                  <div
+                    className="director-stat-card"
+                    style={{
+                      background: '#ffffff',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px'
+                    }}
+                  >
+                    <div
+                      className="director-stat-icon"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '10px',
+                        background: '#e0f2fe',
+                        color: '#0056b3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        flexShrink: 0
+                      }}
+                    >
+                      <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>مجموع واردات الشهر</h3>
+                      <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                        {totalRevenue > 0 ? `${totalRevenue.toLocaleString('ar-IQ')} د.ع` : '450,000,000 د.ع'}
+                      </p>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '10px', height: '10px', backgroundColor: '#00c49f', borderRadius: '50%', display: 'inline-block' }} />
-                    <span>الكُتّاب</span>
+
+                  {/* كارت 2: عدد الأفرع */}
+                  <div
+                    className="director-stat-card"
+                    onClick={() => setActiveSection('branches')}
+                    style={{
+                      background: '#ffffff',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div
+                      className="director-stat-icon"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '10px',
+                        background: '#e0f2fe',
+                        color: '#0056b3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        flexShrink: 0
+                      }}
+                    >
+                      <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>عدد الأفرع</h3>
+                      <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                        {directorateData.branches.length} أفرع
+                      </p>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ width: '10px', height: '10px', backgroundColor: '#ffbb28', borderRadius: '50%', display: 'inline-block' }} />
-                    <span>المحصلين</span>
+
+                  {/* كارت 3: الكُتّاب والمحصلين */}
+                  <div
+                    className="director-stat-card"
+                    onClick={() => setActiveSection('staff')}
+                    style={{
+                      background: '#ffffff',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div
+                      className="director-stat-icon"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '10px',
+                        background: '#e0f2fe',
+                        color: '#0056b3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        flexShrink: 0
+                      }}
+                    >
+                      <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>الكُتّاب والمحصلين</h3>
+                      <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                        {totalStaff > 0 ? `${totalStaff} موظف` : '120 محصّل'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* كارت 4: إجمالي المشتركين */}
+                  <div
+                    className="director-stat-card"
+                    onClick={() => setActiveSection('subscribers')}
+                    style={{
+                      background: '#ffffff',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div
+                      className="director-stat-icon"
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '10px',
+                        background: '#e0f2fe',
+                        color: '#0056b3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        flexShrink: 0
+                      }}
+                    >
+                      <svg style={{ width: '26px', height: '26px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="director-stat-title" style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>إجمالي المشتركين</h3>
+                      <p className="director-stat-val" style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+                        {totalSubscribers > 0 ? `${totalSubscribers.toLocaleString('ar-IQ')} مشترك` : '85,000 مشترك'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* قسم الفروع والجدول */}
-            <div
-              style={{
-                background: '#ffffff',
-                padding: '20px',
-                borderRadius: '12px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                marginBottom: '30px'
-              }}
-            >
-              <div
-                className="section-header-wrap"
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '20px'
-                }}
-              >
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>
-                  تفاصيل الأفرع والمسؤولين
-                </h3>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                {/* قسم الرسوم البيانية والجباية (تم حذف رسم توزيع الكوادر بناء على طلب المدير) */}
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '22px 25px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    marginBottom: '30px'
+                  }}
+                >
+                  <h3 style={{ marginBottom: '18px', fontSize: '1.15rem', color: '#334155', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg style={{ width: '20px', height: '20px', color: '#0056b3' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>نسبة الجباية حسب المناطق (بالعراقي)</span>
+                  </h3>
+
+                  {/* رسم بياني مخصص بالأعمدة ممتد بعرض الصفحة كاملاً */}
+                  <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '20px', padding: '10px 10px 30px', borderBottom: '1px solid #e2e8f0', overflowX: 'auto' }}>
+                    {directorateData.branches.map((b, idx) => {
+                      const stats = branchFinancialStats.find(s => s.branch.id === b.id)
+                      const collected = stats ? stats.collected : 0
+                      const fallbackValues = [120, 95, 80, 110, 45, 60]
+                      const heightPercent = collected > 0
+                        ? Math.max(15, Math.min(100, (collected / maxRevenue) * 100))
+                        : fallbackValues[idx % fallbackValues.length]
+                      return (
+                        <div key={b.id} style={{ flex: 1, minWidth: '70px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                          <div
+                            style={{
+                              width: '100%',
+                              maxWidth: '45px',
+                              height: `${heightPercent}%`,
+                              backgroundColor: '#0056b3',
+                              borderRadius: '6px 6px 0 0',
+                              transition: 'height 0.4s ease',
+                              boxShadow: '0 2px 6px rgba(0, 86, 179, 0.3)'
+                            }}
+                            title={`${b.name}: ${collected > 0 ? collected.toLocaleString('ar-IQ') + ' د.ع' : heightPercent + ' مليون'}`}
+                          />
+                          <span
+                            style={{
+                              fontSize: '0.78rem',
+                              color: '#64748b',
+                              fontWeight: 700,
+                              marginTop: '8px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '85px',
+                              textAlign: 'center'
+                            }}
+                          >
+                            {b.name.replace('فرع واردات ', '').replace('فرع ', '')}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* جدول الأفرع والمسؤولين السريع */}
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    marginBottom: '30px'
+                  }}
+                >
+                  <div
+                    className="section-header-wrap"
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '20px'
+                    }}
+                  >
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>
+                      تفاصيل الأفرع والمسؤولين
+                    </h3>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => setShowAddBranchModal(true)}
+                        style={{
+                          backgroundColor: '#1e293b',
+                          color: '#fff',
+                          padding: '10px 18px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        + إضافة فرع جديد
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setEditingManager(null)
+                          setManagerFullName('')
+                          setManagerPhone('')
+                          setShowAddManagerModal(true)
+                        }}
+                        style={{
+                          backgroundColor: '#0056b3',
+                          color: '#fff',
+                          padding: '10px 18px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        + إضافة مسؤول فرع جديد
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                          <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المنطقة / الفرع</th>
+                          <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>مسؤول الفرع</th>
+                          <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>عدد المشتركين</th>
+                          <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>عدد الكُتّاب والمحصلين</th>
+                          <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>نسبة جباية الشهر</th>
+                          <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>الحالة / الإجراء</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBranches.map(branch => {
+                          const firstManager = branch.managers && branch.managers.length > 0 ? branch.managers[0] : null
+                          const managerDisplay = firstManager ? firstManager.name : 'لم يعين بعد'
+                          const subCount = branch.subscribers?.length || 0
+                          const staffCount = (branch.collectors?.length || 0) + (branch.writers?.length || 0)
+                          return (
+                            <tr
+                              key={branch.id}
+                              style={{
+                                borderBottom: '1px solid #e2e8f0',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s'
+                              }}
+                              onClick={() => setSelectedBranchId(branch.id)}
+                            >
+                              <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
+                                {branch.name}
+                              </td>
+                              <td style={{ padding: '12px 15px', fontWeight: 700, color: '#475569' }}>
+                                {managerDisplay}
+                              </td>
+                              <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                                {subCount > 0 ? subCount.toLocaleString('ar-IQ') : '—'}
+                              </td>
+                              <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                                {staffCount > 0 ? `${staffCount} موظف` : '—'}
+                              </td>
+                              <td style={{ padding: '12px 15px', fontWeight: 800, color: '#0056b3' }}>
+                                88%
+                              </td>
+                              <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedBranchId(branch.id)
+                                  }}
+                                  style={{
+                                    backgroundColor: '#e0f2fe',
+                                    color: '#0056b3',
+                                    border: '1px solid #bae6fd',
+                                    padding: '6px 14px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 800,
+                                    fontSize: '0.8rem'
+                                  }}
+                                >
+                                  إدارة الفرع ←
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ======================================================== */}
+            {/* 2. صفحة أفرع المناطق (الأفرع)                            */}
+            {/* ======================================================== */}
+            {activeSection === 'branches' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px 25px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                      أفرع مديرية ماء البصرة ({directorateData.branches.length} فرع)
+                    </h2>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                      انقر على أي فرع للدخول إلى إدارته وقاعدة بياناته المستقلة
+                    </p>
+                  </div>
                   <button
                     onClick={() => setShowAddBranchModal(true)}
                     style={{
-                      backgroundColor: '#1e293b',
-                      color: '#fff',
-                      padding: '10px 18px',
+                      backgroundColor: '#0056b3',
+                      color: '#ffffff',
                       border: 'none',
+                      padding: '10px 20px',
                       borderRadius: '8px',
                       cursor: 'pointer',
+                      fontWeight: 800,
                       fontSize: '0.9rem',
-                      fontWeight: 700,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
@@ -1914,7 +2016,119 @@ export default function DirectorDashboard({
                   >
                     + إضافة فرع جديد
                   </button>
+                </div>
 
+                {/* كروت الأفرع التفاعلية */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                  {filteredBranches.map(b => {
+                    const manager = b.managers && b.managers[0]
+                    const subs = b.subscribers?.length || 0
+                    const collectors = b.collectors?.length || 0
+                    const writers = b.writers?.length || 0
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => setSelectedBranchId(b.id)}
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '12px',
+                          padding: '22px',
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                          cursor: 'pointer',
+                          border: '1px solid #e2e8f0',
+                          transition: 'all 0.2s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                              {b.name}
+                            </h3>
+                            <span style={{ backgroundColor: '#e0f2fe', color: '#0056b3', fontSize: '0.75rem', fontWeight: 800, padding: '4px 10px', borderRadius: '12px' }}>
+                              فرع فعال
+                            </span>
+                          </div>
+
+                          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '15px' }}>
+                            المسؤول: <strong style={{ color: '#1e293b' }}>{manager ? manager.name : 'لم يعين بعد'}</strong>
+                          </p>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', padding: '12px', background: '#f8fafc', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' }}>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>المشتركين</span>
+                              <strong style={{ fontSize: '1rem', color: '#0056b3' }}>{subs.toLocaleString('ar-IQ')}</strong>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>المحصلين</span>
+                              <strong style={{ fontSize: '1rem', color: '#16a34a' }}>{collectors}</strong>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>الكُتّاب</span>
+                              <strong style={{ fontSize: '1rem', color: '#d97706' }}>{writers}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedBranchId(b.id)
+                          }}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#0056b3',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 800,
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <span>دخول وإدارة الفرع</span>
+                          <span>←</span>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* 3. صفحة مسؤولي الأفرع (المسؤولين)                        */}
+            {/* ======================================================== */}
+            {activeSection === 'managers' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px 25px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                      مسؤولو أفرع المديرية ({allManagersList.length} مسؤول)
+                    </h2>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                      إدارة مسؤولي الأفرع وإرسال روابط الدخول المباشرة لهم عبر الواتساب
+                    </p>
+                  </div>
                   <button
                     onClick={() => {
                       setEditingManager(null)
@@ -1923,80 +2137,478 @@ export default function DirectorDashboard({
                       setShowAddManagerModal(true)
                     }}
                     style={{
-                      backgroundColor: '#0056b3',
-                      color: '#fff',
-                      padding: '10px 18px',
+                      backgroundColor: '#16a34a',
+                      color: '#ffffff',
                       border: 'none',
+                      padding: '10px 20px',
                       borderRadius: '8px',
                       cursor: 'pointer',
+                      fontWeight: 800,
                       fontSize: '0.9rem',
-                      fontWeight: 700,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
                     }}
                   >
-                    + إضافة مسؤول فرع جديد
+                    + إضافة مسؤول جديد
                   </button>
                 </div>
-              </div>
 
-              {/* الجدول المطابق تماماً لتصميم المستخدم */}
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المنطقة / الفرع</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>مسؤول الفرع</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>عدد المشتركين</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>عدد الكُتّاب والمحصلين</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>نسبة جباية الشهر</th>
-                      <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>الحالة / الإجراء</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBranches.map(branch => {
-                      const firstManager = branch.managers && branch.managers.length > 0 ? branch.managers[0] : null
-                      const managerDisplay = firstManager
-                        ? firstManager.name
-                        : 'لم يعين بعد'
-                      const subCount = branch.subscribers?.length || 0
-                      const staffCount = (branch.collectors?.length || 0) + (branch.writers?.length || 0)
-                      return (
-                        <tr
-                          key={branch.id}
-                          style={{
-                            borderBottom: '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                            transition: 'background 0.2s'
-                          }}
-                          onClick={() => setSelectedBranchId(branch.id)}
-                        >
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    overflowX: 'auto'
+                  }}
+                >
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>اسم المسؤول</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>الفرع المسؤول عنه</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الهاتف</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>رابط الدخول</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>إرسال واتساب</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allManagersList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                            لم يتم إضافة أي مسؤول بعد، انقر على زر "إضافة مسؤول جديد" بالأعلى
+                          </td>
+                        </tr>
+                      ) : (
+                        allManagersList.map(({ manager, branch }) => (
+                          <tr key={manager.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
+                              {manager.name}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }}>
+                              {branch.name}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 600, color: '#475569', direction: 'ltr', textAlign: 'right' }}>
+                              {manager.phone}
+                            </td>
+                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleCopyLink(manager, branch)}
+                                style={{
+                                  backgroundColor: copiedManagerId === manager.id ? '#16a34a' : '#f1f5f9',
+                                  color: copiedManagerId === manager.id ? '#ffffff' : '#1e293b',
+                                  border: '1px solid #cbd5e1',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                {copiedManagerId === manager.id ? 'تم النسخ ✓' : 'نسخ الرابط'}
+                              </button>
+                            </td>
+                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleShareWhatsApp(manager, branch)}
+                                style={{
+                                  backgroundColor: '#25D366',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  fontSize: '0.8rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px'
+                                }}
+                              >
+                                <span>واتساب</span>
+                              </button>
+                            </td>
+                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => {
+                                    setEditingManager(manager)
+                                    setManagerFullName(manager.name)
+                                    setManagerPhone(manager.phone)
+                                    setSelectedBranchForManager(branch.id)
+                                    setShowAddManagerModal(true)
+                                  }}
+                                  style={{
+                                    backgroundColor: '#e0f2fe',
+                                    color: '#0056b3',
+                                    border: 'none',
+                                    padding: '5px 10px',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem'
+                                  }}
+                                >
+                                  تعديل
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteManager(branch.id, manager.id, manager.name)}
+                                  style={{
+                                    backgroundColor: '#fee2e2',
+                                    color: '#dc2626',
+                                    border: 'none',
+                                    padding: '5px 10px',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem'
+                                  }}
+                                >
+                                  حذف
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* 4. صفحة المشتركين المركزية (المشتركين)                   */}
+            {/* ======================================================== */}
+            {activeSection === 'subscribers' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px 25px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                      قاعدة بيانات المشتركين المركزية ({allSubscribersList.length} مشترك)
+                    </h2>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                      معاينة المشتركين وسجلات ديونهم وفترات الجباية (للقراءة فقط للمدير)
+                    </p>
+                  </div>
+
+                  {/* بحث في المشتركين */}
+                  <div style={{ width: '260px' }}>
+                    <input
+                      type="text"
+                      placeholder="بحث بالاسم أو الهاتف أو الحساب..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    overflowX: 'auto'
+                  }}
+                >
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>اسم المشترك</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>الفرع</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الحساب</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الهاتف</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>نوع العقار</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>سجل الديون والمعاينة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAllSubscribers.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                            {searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد مشتركون مسجلون في أي فرع بعد'}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAllSubscribers.map(({ subscriber, branch }) => (
+                          <tr key={subscriber.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
+                              {subscriber.name}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }}>
+                              {branch.name}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 700, color: '#475569' }}>
+                              #{subscriber.id}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 600, color: '#64748b', direction: 'ltr', textAlign: 'right' }}>
+                              {subscriber.phone || '—'}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                              <span style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                {subscriber.propertyType || 'سكني'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => {
+                                  setSelectedBranchId(branch.id)
+                                  setViewingSubscriber(subscriber)
+                                  setViewingSubscriberYear(2026)
+                                }}
+                                style={{
+                                  backgroundColor: '#0056b3',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '7px 14px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontWeight: 800,
+                                  fontSize: '0.82rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                <span>معاينة وسجل الديون</span>
+                                <span>👁️</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* 5. صفحة كادر الجباية والكُتّاب (المحصلين)                */}
+            {/* ======================================================== */}
+            {activeSection === 'staff' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px 25px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                      كادر الجباية والكُتّاب في الأفرع ({allStaffList.length} موظف)
+                    </h2>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                      متابعة أداء المحصلين والكُتّاب والمناطق المسندة لكل منهم والمبالغ المستحصلة
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    overflowX: 'auto'
+                  }}
+                >
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>اسم الموظف</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>الصفة الوظيفية</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>الفرع التابع له</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>رقم الهاتف</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المناطق المسندة</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المبالغ المستحصلة</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>التفاصيل</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allStaffList.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                            لا يوجد محصلون أو كُتّاب مسجلون في أي فرع حتى الآن
+                          </td>
+                        </tr>
+                      ) : (
+                        allStaffList.map(item => (
+                          <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
+                              {item.name}
+                            </td>
+                            <td style={{ padding: '12px 15px' }}>
+                              <span
+                                style={{
+                                  backgroundColor: item.type === 'collector' ? '#e0f2fe' : '#fef3c7',
+                                  color: item.type === 'collector' ? '#0056b3' : '#b45309',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  fontWeight: 800,
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                {item.type === 'collector' ? 'محصّل جباية' : 'كاتب منطقة'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 700, color: '#475569' }}>
+                              {item.branch.name}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 600, color: '#64748b', direction: 'ltr', textAlign: 'right' }}>
+                              {item.phone || '—'}
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                              {item.areasCount} منطقة
+                            </td>
+                            <td style={{ padding: '12px 15px', fontWeight: 800, color: '#16a34a' }}>
+                              {item.collected > 0 ? `${item.collected.toLocaleString('ar-IQ')} د.ع` : '—'}
+                            </td>
+                            <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                              {item.rawCollector ? (
+                                <button
+                                  onClick={() => {
+                                    setSelectedBranchId(item.branch.id)
+                                    setViewingCollector(item.rawCollector!)
+                                  }}
+                                  style={{
+                                    backgroundColor: '#f1f5f9',
+                                    color: '#1e293b',
+                                    border: '1px solid #cbd5e1',
+                                    padding: '5px 12px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem'
+                                  }}
+                                >
+                                  معاينة الجباية والمناطق
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setSelectedBranchId(item.branch.id)}
+                                  style={{
+                                    backgroundColor: '#f1f5f9',
+                                    color: '#1e293b',
+                                    border: '1px solid #cbd5e1',
+                                    padding: '5px 12px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem'
+                                  }}
+                                >
+                                  عرض بالفرع
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* 6. صفحة التقارير المالية والواردات                      */}
+            {/* ======================================================== */}
+            {activeSection === 'financials' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px 25px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                      التقارير المالية والواردات المستحصلة
+                    </h2>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+                      مجموع إيرادات مديرية ماء البصرة: <strong>{totalRevenue.toLocaleString('ar-IQ')} د.ع</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '20px',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    overflowX: 'auto'
+                  }}
+                >
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>الفرع</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>عدد المشتركين</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المحصلين</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800 }}>المبالغ المستحصلة</th>
+                        <th style={{ padding: '12px 15px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, textAlign: 'center' }}>الإجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {branchFinancialStats.map(({ branch, collected }) => (
+                        <tr key={branch.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                           <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>
                             {branch.name}
                           </td>
-                          <td style={{ padding: '12px 15px', fontWeight: 700, color: '#475569' }}>
-                            {managerDisplay}
+                          <td style={{ padding: '12px 15px', fontWeight: 700 }}>
+                            {branch.subscribers?.length || 0} مشترك
                           </td>
                           <td style={{ padding: '12px 15px', fontWeight: 700 }}>
-                            {subCount > 0 ? subCount.toLocaleString('ar-IQ') : '—'}
+                            {branch.collectors?.length || 0} محصّل
                           </td>
-                          <td style={{ padding: '12px 15px', fontWeight: 700 }}>
-                            {staffCount > 0 ? `${staffCount} موظف` : '—'}
-                          </td>
-                          <td style={{ padding: '12px 15px', fontWeight: 800, color: '#0056b3' }}>
-                            88%
+                          <td style={{ padding: '12px 15px', fontWeight: 800, color: '#16a34a' }}>
+                            {collected > 0 ? `${collected.toLocaleString('ar-IQ')} د.ع` : '0 د.ع'}
                           </td>
                           <td style={{ padding: '12px 15px', textAlign: 'center' }}>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedBranchId(branch.id)
-                              }}
+                              onClick={() => setSelectedBranchId(branch.id)}
                               style={{
-                                backgroundColor: '#e0f2fe',
-                                color: '#0056b3',
-                                border: '1px solid #bae6fd',
+                                backgroundColor: '#0056b3',
+                                color: '#ffffff',
+                                border: 'none',
                                 padding: '6px 14px',
                                 borderRadius: '6px',
                                 cursor: 'pointer',
@@ -2004,16 +2616,16 @@ export default function DirectorDashboard({
                                 fontSize: '0.8rem'
                               }}
                             >
-                              إدارة الفرع ←
+                              تفاصيل الفرع ←
                             </button>
                           </td>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </main>
