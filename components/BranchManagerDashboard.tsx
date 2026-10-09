@@ -754,54 +754,7 @@ export default function BranchManagerDashboard({
       {/* المحتوى الرئيسي */}
       <div className="flex-1 max-w-7xl mx-auto w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
         
-        {/* شبكة الإحصائيات المدمجة والمريحة للموبايل */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
-          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-            <div className="p-2 sm:p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">إجمالي المشتركين</p>
-              <p className="text-sm sm:text-base font-black text-slate-900 leading-tight">
-                {stats.totalSubscribers.toLocaleString('ar-IQ')}
-              </p>
-            </div>
-          </div>
 
-          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-            <div className="p-2 sm:p-2.5 bg-rose-50 text-rose-600 rounded-xl shrink-0">
-              <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">مجموع الديون</p>
-              <p className="text-xs sm:text-sm font-black text-rose-600 leading-tight truncate">
-                {stats.totalDebt.toLocaleString('ar-IQ')} <span className="text-[9px]">د.ع</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-            <div className="p-2 sm:p-2.5 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
-              <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">المناطق المشمولة</p>
-              <p className="text-sm sm:text-base font-black text-slate-900 leading-tight">{stats.totalAreas}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2.5">
-            <div className="p-2 sm:p-2.5 bg-purple-50 text-purple-600 rounded-xl shrink-0">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate">الكوادر المسجلة</p>
-              <p className="text-sm sm:text-base font-black text-slate-900 leading-tight">
-                {stats.totalCollectors + stats.totalWriters}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* شريط الأقسام (Tabs) انسيابي وخفيف للموبايل */}
         <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto flex items-center gap-1">
