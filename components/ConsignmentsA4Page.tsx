@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Printer, Save, ArrowRight, Plus } from 'lucide-react'
 import { DirectorateBranch, Consignment, ConsignmentItem, BranchCollector } from '@/lib/directorateTypes'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
 
@@ -201,36 +202,36 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition flex items-center gap-2"
+            style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
+            className="px-4 py-2 hover:bg-slate-200 border rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 text-xs sm:text-sm"
           >
-            عودة
+            <ArrowRight className="w-4 h-4 text-slate-700" />
+            <span>رجوع للوحة التحكم</span>
           </button>
           <div>
-            <h1 className="text-xl font-black text-slate-900">تنزيل الإرساليات الرسمية</h1>
-            <p className="text-xs text-slate-500">{branch.name}</p>
+            <h1 className="text-lg sm:text-xl font-black text-slate-900">تنزيل الإرساليات الرسمية</h1>
+            <p className="text-xs text-slate-500 font-bold">{branch.name}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handlePrint}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition flex items-center gap-2"
+            style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+            className="px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-blue-700 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" />
-            </svg>
-            طباعة الاستمارة (A4)
+            <Printer className="w-4 h-4 text-white" />
+            <span>طباعة الاستمارة (A4)</span>
           </button>
 
           <button
             onClick={handleSaveAndPost}
             disabled={isSaving}
-            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
+            style={{ backgroundColor: '#059669', color: '#ffffff' }}
+            className="px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-            </svg>
-            {isSaving ? 'جارِ الترحيل...' : 'حفظ وترحيل المبالغ'}
+            <Save className="w-4 h-4 text-white" />
+            <span>{isSaving ? 'جارِ الترحيل...' : 'حفظ وترحيل المبالغ'}</span>
           </button>
         </div>
       </div>
@@ -408,9 +409,11 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         <div className="mt-4 flex justify-between items-center print:hidden">
           <button
             onClick={handleAddMoreRows}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition"
+            style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
+            className="px-4 py-2 border rounded-xl font-bold text-xs hover:bg-slate-200 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
           >
-            إضافة 10 أسطر
+            <Plus className="w-4 h-4 text-slate-700" />
+            <span>إضافة 10 أسطر جديدة</span>
           </button>
         </div>
 
