@@ -1580,25 +1580,14 @@ export default function BranchManagerDashboard({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* زر التوجيه لخيارات الاستيراد في الإعدادات */}
                   <button
-                    onClick={() => {
-                      setExcelPreviewResult(null)
-                      setExcelError(null)
-                      setShowExcelModal(true)
-                    }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                   >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    <span>استيراد من إكسل</span>
-                  </button>
-
-                  {/* زر إضافة قائمة مناطق بسطور متعددة */}
-                  <button
-                    onClick={() => setShowAreasListModal(true)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span>إضافة قائمة مناطق (كل منطقة بسطر)</span>
+                    <Settings className="w-3.5 h-3.5 text-slate-500" />
+                    <span>استيراد المناطق والإعدادات</span>
                   </button>
 
                   {/* نموذج إضافة سريعة لمنطقة واحدة */}
@@ -1607,7 +1596,7 @@ export default function BranchManagerDashboard({
                       type="text"
                       value={newAreaName}
                       onChange={(e) => setNewAreaName(e.target.value)}
-                      placeholder="اسم منطقة مفردة..."
+                      placeholder="اسم منطقة جديدة..."
                       className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
@@ -1952,6 +1941,62 @@ export default function BranchManagerDashboard({
                     <div>
                       <h4 className="font-black text-slate-900 text-sm">استيراد نصي (لصق)</h4>
                       <p className="text-[11px] text-slate-500 font-bold mt-0.5">لصق قائمة أرقام وأسماء سطر بسطر</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* قسم إدارة واستيراد المناطق (خيارات مجمعة ووقتية) */}
+              <div className="space-y-3 pb-6 border-b border-slate-200">
+                <div>
+                  <h3 className="text-sm md:text-base font-black text-slate-900">
+                    إدارة واستيراد المناطق (خيارات مجمّعة)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    أدوات إضافة قوائم المناطق واستخراجها من ملفات الإكسل
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* زر إضافة قائمة مناطق بسطور متعددة */}
+                  <button
+                    onClick={() => setShowAreasListModal(true)}
+                    className="p-4 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] bg-emerald-200/60 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                        سطر بسطر
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">إضافة قائمة مناطق (كل منطقة بسطر)</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">لصق أسماء المناطق دفعة واحدة لتحويلها لمناطق بالنظام</p>
+                    </div>
+                  </button>
+
+                  {/* زر استيراد من إكسل */}
+                  <button
+                    onClick={() => {
+                      setExcelPreviewResult(null)
+                      setExcelError(null)
+                      setShowExcelModal(true)
+                    }}
+                    className="p-4 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+                        <FileSpreadsheet className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] bg-blue-200/60 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                        Excel
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">استيراد من إكسل</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">استخراج وتوليد المناطق تلقائياً من ملف الإكسل الشامل</p>
                     </div>
                   </button>
                 </div>

@@ -319,6 +319,13 @@ export default function DirectorDashboard({
     }
   }
 
+  // فتح صفحة المسؤول في نافذة جديدة مستقلة
+  const handleOpenManagerPage = (manager: BranchManager, branch: DirectorateBranch) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const directLink = `${origin}/?role=manager&token=${manager.token}&branch=${branch.id}`
+    window.open(directLink, '_blank')
+  }
+
   // مشاركة واتساب
   const handleShareWhatsApp = (manager: BranchManager, branch: DirectorateBranch) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
