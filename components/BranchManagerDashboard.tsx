@@ -1445,31 +1445,42 @@ export default function BranchManagerDashboard({
 
       {/* نافذة استيراد ملف إكسل شامل (Excel) */}
       {showExcelModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl p-5 md:p-6 max-w-3xl w-full space-y-5 shadow-2xl my-8 border border-slate-100">
-            {/* الترويسة */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-2xl">
-                  <FileSpreadsheet className="w-6 h-6" />
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowExcelModal(false)
+              setExcelPreviewResult(null)
+              setExcelError(null)
+            }
+          }}
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 overflow-y-auto"
+        >
+          <div className="bg-white rounded-3xl p-5 md:p-6 max-w-xl w-full space-y-4 shadow-2xl my-auto border border-slate-100 relative">
+            {/* الترويسة مع زر إغلاق بارز وواضح */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                  <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base md:text-lg font-black text-slate-900">
+                  <h3 className="text-sm md:text-base font-black text-slate-900">
                     استيراد شامل من ملف إكسل (Excel)
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    استيراد المشتركين، إنشاء المناطق تلقائياً، وإنشاء حسابات الكتّاب وربطهم
+                  <p className="text-[11px] text-slate-500">
+                    مشتركون، مناطق، وكتاب تلقائياً
                   </p>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => {
                   setShowExcelModal(false)
                   setExcelPreviewResult(null)
                   setExcelError(null)
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition font-black text-lg"
+                className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-xl transition font-black text-sm shadow-sm"
+                title="إغلاق النافذة"
               >
                 ✕
               </button>
@@ -1477,7 +1488,7 @@ export default function BranchManagerDashboard({
 
             {/* حالة حدوث خطأ */}
             {excelError && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-bold">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs font-bold">
                 <XCircle className="w-4 h-4 shrink-0 text-rose-500" />
                 <span>{excelError}</span>
               </div>
@@ -1486,7 +1497,7 @@ export default function BranchManagerDashboard({
             {/* صندوق اختيار الملف (إذا لم تكن هناك معاينة جاهزة بعد) */}
             {!excelPreviewResult ? (
               <div className="space-y-4">
-                <div className="p-5 md:p-8 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-3xl bg-emerald-50/40 text-center transition flex flex-col items-center justify-center space-y-3 relative">
+                <div className="p-6 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-2xl bg-emerald-50/40 text-center transition flex flex-col items-center justify-center space-y-2.5 relative cursor-pointer">
                   <input
                     type="file"
                     accept=".xlsx, .xls, .csv"
@@ -1494,82 +1505,95 @@ export default function BranchManagerDashboard({
                     disabled={isProcessingExcel}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
-                  <div className="p-4 bg-emerald-100 text-emerald-700 rounded-2xl">
-                    <FileSpreadsheet className="w-8 h-8" />
+                  <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
+                    <FileSpreadsheet className="w-6 h-6" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-black text-slate-800">
+                  <div className="space-y-0.5">
+                    <p className="text-xs md:text-sm font-black text-slate-800">
                       {isProcessingExcel ? 'جاري قراءة وتحليل بيانات الملف...' : 'اضغط لاختيار ملف الإكسل أو اسحبه هنا'}
                     </p>
-                    <p className="text-xs text-slate-500 font-bold">
-                      يدعم الملفات بصيغة (xlsx, xls, csv)
+                    <p className="text-[11px] text-slate-500 font-bold">
+                      يدعم ملفات Excel بصيغة (xlsx, xls, csv)
                     </p>
                   </div>
                   {isProcessingExcel && (
-                    <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-700 pt-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping" />
-                      <span>يرجى الانتظار، جاري تصنيف وفهرسة المشتركين والمناطق...</span>
+                    <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-700 pt-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
+                      <span>جاري تصنيف وفهرسة المشتركين والمناطق...</span>
                     </div>
                   )}
                 </div>
 
                 {/* تعليمات وتوضيحات الاستيراد الذكي */}
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-2 leading-relaxed">
-                  <p className="font-black text-slate-900 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>ميزات الاستيراد الذكي التلقائي:</span>
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1.5 leading-relaxed">
+                  <p className="font-black text-slate-900 flex items-center gap-1.5 text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>ميزات الاستيراد الذكي:</span>
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 pr-1 font-bold">
-                    <li>يتم استيراد المشترك حتى لو كان بلا اسم منطقة أو بلا كاتب.</li>
-                    <li>المناطق المذكورة في الملف غير المسجلة سيتم إنشاؤها تلقائياً بالفرع.</li>
-                    <li>أسماء الكتاب غير المسجلين سيتم إنشاء حسابات كتاب جديدة لهم تلقائياً برمز دخول مباشر.</li>
-                    <li>التعرف التلقائي على نوع العقار (سكني / تجاري)، نوع العداد (4 متر أو غيره)، والديون السابقة.</li>
-                    <li>التعرف على حالات المشتركين الخاصة مثل (مغلق، مهدوم، إيقاف حساب، متجاوز، بدون عداد).</li>
+                    <li>يقبل المشترك حتى لو كان بلا منطقة أو بلا كاتب.</li>
+                    <li>المناطق الجديدة المذكورة يتم إنشاؤها تلقائياً.</li>
+                    <li>الكتاب الجدد يتم إنشاء حسابات ورموز دخول لهم فوراً.</li>
+                    <li>التعرف على نوع العقار، العداد، والحالات (مغلق، مهدوم، إيقاف...).</li>
                   </ul>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowExcelModal(false)
+                      setExcelPreviewResult(null)
+                      setExcelError(null)
+                    }}
+                    className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                  >
+                    إغلاق
+                  </button>
                 </div>
               </div>
             ) : (
               /* شاشة المعاينة قبل التأكيد */
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {/* ملخص الأرقام المكتشفة */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
                     <p className="text-[10px] font-bold text-emerald-700">مشتركون جدد</p>
-                    <p className="text-lg font-black text-emerald-800">{excelPreviewResult.newSubscribersCount}</p>
+                    <p className="text-base font-black text-emerald-800">{excelPreviewResult.newSubscribersCount}</p>
                   </div>
 
-                  <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+                  <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-100 text-center">
                     <p className="text-[10px] font-bold text-blue-700">مشتركون محدثون</p>
-                    <p className="text-lg font-black text-blue-800">{excelPreviewResult.updatedSubscribersCount}</p>
+                    <p className="text-base font-black text-blue-800">{excelPreviewResult.updatedSubscribersCount}</p>
                   </div>
 
-                  <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 text-center">
-                    <p className="text-[10px] font-bold text-purple-700">مناطق جديدة ستنشأ</p>
-                    <p className="text-lg font-black text-purple-800">{excelPreviewResult.newAreasCount}</p>
+                  <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-100 text-center">
+                    <p className="text-[10px] font-bold text-purple-700">مناطق جديدة</p>
+                    <p className="text-base font-black text-purple-800">{excelPreviewResult.newAreasCount}</p>
                   </div>
 
-                  <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100 text-center">
-                    <p className="text-[10px] font-bold text-amber-700">حسابات كتاب ستنشأ</p>
-                    <p className="text-lg font-black text-amber-800">{excelPreviewResult.newWritersCount}</p>
+                  <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-100 text-center">
+                    <p className="text-[10px] font-bold text-amber-700">كتاب جدد</p>
+                    <p className="text-base font-black text-amber-800">{excelPreviewResult.newWritersCount}</p>
                   </div>
                 </div>
 
                 {/* جدول معاينة السطور */}
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-slate-800">
-                    معاينة عينة من المشتركين المستخرجين (أول {excelPreviewResult.previewRows.length} سجلات):
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-black text-slate-800">
+                    معاينة عينة من المشتركين المستخرجين:
                   </p>
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-56">
-                    <table className="w-full text-right text-xs">
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-48">
+                    <table className="w-full text-right text-[11px]">
                       <thead>
                         <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
-                          <th className="p-2.5">رقم المشترك</th>
-                          <th className="p-2.5">الاسم</th>
-                          <th className="p-2.5">المنطقة</th>
-                          <th className="p-2.5">الكاتب</th>
-                          <th className="p-2.5">العقار/العداد</th>
-                          <th className="p-2.5">الحالة</th>
-                          <th className="p-2.5">الدين السابق</th>
+                          <th className="p-2">الرقم</th>
+                          <th className="p-2">الاسم</th>
+                          <th className="p-2">المنطقة</th>
+                          <th className="p-2">الكاتب</th>
+                          <th className="p-2">العقار/العداد</th>
+                          <th className="p-2">الحالة</th>
+                          <th className="p-2">الدين السابق</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1590,16 +1614,18 @@ export default function BranchManagerDashboard({
                 </div>
 
                 {/* أزرار الإجراءات */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                   <button
+                    type="button"
                     onClick={() => setExcelPreviewResult(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
                   >
                     اختيار ملف آخر
                   </button>
 
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => {
                         setShowExcelModal(false)
                         setExcelPreviewResult(null)
@@ -1609,11 +1635,12 @@ export default function BranchManagerDashboard({
                       إلغاء
                     </button>
                     <button
+                      type="button"
                       onClick={handleConfirmExcelImport}
-                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
+                      className="px-4.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>تأكيد واستيراد البيانات الآن</span>
+                      <span>تأكيد واستيراد</span>
                     </button>
                   </div>
                 </div>
