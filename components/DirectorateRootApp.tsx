@@ -179,13 +179,31 @@ export default function DirectorateRootApp() {
               setSelectedBranch(matchedBranch)
               const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
               setSubscriberAppData(subsData)
-              setSubscriberAppProps({
-                role: 'collector',
+              const props = {
+                role: 'collector' as const,
                 userTitle: `محصل: ${matchedCollector.name} (${matchedBranch.name})`,
                 canEdit: matchedCollector.canEdit,
                 assignedAreaIds: matchedCollector.assignedAreaIds,
                 assignedSubscriberIds: matchedCollector.assignedSubscriberIds
-              })
+              }
+              setSubscriberAppProps(props)
+
+              // حفظ جلسة المحصل بالهاتف لفتح التطبيق بدون إنترنت دائماً
+              try {
+                localStorage.setItem(
+                  'ashtrakat_collector_session',
+                  JSON.stringify({
+                    branchId: matchedBranch.id,
+                    token: matchedCollector.token,
+                    name: matchedCollector.name,
+                    branchName: matchedBranch.name,
+                    canEdit: matchedCollector.canEdit,
+                    assignedAreaIds: matchedCollector.assignedAreaIds,
+                    assignedSubscriberIds: matchedCollector.assignedSubscriberIds
+                  })
+                )
+              } catch {}
+
               setActiveView('subscriber_app')
               setIsLoading(false)
               return
@@ -239,6 +257,32 @@ export default function DirectorateRootApp() {
               setActiveView('director_login')
               setIsLoading(false)
               return
+            }
+          }
+
+          // فحص جلسة المحصل المحفوظة بالهاتف أولاً (لتمكين الفتح المباشر دون نت)
+          const savedCollectorStr = localStorage.getItem('ashtrakat_collector_session')
+          if (savedCollectorStr) {
+            try {
+              const colSess = JSON.parse(savedCollectorStr)
+              const foundBranch = data.branches.find(b => b.id === colSess.branchId) || data.branches[0]
+              if (foundBranch) {
+                setSelectedBranch(foundBranch)
+                const subsData = await loadBranchSubscribersAndBilling(foundBranch.id)
+                setSubscriberAppData(subsData)
+                setSubscriberAppProps({
+                  role: 'collector',
+                  userTitle: `محصل: ${colSess.name} (${foundBranch.name})`,
+                  canEdit: colSess.canEdit ?? true,
+                  assignedAreaIds: colSess.assignedAreaIds,
+                  assignedSubscriberIds: colSess.assignedSubscriberIds
+                })
+                setActiveView('subscriber_app')
+                setIsLoading(false)
+                return
+              }
+            } catch (e) {
+              console.error('Error loading saved collector session:', e)
             }
           }
 
@@ -413,13 +457,20 @@ export default function DirectorateRootApp() {
         assignedSubscriberIds={subscriberAppProps?.assignedSubscriberIds}
         customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}
         bypassAuth={true}
-        onBack={() => {
-          if (selectedBranch) {
-            setActiveView('branch_manager')
-          } else {
-            setActiveView('director_login')
-          }
-        }}
+        onBack={
+          subscriberAppProps?.role === 'writer'
+            ? undefined
+            : () => {
+                try {
+                  localStorage.removeItem('ashtrakat_collector_session')
+                } catch {}
+                if (selectedBranch && subscriberAppProps?.role === 'manager') {
+                  setActiveView('branch_manager')
+                } else {
+                  setActiveView('director_login')
+                }
+              }
+        }
       />
     )
   }

@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase'
 import ReceiptScannerModal from './ReceiptScannerModal'
 import InstallmentsPage from './InstallmentsPage'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
+import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateStore'
+import type { Consignment, ConsignmentItem } from '../lib/directorateTypes'
+import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck } from 'lucide-react'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -659,6 +662,7 @@ export interface MainAppProps {
   initialBilling?: BillingRecords
   initialPricing?: Pricing
   initialAiApiKeys?: string[]
+  initialConsignments?: Consignment[]
   onSaveBranchData?: (data: {
     subscribers: Subscriber[]
     areas: Area[]
@@ -683,12 +687,79 @@ export default function MainApp({
   initialBilling,
   initialPricing,
   initialAiApiKeys,
+  initialConsignments = [],
   onSaveBranchData
 }: MainAppProps = {}) {
   // حالة تسجيل الدخول (إذا كان دخول مباشر عبر الرابط يتم تجاوزه فوراً)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(bypassAuth)
   const [pinInput, setPinInput] = useState<string>('')
   const [pinError, setPinError] = useState<string>('')
+
+  // حالات إرساليات الكاتب لتحديث السجل الورقي
+  const [consignmentsList, setConsignmentsList] = useState<Consignment[]>(() => initialConsignments || [])
+  const [showWriterConsignmentsModal, setShowWriterConsignmentsModal] = useState<boolean>(false)
+  const [writerConsignmentsFilter, setWriterConsignmentsFilter] = useState<'all' | 'unread'>('unread')
+  const [recordedItemIds, setRecordedItemIds] = useState<Set<string>>(new Set())
+  const [isRefreshingConsignments, setIsRefreshingConsignments] = useState<boolean>(false)
+
+  // حفظ ومزامنة السطور التي تم تثبيتها في السجل الورقي محلياً
+  const recordedStorageKey = `writer_recorded_consignments_${branchId || 'main'}`
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(recordedStorageKey)
+      if (saved) {
+        setRecordedItemIds(new Set(JSON.parse(saved)))
+      }
+    } catch {}
+  }, [recordedStorageKey])
+
+  const toggleRecordItem = (itemId: string) => {
+    setRecordedItemIds(prev => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      try {
+        localStorage.setItem(recordedStorageKey, JSON.stringify(Array.from(next)))
+      } catch {}
+      return next
+    })
+  }
+
+  const markAllAsRecorded = (itemIds: string[]) => {
+    setRecordedItemIds(prev => {
+      const next = new Set(prev)
+      itemIds.forEach(id => next.add(id))
+      try {
+        localStorage.setItem(recordedStorageKey, JSON.stringify(Array.from(next)))
+      } catch {}
+      return next
+    })
+  }
+
+  // تحديث قائمة الإرساليات سحابياً فوراً
+  const handleRefreshConsignments = async () => {
+    setIsRefreshingConsignments(true)
+    try {
+      const res = await fetch('/api/directorate')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.success && json.data?.branches) {
+          const thisBranch = json.data.branches.find((b: any) => b.id === branchId)
+          if (thisBranch && thisBranch.consignments) {
+            setConsignmentsList(thisBranch.consignments)
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error refreshing consignments:', e)
+    } finally {
+      setIsRefreshingConsignments(false)
+    }
+  }
 
   // البيانات الأساسية معزولة لكل فرع حصراً
   const [areas, setAreas] = useState<Area[]>(() => initialAreas || DEFAULT_AREAS)
@@ -749,6 +820,69 @@ export default function MainApp({
   const [newAiKeyInput, setNewAiKeyInput] = useState<string>('')
   const [aiTestingKey, setAiTestingKey] = useState<string | null>(null)
   const [aiTestResult, setAiTestResult] = useState<{ [key: string]: { success: boolean; message: string } }>({})
+
+  // حساب الإرساليات الخاصة باشتراكات الكاتب
+  const writerConsignmentItems = useMemo(() => {
+    const list: Array<{
+      uniqueKey: string
+      consignmentId: string
+      serialNumber: string
+      paperRefNumber?: string
+      collectorName: string
+      consignmentDate: string
+      createdAt: string
+      item: ConsignmentItem
+      isRecorded: boolean
+    }> = []
+
+    const allowedSubIdSet = new Set<number>()
+    const hasSpecificSubs = assignedSubscriberIds && assignedSubscriberIds.length > 0
+    const hasSpecificAreas = assignedAreaIds && assignedAreaIds.length > 0
+
+    if (hasSpecificSubs) {
+      assignedSubscriberIds.forEach(id => allowedSubIdSet.add(id))
+    } else if (hasSpecificAreas) {
+      subscribers.forEach(sub => {
+        if (sub.areaId && assignedAreaIds.includes(sub.areaId)) {
+          allowedSubIdSet.add(sub.id)
+        }
+      })
+    } else {
+      subscribers.forEach(sub => allowedSubIdSet.add(sub.id))
+    }
+
+    (consignmentsList || []).forEach(c => {
+      (c.items || []).forEach((it, idx) => {
+        if (allowedSubIdSet.has(it.subscriberId)) {
+          const itemKey = `${c.id}_${it.subscriberId}_${it.receiptNumber || idx}`
+          list.push({
+            uniqueKey: itemKey,
+            consignmentId: c.id,
+            serialNumber: c.serialNumber || 'بدون رقم',
+            paperRefNumber: c.paperRefNumber,
+            collectorName: c.collectorName || 'غير محدد',
+            consignmentDate: it.paymentDate || c.date || '',
+            createdAt: c.createdAt || '',
+            item: it,
+            isRecorded: recordedItemIds.has(itemKey)
+          })
+        }
+      })
+    })
+
+    return list.reverse()
+  }, [consignmentsList, assignedSubscriberIds, assignedAreaIds, subscribers, recordedItemIds])
+
+  const unrecordedWriterItems = useMemo(() => {
+    return writerConsignmentItems.filter(x => !x.isRecorded)
+  }, [writerConsignmentItems])
+
+  const displayedWriterItems = useMemo(() => {
+    if (writerConsignmentsFilter === 'unread') {
+      return unrecordedWriterItems
+    }
+    return writerConsignmentItems
+  }, [writerConsignmentsFilter, unrecordedWriterItems, writerConsignmentItems])
 
   // فورم المشترك
   const [newSub, setNewSub] = useState({
@@ -819,11 +953,82 @@ export default function MainApp({
     }
   }, [])
 
-  // حالة المزامنة السحابية
+  // حالة المزامنة السحابية والعمل بدون إنترنت (أوفلاين)
   const [isSyncing, setIsSyncing] = useState<boolean>(false)
   const [isLoadingCloud, setIsLoadingCloud] = useState<boolean>(true)
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // حالات العمل دون إنترنت وقائمة الانتظار
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    if (typeof navigator !== 'undefined') return navigator.onLine
+    return true
+  })
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0)
+  const [isManualSyncing, setIsManualSyncing] = useState<boolean>(false)
+  const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null)
+
+  // مراقبة الاتصال بالإنترنت ومزامنة العمليات المعلقة تلقائياً
+  useEffect(() => {
+    const checkStatus = () => {
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+      setIsOnline(online)
+      setPendingSyncCount(getPendingSyncCount())
+    }
+
+    const handleOffline = () => {
+      setIsOnline(false)
+      setSyncToastMessage('تم التحول لوضع العمل بدون إنترنت (أوفلاين) - جميع العمليات محفوظة محلياً بأمان')
+      setTimeout(() => setSyncToastMessage(null), 5000)
+    }
+
+    const handleOnline = async () => {
+      setIsOnline(true)
+      setIsManualSyncing(true)
+      const res = await syncPendingOfflineData()
+      setIsManualSyncing(false)
+      setPendingSyncCount(getPendingSyncCount())
+      if (res.syncedCount > 0) {
+        setSyncToastMessage(`تم الاتصال بالإنترنت ومزامنة ${res.syncedCount} من العمليات بنجاح!`)
+      } else {
+        setSyncToastMessage('تم الاتصال بالإنترنت بنجاح')
+      }
+      setTimeout(() => setSyncToastMessage(null), 4000)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    checkStatus()
+
+    const interval = setInterval(() => {
+      setPendingSyncCount(getPendingSyncCount())
+    }, 8000)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      clearInterval(interval)
+    }
+  }, [])
+
+  // دالة تشغيل المزامنة اليدوية فوراً
+  const handleTriggerSync = async () => {
+    if (!navigator.onLine) {
+      setSyncToastMessage('الجهاز غير متصل بالإنترنت حالياً - سيتم الرفع تلقائياً فور توفر الشبكة')
+      setTimeout(() => setSyncToastMessage(null), 4000)
+      return
+    }
+    setIsManualSyncing(true)
+    const res = await syncPendingOfflineData()
+    setIsManualSyncing(false)
+    setPendingSyncCount(getPendingSyncCount())
+    if (res.syncedCount > 0) {
+      setSyncToastMessage(`تمت مزامنة ${res.syncedCount} من العمليات بنجاح مع السحابة`)
+    } else {
+      setSyncToastMessage('كافة البيانات متزامنة مع السحابة بالفعل')
+    }
+    setTimeout(() => setSyncToastMessage(null), 3500)
+  }
 
   // الشهر الحالي 0-5
   const currentPeriodIndex = useMemo(() => {
@@ -2496,24 +2701,57 @@ export default function MainApp({
               )}
             </div>
 
-            {/* مؤشر المزامنة السحابية */}
-            {isSyncing ? (
-              <span className="flex items-center gap-1 text-[11px] text-sky-700 font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
-                حفظ...
+            {/* مؤشر المزامنة السحابية الذكي (يدعم العمل بدون إنترنت كلياً) */}
+            {!isOnline ? (
+              <span className="flex items-center gap-1.5 text-[11px] text-amber-800 font-bold bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-amber-600"></span>
+                <span>أوفلاين</span>
+                {pendingSyncCount > 0 && (
+                  <span className="bg-amber-600 text-white text-[10px] px-1 rounded-full font-bold">
+                    {pendingSyncCount} معلق
+                  </span>
+                )}
               </span>
+            ) : isManualSyncing || isSyncing ? (
+              <span className="flex items-center gap-1.5 text-[11px] text-sky-800 font-semibold bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping"></span>
+                مزامنة...
+              </span>
+            ) : pendingSyncCount > 0 ? (
+              <button
+                type="button"
+                onClick={handleTriggerSync}
+                className="flex items-center gap-1 text-[11px] text-amber-900 bg-amber-200 hover:bg-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-400 transition-all active:scale-95 shadow-sm"
+                title="اضغط لرفع العمليات المعلقة إلى السحابة الآن"
+              >
+                <span>مزامنة ({pendingSyncCount})</span>
+                <span className="text-xs">🔄</span>
+              </button>
             ) : isLoadingCloud ? (
               <span className="flex items-center gap-1 text-[11px] text-slate-700 font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
                 تحميل...
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
+              <button
+                type="button"
+                onClick={handleTriggerSync}
+                className="flex items-center gap-1 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold hover:bg-emerald-100 transition-colors"
+                title="كافة البيانات متزامنة، اضغط للتحديث"
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                 متزامن
-              </span>
+              </button>
             )}
           </div>
+
+          {/* تنبيه حالة الاتصال المنبثق */}
+          {syncToastMessage && (
+            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-2xl border text-xs font-bold transition-all flex items-center gap-2 bg-slate-900 text-white border-slate-700 pointer-events-none">
+              <span>🔔</span>
+              <span>{syncToastMessage}</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             {/* زر البحث */}

@@ -41,6 +41,7 @@ import {
   CheckSquare,
   Square,
   Check,
+  Copy,
   X
 } from 'lucide-react'
 
@@ -137,6 +138,8 @@ export default function BranchManagerDashboard({
   const [writerName, setWriterName] = useState('')
   const [writerPhone, setWriterPhone] = useState('')
   const [selectedWriterAreas, setSelectedWriterAreas] = useState<string[]>([])
+  const [copiedWriterId, setCopiedWriterId] = useState<string | null>(null)
+  const [copiedCollectorId, setCopiedCollectorId] = useState<string | null>(null)
 
 
   // حالات الذكاء الاصطناعي
@@ -865,6 +868,21 @@ export default function BranchManagerDashboard({
     window.open(waUrl, '_blank')
   }
 
+  const handleCopyCollectorLink = (collector: BranchCollector) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(directLink).then(() => {
+        setCopiedCollectorId(collector.id)
+        setTimeout(() => setCopiedCollectorId(null), 2500)
+      }).catch(() => {
+        prompt('انسخ الرابط التالي:', directLink)
+      })
+    } else {
+      prompt('انسخ الرابط التالي:', directLink)
+    }
+  }
+
   // ------------------ إدارة الكتّاب ------------------
   const handleSaveWriter = () => {
     if (!writerName.trim() || !writerPhone.trim()) {
@@ -917,6 +935,21 @@ export default function BranchManagerDashboard({
     const msg = `مرحبا ${writer.name}\nكاتب واردات ${branch.name}\nرابط حسابك المباشر:\n${directLink}`
     const waUrl = generateWhatsAppLink(writer.phone, msg)
     window.open(waUrl, '_blank')
+  }
+
+  const handleCopyWriterLink = (writer: BranchWriter) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(directLink).then(() => {
+        setCopiedWriterId(writer.id)
+        setTimeout(() => setCopiedWriterId(null), 2500)
+      }).catch(() => {
+        prompt('انسخ الرابط التالي:', directLink)
+      })
+    } else {
+      prompt('انسخ الرابط التالي:', directLink)
+    }
   }
 
 
@@ -1718,24 +1751,43 @@ export default function BranchManagerDashboard({
 
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                         <button
-                          onClick={() =>
-                            onOpenSubscriberApp({
-                              role: 'collector',
-                              userTitle: `محصل: ${collector.name}`,
-                              canEdit: collector.canEdit,
-                              assignedAreaIds: collector.assignedAreaIds,
-                              assignedSubscriberIds: collector.assignedSubscriberIds
-                            })
-                          }
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          onClick={() => {
+                            const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                            const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
+                            window.open(directLink, '_blank')
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
+                          title="فتح حساب المحصل في نافذة جديدة مستقلة"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>فتح الحساب</span>
                         </button>
 
                         <button
+                          onClick={() => handleCopyCollectorLink(collector)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm ${
+                            copiedCollectorId === collector.id
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                          }`}
+                          title="نسخ رابط الدخول المباشر لحساب المحصل"
+                        >
+                          {copiedCollectorId === collector.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-white" />
+                              <span>تم النسخ ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>نسخ الرابط</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
                           onClick={() => handleShareCollectorWhatsApp(collector)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
                         >
                           <Share2 className="w-3.5 h-3.5" />
                           <span>مشاركة</span>
@@ -1758,7 +1810,7 @@ export default function BranchManagerDashboard({
 
                         <button
                           onClick={() => handleDeleteCollector(collector.id, collector.name)}
-                          className="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="col-span-2 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>حذف</span>
@@ -1817,24 +1869,43 @@ export default function BranchManagerDashboard({
 
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                         <button
-                          onClick={() =>
-                            onOpenSubscriberApp({
-                              role: 'writer',
-                              userTitle: `كاتب: ${writer.name}`,
-                              canEdit: true,
-                              assignedAreaIds: writer.assignedAreaIds,
-                              assignedSubscriberIds: writer.assignedSubscriberIds
-                            })
-                          }
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          onClick={() => {
+                            const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                            const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
+                            window.open(directLink, '_blank')
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
+                          title="فتح حساب الكاتب في نافذة جديدة مستقلة"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>فتح الحساب</span>
                         </button>
 
                         <button
+                          onClick={() => handleCopyWriterLink(writer)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm ${
+                            copiedWriterId === writer.id
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                          }`}
+                          title="نسخ رابط الدخول المباشر لحساب الكاتب"
+                        >
+                          {copiedWriterId === writer.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-white" />
+                              <span>تم النسخ ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>نسخ الرابط</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
                           onClick={() => handleShareWriterWhatsApp(writer)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
                         >
                           <Share2 className="w-3.5 h-3.5" />
                           <span>مشاركة</span>
@@ -1856,7 +1927,7 @@ export default function BranchManagerDashboard({
 
                         <button
                           onClick={() => handleDeleteWriter(writer.id, writer.name)}
-                          className="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="col-span-2 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>حذف</span>

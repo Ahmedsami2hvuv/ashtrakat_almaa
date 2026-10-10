@@ -33,6 +33,8 @@ export const viewport: Viewport = {
   themeColor: '#0f172a',
 }
 
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+
 export default function RootLayout({
   children,
 }: {
@@ -40,7 +42,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl" className={tajawal.variable}>
-      <body className={tajawal.className}>{children}</body>
+      <body className={tajawal.className}>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   )
 }

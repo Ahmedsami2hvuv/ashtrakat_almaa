@@ -36,37 +36,132 @@ export function generateWhatsAppLink(phone: string, message: string): string {
   return `https://wa.me/${cleanPhone}?text=${encodedMsg}`
 }
 
-// كاش في الذاكرة لمنع إعادة جلب المشتركين عند التنقل بين الأقسام
 const branchSubscribersCache: Record<string, { subscribers: Subscriber[]; billing: BillingRecords; timestamp: number }> = {}
 
-// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط عبر مسار السيرفر الآمن
+// مفتاح التخزين المحلي لبيانات المشتركين لكل فرع
+const getBranchStorageKey = (branchId: string) => `ashtrakat_branch_subscribers_${branchId}`
+const getPendingSyncKey = (branchId: string) => `ashtrakat_pending_sync_${branchId}`
+
+// فحص وجود أي بيانات معلقة بانتظار المزامنة
+export function getPendingSyncCount(): number {
+  if (typeof window === 'undefined') return 0
+  let count = 0
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('ashtrakat_pending_sync_')) {
+        count++
+      }
+    }
+  } catch {}
+  return count
+}
+
+// مزامنة العمليات والبيانات المعلقة التي سُجلت أثناء انقطاع الإنترنت
+export async function syncPendingOfflineData(): Promise<{ success: boolean; syncedCount: number }> {
+  if (typeof window === 'undefined' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+    return { success: false, syncedCount: 0 }
+  }
+
+  let syncedCount = 0
+  try {
+    const pendingKeys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('ashtrakat_pending_sync_')) {
+        pendingKeys.push(key)
+      }
+    }
+
+    for (const key of pendingKeys) {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      try {
+        const item = JSON.parse(raw)
+        if (item.branchId && item.subscribers) {
+          const res = await fetch('/api/branch-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              branchId: item.branchId,
+              subscribers: item.subscribers,
+              billing: item.billing || {}
+            })
+          })
+          if (res.ok) {
+            localStorage.removeItem(key)
+            syncedCount++
+          }
+        }
+      } catch (e) {
+        console.error('Error syncing pending item:', e)
+      }
+    }
+  } catch (err) {
+    console.error('Error in syncPendingOfflineData:', err)
+  }
+
+  return { success: true, syncedCount }
+}
+
+// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط (يدعم وضع الأوفلاين التام)
 export async function loadBranchSubscribersAndBilling(
   branchId: string,
   forceRefresh = false
 ): Promise<{ subscribers: Subscriber[]; billing: BillingRecords }> {
-  // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري، نرجعها فوراً من الذاكرة
+  // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري
   if (!forceRefresh && branchSubscribersCache[branchId]) {
     return branchSubscribersCache[branchId]
   }
 
   let subscribers: Subscriber[] = []
   let billing: BillingRecords = {}
+  let loadedFromNetwork = false
 
-  try {
-    // الاتصال عبر السيرفر الآمن الداخلي
-    const res = await fetch(`/api/branch-sync?branchId=${encodeURIComponent(branchId)}`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data.success) {
-        subscribers = data.subscribers || []
-        billing = data.billing || {}
+  // 2. محاولة القراءة من السيرفر إذا كان الإنترنت متوفراً
+  if (typeof navigator === 'undefined' || navigator.onLine) {
+    try {
+      const res = await fetch(`/api/branch-sync?branchId=${encodeURIComponent(branchId)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          subscribers = data.subscribers || []
+          billing = data.billing || {}
+          loadedFromNetwork = true
+
+          // حفظ نسخة محلية دائمة في ذاكرة الهاتف للعمل بدون إنترنت
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(
+                getBranchStorageKey(branchId),
+                JSON.stringify({ subscribers, billing, timestamp: Date.now() })
+              )
+            } catch (e) {
+              console.warn('LocalStorage quota or storage error:', e)
+            }
+          }
+        }
       }
+    } catch (err) {
+      console.warn(`Could not reach server for branch ${branchId}, falling back to local cache:`, err)
     }
-  } catch (err) {
-    console.error(`Error loading subscribers for branch ${branchId}:`, err)
   }
 
-  // حفظ في كاش الذاكرة
+  // 3. إذا لم يتم التحميل من السيرفر (أوفلاين أو انقطاع الاتصال)، نقرأ فوراً من التخزين المحلي بالهاتف
+  if (!loadedFromNetwork && typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(getBranchStorageKey(branchId))
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        subscribers = parsed.subscribers || []
+        billing = parsed.billing || {}
+      }
+    } catch (err) {
+      console.error('Error reading offline cached branch subscribers:', err)
+    }
+  }
+
+  // حفظ في كاش الذاكرة المؤقتة السريع
   branchSubscribersCache[branchId] = {
     subscribers,
     billing,
@@ -76,37 +171,77 @@ export async function loadBranchSubscribersAndBilling(
   return { subscribers, billing }
 }
 
-// حفظ مشتركي وسجلات ديون فرع معين عبر السيرفر الآمن
+// حفظ مشتركي وسجلات ديون فرع معين (يعمل محلياً وفورياً ويضع العمليات في قائمة المزامنة إذا انقطع النت)
 export async function saveBranchSubscribersAndBilling(
   branchId: string,
   subscribers: Subscriber[],
   billing: BillingRecords
 ): Promise<void> {
-  // تحديث الكاش المحلي فوراً
+  // 1. تحديث الكاش السريع في الذاكرة فوراً
   branchSubscribersCache[branchId] = {
     subscribers,
     billing,
     timestamp: Date.now()
   }
 
-  try {
-    await fetch('/api/branch-sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        branchId,
-        subscribers,
-        billing
+  // 2. حفظ فوري في التخزين المحلي بالهاتف للضمان التام
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(
+        getBranchStorageKey(branchId),
+        JSON.stringify({ subscribers, billing, timestamp: Date.now() })
+      )
+    } catch (e) {
+      console.warn('Error saving branch data to localStorage:', e)
+    }
+  }
+
+  // 3. محاولة الإرسال السحابي
+  let syncedSuccessfully = false
+  if (typeof navigator === 'undefined' || navigator.onLine) {
+    try {
+      const res = await fetch('/api/branch-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          branchId,
+          subscribers,
+          billing
+        })
       })
-    })
-  } catch (err) {
-    console.error(`Error saving subscribers for branch ${branchId}:`, err)
+      if (res.ok) {
+        syncedSuccessfully = true
+        // إزالة أي طلب معلق سابق
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(getPendingSyncKey(branchId))
+        }
+      }
+    } catch (err) {
+      console.warn(`Network error saving subscribers for branch ${branchId}, marked for offline sync:`, err)
+    }
+  }
+
+  // 4. إذا لم يتم الإرسال بسبب انقطاع النت، نضع العملية في قائمة المزامنة المعلقة
+  if (!syncedSuccessfully && typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(
+        getPendingSyncKey(branchId),
+        JSON.stringify({
+          branchId,
+          subscribers,
+          billing,
+          timestamp: Date.now()
+        })
+      )
+    } catch (e) {
+      console.error('Error queuing offline pending sync:', e)
+    }
   }
 }
 
-// قراءة بيانات المديرية من السحابة بأمان عبر مسار السيرفر
+// قراءة بيانات المديرية من السحابة بأمان عبر مسار السيرفر (مع دعم الأوفلاين)
 export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
   let cloudDirectorate: DirectorateData | null = null
   let legacyData: any = null
@@ -172,6 +307,19 @@ export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
     }
   } catch (e) {
     console.error('Error fetching directorate data:', e)
+  }
+
+  // استرجاع نسخة المديرية السابقة المخزنة محلياً بالهاتف فوراً إذا انقطع النت
+  if (!cloudDirectorate && typeof window !== 'undefined') {
+    try {
+      const cachedDir = localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (cachedDir) {
+        const parsed = JSON.parse(cachedDir)
+        if (parsed && parsed.branches && parsed.branches.length > 0) {
+          return parsed
+        }
+      }
+    } catch {}
   }
 
   // إذا لم نجد بيانات مهيكلة، نقرأ البيانات السابقة (1005 مشترك) ونحولها بسلامة تامة
