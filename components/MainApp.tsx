@@ -2675,7 +2675,7 @@ export default function MainApp({
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
         <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {onBack && (
+            {onBack && userRole !== 'writer' && (
               <button
                 type="button"
                 onClick={onBack}
@@ -2754,6 +2754,29 @@ export default function MainApp({
           )}
 
           <div className="flex items-center gap-2">
+            {/* زر الإرساليات الجديدة المخصص للكاتب لتحديث السجل الورقي */}
+            {userRole === 'writer' && (
+              <button
+                type="button"
+                aria-label="الإرساليات الجديدة"
+                onClick={() => {
+                  setShowWriterConsignmentsModal(true)
+                  setSearchOpen(false)
+                  setFilterDrawerOpen(false)
+                }}
+                className="h-8 px-2.5 rounded-xl border border-amber-400 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white flex items-center gap-1.5 transition-all text-xs font-black shadow-sm shadow-amber-500/20"
+                title="الإرساليات الجديدة لتعديل السجل الورقي"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span className="inline">الإرساليات الجديدة</span>
+                {unrecordedWriterItems.length > 0 && (
+                  <span className="bg-white text-amber-700 text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
+                    {unrecordedWriterItems.length}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* زر البحث */}
             <button
               type="button"
@@ -6564,6 +6587,245 @@ export default function MainApp({
           </button>
         </div>
       </nav>
+
+      {/* نافذة الإرساليات الجديدة لتعديل السجل الورقي للكاتب */}
+      {showWriterConsignmentsModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* رأس النافذة */}
+            <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-amber-50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
+                    <span>الإرساليات الجديدة (لتعديل السجل الورقي)</span>
+                    {unrecordedWriterItems.length > 0 && (
+                      <span className="text-[11px] bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
+                        {unrecordedWriterItems.length} بانتظار التثبيت
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    الإرساليات والدفعات المسجلة على اشتراكاتك لتثبيتها في سجلك الورقي وتأشيرها
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRefreshConsignments}
+                  disabled={isRefreshingConsignments}
+                  className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                  title="تحديث البيانات من السحابة"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshingConsignments ? 'animate-spin text-amber-600' : ''}`} />
+                  <span className="hidden sm:inline">تحديث</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                  title="طباعة كشف الإرساليات"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span className="hidden sm:inline">طباعة</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowWriterConsignmentsModal(false)}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition"
+                  title="إغلاق"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* شريط الفلترة والأوامر السريعة */}
+            <div className="px-4 md:px-5 py-3 bg-slate-50/80 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWriterConsignmentsFilter('unread')}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${
+                    writerConsignmentsFilter === 'unread'
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>الجديدة فقط (غير المثبتة)</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${writerConsignmentsFilter === 'unread' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                    {unrecordedWriterItems.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setWriterConsignmentsFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${
+                    writerConsignmentsFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>جميع الإرساليات</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${writerConsignmentsFilter === 'all' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                    {writerConsignmentItems.length}
+                  </span>
+                </button>
+              </div>
+
+              {displayedWriterItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const keys = displayedWriterItems.map(x => x.uniqueKey)
+                    markAllAsRecorded(keys)
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span>تحديد المعروض كمثبت في السجل ✓</span>
+                </button>
+              )}
+            </div>
+
+            {/* جسم النافذة: الجدول وقائمة الإرساليات */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-5">
+              {displayedWriterItems.length === 0 ? (
+                <div className="text-center py-12 bg-slate-50/60 rounded-3xl border border-dashed border-slate-200 my-4 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <Check className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                  <h4 className="text-sm font-black text-slate-800">
+                    {writerConsignmentsFilter === 'unread'
+                      ? 'رائع! لا توجد إرساليات جديدة تنتظر التثبيت'
+                      : 'لا توجد إرساليات مسجلة لاشتراكاتك حالياً'}
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    {writerConsignmentsFilter === 'unread'
+                      ? 'جميع الإرساليات والدفعات المسجلة على اشتراكاتك تم تأشيرها كمثبتة في السجل الورقي.'
+                      : 'عند تسجيل أي إرسالية جديدة لاشتراكاتك في الفرع، ستظهر هنا فوراً لتعديلها في سجلك الورقي.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
+                  <table className="w-full text-right text-xs">
+                    <thead>
+                      <tr className="bg-slate-100/90 text-slate-700 font-black border-b border-slate-200 text-[11px]">
+                        <th className="py-3 px-3">التثبيت بالسجل</th>
+                        <th className="py-3 px-3">رقم الوصل</th>
+                        <th className="py-3 px-3">رقم الاشتراك</th>
+                        <th className="py-3 px-3">اسم المشترك</th>
+                        <th className="py-3 px-3">المنطقة</th>
+                        <th className="py-3 px-3">المبلغ المدفوع</th>
+                        <th className="py-3 px-3">رقم الإرسالية</th>
+                        <th className="py-3 px-3">المحصل</th>
+                        <th className="py-3 px-3">تاريخ الدفع</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {displayedWriterItems.map((entry) => (
+                        <tr
+                          key={entry.uniqueKey}
+                          className={`hover:bg-slate-50 transition-colors ${
+                            entry.isRecorded ? 'bg-slate-50/40 text-slate-500' : 'bg-amber-50/30 font-semibold text-slate-900'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => toggleRecordItem(entry.uniqueKey)}
+                              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 shadow-2xs ${
+                                entry.isRecorded
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
+                                  : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                              }`}
+                            >
+                              {entry.isRecorded ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-700 stroke-[3]" />
+                                  <span>مثبت بالسجل ✓</span>
+                                </>
+                              ) : (
+                                <span>تثبيت بالسجل</span>
+                              )}
+                            </button>
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap font-mono font-bold text-blue-700">
+                            {entry.item.receiptNumber || '—'}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap font-mono font-black text-slate-900">
+                            {entry.item.subscriberId}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap font-bold text-slate-900">
+                            {entry.item.subscriberName}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">
+                            {entry.item.areaName || '—'}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap font-mono font-black text-emerald-700">
+                            {formatNumber(entry.item.amount)} د.ع
+                            {(entry.item.waterAmount || entry.item.municipalityAmount) ? (
+                              <div className="text-[10px] text-slate-600 font-normal">
+                                {entry.item.waterAmount ? `ماء: ${formatNumber(entry.item.waterAmount)} ` : ''}
+                                {entry.item.municipalityAmount ? `بلدية: ${formatNumber(entry.item.municipalityAmount)}` : ''}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap font-mono text-slate-700">
+                            {entry.serialNumber}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap text-slate-700">
+                            {entry.collectorName}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap font-mono text-[11px] text-slate-600">
+                            {entry.consignmentDate || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* ذيل النافذة */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <div>
+                إجمالي الإرساليات المعروضة: <strong className="text-slate-800">{displayedWriterItems.length}</strong> حركة
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWriterConsignmentsModal(false)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition shadow-sm"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
