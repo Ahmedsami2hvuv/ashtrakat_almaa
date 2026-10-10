@@ -42,7 +42,9 @@ import {
   Square,
   Check,
   Copy,
-  X
+  X,
+  RefreshCw,
+  Zap
 } from 'lucide-react'
 
 interface BranchManagerDashboardProps {
@@ -1120,7 +1122,7 @@ export default function BranchManagerDashboard({
                     disabled={isLoadingSubscribers}
                     className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                   >
-                    <span>🔄</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSubscribers ? 'animate-spin' : ''}`} />
                     <span>{isLoadingSubscribers ? 'جارِ التحميل...' : 'تحديث البيانات'}</span>
                   </button>
 
@@ -1197,7 +1199,7 @@ export default function BranchManagerDashboard({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '18px' }}>⚡</span>
+                        <Zap className="w-5 h-5 text-amber-500" />
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>
                             خيارات التعامل مع المشتركين المحددين ({selectedSubIds.size} مشترك):
@@ -1497,7 +1499,7 @@ export default function BranchManagerDashboard({
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <div className="text-sm font-black text-white flex items-center gap-2">
-                          <span>✅ تم تحديد</span>
+                          <span>تم تحديد</span>
                           <span style={{ color: '#60a5fa', fontSize: '16px', fontWeight: 900 }}>{selectedSubIds.size}</span>
                           <span>مشترك</span>
                         </div>
@@ -1775,7 +1777,7 @@ export default function BranchManagerDashboard({
                           {copiedCollectorId === collector.id ? (
                             <>
                               <Check className="w-3.5 h-3.5 text-white" />
-                              <span>تم النسخ ✓</span>
+                              <span>تم النسخ</span>
                             </>
                           ) : (
                             <>
@@ -1893,7 +1895,7 @@ export default function BranchManagerDashboard({
                           {copiedWriterId === writer.id ? (
                             <>
                               <Check className="w-3.5 h-3.5 text-white" />
-                              <span>تم النسخ ✓</span>
+                              <span>تم النسخ</span>
                             </>
                           ) : (
                             <>
@@ -2132,12 +2134,12 @@ export default function BranchManagerDashboard({
           <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-black text-slate-900">إضافة قائمة مناطق دفعة واحدة</h3>
-              <button
-                onClick={() => setShowAreasListModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-black text-lg p-1"
-              >
-                ✕
-              </button>
+                <button
+                  onClick={() => setShowAreasListModal(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1 flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
             </div>
             <p className="text-xs text-slate-600">
               اكتب أو الصق أسماء المناطق في المربع أدناه بحيث تكون <strong>كل منطقة في سطر مستقل</strong>:
@@ -2244,10 +2246,10 @@ export default function BranchManagerDashboard({
                   setExcelPreviewResult(null)
                   setExcelError(null)
                 }}
-                className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-xl transition font-black text-sm shadow-sm"
+                className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-xl transition shadow-sm"
                 title="إغلاق النافذة"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

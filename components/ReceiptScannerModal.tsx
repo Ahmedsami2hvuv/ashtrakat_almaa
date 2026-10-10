@@ -3,6 +3,23 @@
 import React, { useState, useRef } from 'react'
 import { Subscriber, Pricing, BillingRecords, PERIODS } from './MainApp'
 import { analyzeReceiptImage, ScannedReceipt, getPeriodIndexFromMonth } from '@/lib/aiReceiptScanner'
+import {
+  Camera,
+  Sparkles,
+  ArrowDown10,
+  Search,
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+  Check,
+  Edit2,
+  Lightbulb,
+  Save,
+  X,
+  ArrowRight,
+  Loader2,
+  ZoomIn
+} from 'lucide-react'
 
 export interface ExtendedScannedReceipt extends ScannedReceipt {
   suggestedSubscribers?: Subscriber[]
@@ -371,7 +388,7 @@ export default function ReceiptScannerModal({
 
           {/* عنوان الصفحة */}
           <div className="flex items-center gap-2">
-            <span className="text-base">✨</span>
+            <Sparkles className="w-5 h-5 text-sky-200" />
             <h1 className="font-bold text-sm sm:text-base tracking-tight text-white">
               تنزيل إرساليات بالذكاء الاصطناعي
             </h1>
@@ -384,7 +401,7 @@ export default function ReceiptScannerModal({
             className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center justify-center font-bold text-base transition-colors"
             title="إغلاق والرجوع"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
       </header>
@@ -408,7 +425,7 @@ export default function ReceiptScannerModal({
               htmlFor="standalone-receipt-files-input"
               className="cursor-pointer h-10 px-4 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
             >
-              <span className="text-base">📷</span>
+              <Camera className="w-4 h-4" />
               <span>إضافة صور الوصولات</span>
             </label>
 
@@ -419,7 +436,7 @@ export default function ReceiptScannerModal({
                 className="h-10 px-3 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
                 title="ترتيب الوصولات تصاعدياً بالتسلسل حسب رقم الوصل"
               >
-                <span>🔢</span>
+                <ArrowDown10 className="w-4 h-4" />
                 <span>تسطير بالتسلسل</span>
               </button>
             )}
@@ -451,7 +468,7 @@ export default function ReceiptScannerModal({
                   </>
                 ) : (
                   <>
-                    <span>🔍</span>
+                    <Search className="w-4 h-4" />
                     <span>قراءة الكل بالذكاء الاصطناعي</span>
                   </>
                 )}
@@ -483,7 +500,10 @@ export default function ReceiptScannerModal({
         {/* تنبيه إذا لم تكن هناك مفاتيح */}
         {apiKeys.length === 0 && (
           <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900">
-            <span className="font-semibold">⚠️ لم تقم بإضافة مفتاح الذكاء الاصطناعي بعد في الإعدادات.</span>
+            <span className="font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>لم تقم بإضافة مفتاح الذكاء الاصطناعي بعد في الإعدادات.</span>
+            </span>
             <button
               onClick={() => {
                 onClose()
@@ -498,20 +518,23 @@ export default function ReceiptScannerModal({
 
         {/* رسالة النجاح */}
         {successMessage && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-center font-bold text-sm shadow-sm">
-            🎉 {successMessage}
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-center font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+            <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span>{successMessage}</span>
           </div>
         )}
 
         {/* حالة عدم وجود وصولات */}
         {receipts.length === 0 ? (
           <div className="my-10 p-8 text-center bg-white border border-sky-100 rounded-3xl shadow-sm space-y-3">
-            <div className="text-5xl">🧾</div>
+            <div className="flex justify-center">
+              <FileText className="w-14 h-14 text-sky-400 stroke-1" />
+            </div>
             <h3 className="text-base font-bold text-slate-800">
               لا توجد وصولات مضافة حالياً
             </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-              اضغط على زر <strong className="text-sky-700">"📷 إضافة صور الوصولات"</strong> في الأعلى لاختيار صور الوصولات من جهازك، وسيقوم الذكاء الاصطناعي بقراءة القوائم وتسلسلها وتنزيل مبالغها تلقائياً.
+              اضغط على زر <strong className="text-sky-700">"إضافة صور الوصولات"</strong> في الأعلى لاختيار صور الوصولات من جهازك، وسيقوم الذكاء الاصطناعي بقراءة القوائم وتسلسلها وتنزيل مبالغها تلقائياً.
             </p>
           </div>
         ) : (
@@ -555,8 +578,8 @@ export default function ReceiptScannerModal({
                           alt="وصل"
                           className="w-full h-full object-cover"
                         />
-                        <span className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] px-1 rounded-tl font-bold">
-                          🔍
+                        <span className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] p-0.5 rounded-tl flex items-center justify-center">
+                          <ZoomIn className="w-2.5 h-2.5" />
                         </span>
                       </button>
 
@@ -571,8 +594,9 @@ export default function ReceiptScannerModal({
                             </span>
                           )}
                           {rc.status === 'success' && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">
-                              ✓ جاهز للتنزيل
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-700" />
+                              <span>جاهز للتنزيل</span>
                             </span>
                           )}
                           {rc.status === 'processing' && (
@@ -596,10 +620,10 @@ export default function ReceiptScannerModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveReceipt(idx)}
-                      className="w-8 h-8 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors text-sm"
+                      className="w-8 h-8 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
                       title="حذف هذا الوصل"
                     >
-                      ✕
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -642,7 +666,8 @@ export default function ReceiptScannerModal({
                     {rc.matchedSubscriber && (
                       <div className="p-2 bg-emerald-50/70 border border-emerald-100 rounded-xl text-[11px] text-emerald-900 flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold">✓ المشترك المسجل بالنظام:</span>
+                          <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                          <span className="font-bold">المشترك المسجل بالنظام:</span>
                           <span className="font-semibold text-emerald-800">{rc.matchedSubscriber.name}</span>
                           <span className="text-[10px] text-emerald-600 font-mono">(رقم {rc.matchedSubscriber.id})</span>
                         </div>
@@ -664,10 +689,11 @@ export default function ReceiptScannerModal({
                               onClick={() =>
                                 handleInstantUpdateNameInSystem(rc.subscriberId!, rc.subscriberName!, idx)
                               }
-                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-colors"
+                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-colors flex items-center gap-1"
                               title="تعديل وتحديث الاسم في قاعدة بيانات المشتركين"
                             >
-                              ✏️ تعديل الاسم بالسجل
+                              <Edit2 className="w-3 h-3" />
+                              <span>تعديل الاسم بالسجل</span>
                             </button>
                           </div>
                         )}
@@ -676,16 +702,18 @@ export default function ReceiptScannerModal({
 
                     {/* ب) إذا كان الرقم غير مسجل بالنظام */}
                     {!rc.matchedSubscriber && rc.subscriberId && (
-                      <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900">
-                        ⚠️ الرقم ({rc.subscriberId}) غير مسجل في قائمة المشتركين. يمكنك التأكد من الرقم أو البحث باسم المشترك.
+                      <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                        <span>الرقم ({rc.subscriberId}) غير مسجل في قائمة المشتركين. يمكنك التأكد من الرقم أو البحث باسم المشترك.</span>
                       </div>
                     )}
 
                     {/* ج) مقترحات البحث التلقائي بالاسم إذا كان الاسم مكتوباً ولكن الرقم لم يُطابق بعد */}
                     {rc.suggestedSubscribers && rc.suggestedSubscribers.length > 0 && (
                       <div className="p-2 bg-sky-50 border border-sky-100 rounded-xl space-y-1">
-                        <span className="text-[10px] font-bold text-sky-900 block">
-                          💡 مقترحات المشتركين المسجلين في النظام (اضغط لاختيار الرقم فوراً):
+                        <span className="text-[10px] font-bold text-sky-900 flex items-center gap-1">
+                          <Lightbulb className="w-3.5 h-3.5 text-sky-700 flex-shrink-0" />
+                          <span>مقترحات المشتركين المسجلين في النظام (اضغط لاختيار الرقم فوراً):</span>
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {rc.suggestedSubscribers.map((sub) => (
@@ -751,8 +779,9 @@ export default function ReceiptScannerModal({
                   </div>
 
                   {rc.errorMessage && (
-                    <div className="mt-2 text-[11px] text-red-600 font-medium">
-                      ⚠️ {rc.errorMessage}
+                    <div className="mt-2 text-[11px] text-red-600 font-medium flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                      <span>{rc.errorMessage}</span>
                     </div>
                   )}
                 </div>
@@ -780,7 +809,7 @@ export default function ReceiptScannerModal({
             disabled={successCount === 0 || isProcessing}
             className="flex-1 h-12 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl text-sm font-bold shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2"
           >
-            <span className="text-lg">💾</span>
+            <Save className="w-5 h-5" />
             <span>تنزيل وحفظ جميع الإرساليات بالحسابات ({successCount})</span>
           </button>
         </div>
@@ -803,7 +832,7 @@ export default function ReceiptScannerModal({
               }}
               className="px-5 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xl"
             >
-              <span>✕</span>
+              <X className="w-4 h-4" />
               <span>إغلاق الصورة</span>
             </button>
           </div>

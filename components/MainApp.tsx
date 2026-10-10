@@ -2695,11 +2695,6 @@ export default function MainApp({
               <h1 className="text-[14px] font-bold tracking-tight text-slate-900">
                 {customHeaderTitle || 'نظام الاشتراكات'}
               </h1>
-              {!canEdit && (
-                <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 w-fit">
-                  وضع المتابعة (للقراءة فقط)
-                </span>
-              )}
             </div>
 
             {/* مؤشر المزامنة السحابية الذكي (يدعم العمل بدون إنترنت كلياً) */}
@@ -2726,7 +2721,9 @@ export default function MainApp({
                 title="اضغط لرفع العمليات المعلقة إلى السحابة الآن"
               >
                 <span>مزامنة ({pendingSyncCount})</span>
-                <span className="text-xs">🔄</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                </svg>
               </button>
             ) : isLoadingCloud ? (
               <span className="flex items-center gap-1 text-[11px] text-slate-700 font-semibold">
@@ -2749,7 +2746,6 @@ export default function MainApp({
           {/* تنبيه حالة الاتصال المنبثق */}
           {syncToastMessage && (
             <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-2xl border text-xs font-bold transition-all flex items-center gap-2 bg-slate-900 text-white border-slate-700 pointer-events-none">
-              <span>🔔</span>
               <span>{syncToastMessage}</span>
             </div>
           )}
@@ -2778,16 +2774,16 @@ export default function MainApp({
               </button>
             )}
 
-            {/* زر البحث والفلترة المدمج - يفتح البحث والفلتر معاً بنقرة واحدة */}
+            {/* زر البحث - رمز بحث SVG فقط بدون كلمة وبدون أي إيموجي */}
             <button
               type="button"
-              aria-label="بحث وفلتر"
+              aria-label="بحث"
               onClick={() => {
                 const nextOpen = !(searchOpen || filterDrawerOpen)
                 setSearchOpen(nextOpen)
                 setFilterDrawerOpen(nextOpen)
               }}
-              className={`depth-button relative px-2.5 h-8 rounded-xl border flex items-center gap-1.5 transition-all ${
+              className={`depth-button relative w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
                 searchOpen || filterDrawerOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
               }`}
               title="بحث وتصفية المشتركين"
@@ -2796,9 +2792,8 @@ export default function MainApp({
                 <circle cx="11" cy="11" r="6" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-              <span className="text-[11px] font-bold">بحث وفلتر</span>
               {activeFiltersBadge > 0 && (
-                <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
                   {formatNumber(activeFiltersBadge)}
                 </span>
               )}
@@ -6675,7 +6670,7 @@ export default function MainApp({
                   className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
-                  <span>تحديد المعروض كمثبت في السجل ✓</span>
+                  <span>تحديد المعروض كمثبت في السجل</span>
                 </button>
               )}
             </div>
@@ -6735,7 +6730,7 @@ export default function MainApp({
                               {entry.isRecorded ? (
                                 <>
                                   <Check className="w-3 h-3 text-emerald-700 stroke-[3]" />
-                                  <span>مثبت بالسجل ✓</span>
+                                  <span>مثبت بالسجل</span>
                                 </>
                               ) : (
                                 <span>تثبيت بالسجل</span>

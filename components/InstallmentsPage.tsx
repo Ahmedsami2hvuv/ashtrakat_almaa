@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import type { Subscriber, BillingRecords, Area, Pricing } from './MainApp'
 import { PERIODS } from './MainApp'
 import ReceiptScannerModal from './ReceiptScannerModal'
+import { Check } from 'lucide-react'
 
 export interface ConsignmentRow {
   id: string
@@ -366,7 +367,6 @@ export default function InstallmentsPage({
             </button>
 
             <span className="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-1">
-              <span>📥</span>
               <span>تنزيل إرساليات</span>
             </span>
           </div>
@@ -379,7 +379,10 @@ export default function InstallmentsPage({
               className="h-9 px-3 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
               title="مسح وصولات الاستلام الورقية بالذكاء الاصطناعي وتنزيلها تلقائياً"
             >
-              <span className="text-sm">📷</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
               <span className="hidden sm:inline">مسح الوصولات بالذكاء الاصطناعي</span>
               <span className="sm:hidden">مسح ذكي</span>
             </button>
@@ -394,12 +397,9 @@ export default function InstallmentsPage({
               {isSaving ? (
                 <span style={{ color: '#ffffff', fontWeight: 800 }}>جاري الحفظ...</span>
               ) : (
-                <>
-                  <span className="text-sm font-black" style={{ color: '#ffffff' }}>✓</span>
-                  <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '12px' }}>
-                    حفظ ({validRows.length})
-                  </span>
-                </>
+                <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '12px' }}>
+                  حفظ ({validRows.length})
+                </span>
               )}
             </button>
           </div>
@@ -421,7 +421,7 @@ export default function InstallmentsPage({
               >
                 {PERIODS.map((p, idx) => (
                   <option key={idx} value={idx}>
-                    شهر {p} {idx === currentPeriodIdx ? '⭐' : ''}
+                    شهر {p} {idx === currentPeriodIdx ? '(الحالية)' : ''}
                   </option>
                 ))}
               </select>
@@ -549,7 +549,6 @@ export default function InstallmentsPage({
                   {row.isFound ? (
                     <div className="min-h-[36px] px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs sm:text-sm font-black flex items-center justify-between gap-1 shadow-2xs">
                       <span className="flex items-center gap-1.5 break-words">
-                        <span className="text-emerald-700 text-base">👤</span>
                         <span className="text-emerald-950 font-black">{row.name}</span>
                       </span>
                       <span className="text-[11px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
@@ -564,7 +563,7 @@ export default function InstallmentsPage({
                         }}
                         type="text"
                         value={row.name}
-                        placeholder="⚠️ غير مسجل! اكتب اسم المشترك بالكامل لإنشاء حسابه..."
+                        placeholder="غير مسجل! اكتب اسم المشترك بالكامل لإنشاء حسابه..."
                         onChange={(e) => {
                           setRows((prev) =>
                             prev.map((r) =>
@@ -630,12 +629,9 @@ export default function InstallmentsPage({
               {isSaving ? (
                 <span style={{ color: '#ffffff', fontWeight: 900 }}>جاري الحفظ والتنزيل...</span>
               ) : (
-                <>
-                  <span className="text-base">💾</span>
-                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '13.5px' }}>
-                    حفظ وتنزيل الإرساليات ({validRows.length} وصل - {formatNum(totalAmount)} د.ع)
-                  </span>
-                </>
+                <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '13.5px' }}>
+                  حفظ وتنزيل الإرساليات ({validRows.length} وصل - {formatNum(totalAmount)} د.ع)
+                </span>
               )}
             </button>
           </div>
@@ -646,8 +642,8 @@ export default function InstallmentsPage({
       {saveSuccess && successSummary && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl border border-slate-100">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-3">
-              ✓
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+              <Check className="w-7 h-7 stroke-[2.5]" />
             </div>
             <h2 className="text-base font-black text-slate-900 mb-1">تم حفظ وتنزيل الإرساليات بنجاح</h2>
             <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-right space-y-1.5 my-4 text-xs">

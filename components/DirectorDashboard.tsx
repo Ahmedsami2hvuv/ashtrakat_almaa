@@ -4,6 +4,21 @@ import React, { useState, useMemo } from 'react'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink, loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Area, Subscriber, calculateBilling, PERIODS, formatInputDisplay } from '@/components/MainApp'
+import {
+  Users,
+  MapPin,
+  Briefcase,
+  PenTool,
+  UserCheck,
+  RefreshCw,
+  Eye,
+  Building2,
+  Check,
+  Copy,
+  X,
+  Search,
+  Loader2
+} from 'lucide-react'
 
 interface DirectorDashboardProps {
   directorateData: DirectorateData
@@ -610,7 +625,7 @@ export default function DirectorDashboard({
               }}
               title="إغلاق القائمة الجانبية"
             >
-              ✕
+              <X className="w-4 h-4 text-slate-500" />
             </button>
           </div>
 
@@ -1078,7 +1093,7 @@ export default function DirectorDashboard({
                 >
                   <div style={{ color: branchDetailTab === 'subscribers' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>المشتركون</span>
-                    <span style={{ fontSize: '1.1rem' }}>👥</span>
+                    <Users className="w-4 h-4 text-blue-600" />
                   </div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
                     {(selectedBranch.subscribersCount ?? selectedBranch.subscribers?.length ?? 0).toLocaleString('ar-IQ')}
@@ -1104,7 +1119,7 @@ export default function DirectorDashboard({
                 >
                   <div style={{ color: branchDetailTab === 'areas' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>المناطق المائية</span>
-                    <span style={{ fontSize: '1.1rem' }}>📍</span>
+                    <MapPin className="w-4 h-4 text-blue-600" />
                   </div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
                     {selectedBranch.areas?.length || 0}
@@ -1130,7 +1145,7 @@ export default function DirectorDashboard({
                 >
                   <div style={{ color: branchDetailTab === 'collectors' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>المحصلون</span>
-                    <span style={{ fontSize: '1.1rem' }}>💼</span>
+                    <Briefcase className="w-4 h-4 text-blue-600" />
                   </div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
                     {selectedBranch.collectors?.length || 0}
@@ -1156,7 +1171,7 @@ export default function DirectorDashboard({
                 >
                   <div style={{ color: branchDetailTab === 'writers' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>الكُتّاب</span>
-                    <span style={{ fontSize: '1.1rem' }}>✍️</span>
+                    <PenTool className="w-4 h-4 text-blue-600" />
                   </div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '6px' }}>
                     {selectedBranch.writers?.length || 0}
@@ -1182,7 +1197,7 @@ export default function DirectorDashboard({
                 >
                   <div style={{ color: branchDetailTab === 'managers' ? '#0056b3' : '#64748b', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>مسؤولو الفرع</span>
-                    <span style={{ fontSize: '1.1rem' }}>👔</span>
+                    <UserCheck className="w-4 h-4 text-blue-600" />
                   </div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0056b3', marginTop: '6px' }}>
                     {selectedBranch.managers?.length || 0}
@@ -1227,10 +1242,10 @@ export default function DirectorDashboard({
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '6px'
                         }}
                       >
-                        <span>🔄</span>
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoadingBranchDetailSubscribers ? 'animate-spin' : ''}`} />
                         <span>تحديث</span>
                       </button>
 
@@ -1328,7 +1343,7 @@ export default function DirectorDashboard({
                                       }}
                                     >
                                       <span>معاينة</span>
-                                      <span>👁️</span>
+                                      <Eye className="w-3.5 h-3.5" />
                                     </button>
                                   </td>
                                 </tr>
@@ -1377,10 +1392,10 @@ export default function DirectorDashboard({
                                   {subCount.toLocaleString('ar-IQ')} مشترك
                                 </td>
                                 <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedCollector ? '#15803d' : '#94a3b8' }}>
-                                  {assignedCollector ? `💼 ${assignedCollector.name}` : 'غير مسند'}
+                                  {assignedCollector ? assignedCollector.name : 'غير مسند'}
                                 </td>
                                 <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedWriter ? '#b45309' : '#94a3b8' }}>
-                                  {assignedWriter ? `✍️ ${assignedWriter.name}` : 'غير مسند'}
+                                  {assignedWriter ? assignedWriter.name : 'غير مسند'}
                                 </td>
                               </tr>
                             )
@@ -1442,7 +1457,7 @@ export default function DirectorDashboard({
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {assignedAreas.map(a => (
                                       <span key={a.id} style={{ backgroundColor: '#f1f5f9', color: '#1e293b', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                                        📍 {a.name}
+                                        {a.name}
                                       </span>
                                     ))}
                                   </div>
@@ -1519,7 +1534,7 @@ export default function DirectorDashboard({
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                       {assignedAreas.map(a => (
                                         <span key={a.id} style={{ backgroundColor: '#eff6ff', color: '#0056b3', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                                          ✍️ {a.name}
+                                          {a.name}
                                         </span>
                                       ))}
                                     </div>
@@ -1632,7 +1647,7 @@ export default function DirectorDashboard({
                                       fontSize: '0.8rem'
                                     }}
                                   >
-                                    {copiedManagerId === manager.id ? '✓ تم' : 'نسخ الرابط'}
+                                    {copiedManagerId === manager.id ? 'تم النسخ' : 'نسخ الرابط'}
                                   </button>
                                   <button
                                     onClick={() => handleRegenerateManagerToken(selectedBranch.id, manager.id, manager.name)}
@@ -2370,7 +2385,7 @@ export default function DirectorDashboard({
                                   fontSize: '0.8rem'
                                 }}
                               >
-                                {copiedManagerId === manager.id ? 'تم النسخ ✓' : 'نسخ الرابط'}
+                                {copiedManagerId === manager.id ? 'تم النسخ' : 'نسخ الرابط'}
                               </button>
                               <button
                                 onClick={() => handleRegenerateManagerToken(branch.id, manager.id, manager.name)}
@@ -2477,8 +2492,8 @@ export default function DirectorDashboard({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0056b3', fontSize: '1.3rem' }}>
-                          🏢
+                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Building2 className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
                           <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>
@@ -2646,7 +2661,7 @@ export default function DirectorDashboard({
                             gap: '6px'
                           }}
                         >
-                          <span>🔄</span>
+                          <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSubscribers ? 'animate-spin' : ''}`} />
                           <span>تحديث البيانات</span>
                         </button>
 
@@ -2683,7 +2698,9 @@ export default function DirectorDashboard({
                           fontWeight: 800
                         }}
                       >
-                        <div style={{ fontSize: '2rem', marginBottom: '12px' }}>⏳</div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+                        </div>
                         <div>جارِ جلب قاعدة بيانات مشتركي الفرع من السحابة...</div>
                       </div>
                     ) : (
@@ -2764,7 +2781,7 @@ export default function DirectorDashboard({
                                         }}
                                       >
                                         <span>معاينة وسجل الديون</span>
-                                        <span>👁️</span>
+                                        <Eye className="w-3.5 h-3.5" />
                                       </button>
                                     </td>
                                   </tr>
@@ -3285,9 +3302,9 @@ export default function DirectorDashboard({
                 </div>
                 <button
                   onClick={() => setViewingSubscriber(null)}
-                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem' }}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  ✕
+                  <X className="w-4 h-4 text-slate-600" />
                 </button>
               </div>
 
@@ -3555,9 +3572,9 @@ export default function DirectorDashboard({
               </div>
               <button
                 onClick={() => setViewingCollector(null)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 800 }}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                ✕
+                <X className="w-4 h-4 text-slate-600" />
               </button>
             </div>
 
@@ -3576,7 +3593,7 @@ export default function DirectorDashboard({
                         const count = selectedBranch?.subscribers?.filter(s => s.areaId === a.id).length || 0
                         return (
                           <div key={a.id} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>
-                            <span style={{ fontWeight: 800, color: '#1e293b' }}>📍 {a.name}</span>
+                            <span style={{ fontWeight: 800, color: '#1e293b' }}>{a.name}</span>
                             <span style={{ color: '#0056b3', fontWeight: 700, marginRight: '6px' }}>({count} مشترك)</span>
                           </div>
                         )
