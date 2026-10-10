@@ -958,6 +958,7 @@ export default function MainApp({
   const [isLoadingCloud, setIsLoadingCloud] = useState<boolean>(true)
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isInitialLoadRef = useRef<boolean>(true)
 
   // حالات العمل دون إنترنت وقائمة الانتظار
   const [isOnline, setIsOnline] = useState<boolean>(() => {
@@ -1229,33 +1230,33 @@ export default function MainApp({
     }
   }, [dataLoaded, isAuthenticated])
 
-  // الحفظ التلقائي المحلي + البث اللحظي السريع + الحفظ السحابي
+  // الحفظ التلقائي المحلي الفوري + حفظ سحابي هادئ ومقنن للمسؤول فقط (حماية استهلاك فيرسل 100%)
   useEffect(() => {
     if (!isAuthenticated || !dataLoaded) return
     if (isIncomingSyncRef.current) return
 
     const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys }
 
-    // 1. حفظ محلي فوري
+    // 1. حفظ محلي فوري في ذاكرة الجهاز (لا يستهلك أي إنترنت أو سيرفر نهائياً)
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
 
-    // 2. بث مباشر فوري خفيف للأجهزة الأخرى (إشعار خفيف لتفادي خطأ 422 وتجاوز سعة سوبابيس)
-    if (channelRef.current && (channelRef.current as unknown as { state?: string }).state === 'joined') {
-      try {
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'instant_sync_ping',
-          payload: { t: Date.now() }
-        })
-      } catch {}
+    // 2. المحصل والكاتب (أو أي حساب للقراءة): خروج فوري لمنع أي استهلاك لسيرفر فيرسل نهائياً
+    if (!canEdit || userRole === 'collector') {
+      return
     }
 
-    // 3. حفظ سحابي دائم: إما للفرع المحدد حصراً أو حفظ عام
+    // 3. تخطي الحفظ السحابي عند أول تشغيل أو تحميل للبيانات
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
+      return
+    }
+
+    // 4. حفظ سحابي للمسؤولين المصرح لهم فقط بعد توقف التعديل لمدة ثانيتين
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     setIsSyncing(true)
     saveTimerRef.current = setTimeout(async () => {
       if (onSaveBranchData) {
-        onSaveBranchData({
+        await onSaveBranchData({
           subscribers,
           areas,
           billing,
@@ -1266,8 +1267,8 @@ export default function MainApp({
         await saveToCloud(data as Record<string, unknown>)
       }
       setIsSyncing(false)
-    }, 500)
-  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated, onSaveBranchData])
+    }, 2000)
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated, onSaveBranchData, canEdit, userRole])
 
   // تسجيل الدخول بشكل آمن عبر السيرفر
   const handleLogin = async (e: React.FormEvent) => {

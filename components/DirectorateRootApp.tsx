@@ -182,7 +182,7 @@ export default function DirectorateRootApp() {
               const props = {
                 role: 'collector' as const,
                 userTitle: `محصل: ${matchedCollector.name}`,
-                canEdit: matchedCollector.canEdit,
+                canEdit: false,
                 assignedAreaIds: matchedCollector.assignedAreaIds,
                 assignedSubscriberIds: matchedCollector.assignedSubscriberIds
               }
@@ -197,7 +197,7 @@ export default function DirectorateRootApp() {
                     token: matchedCollector.token,
                     name: matchedCollector.name,
                     branchName: matchedBranch.name,
-                    canEdit: matchedCollector.canEdit,
+                    canEdit: false,
                     assignedAreaIds: matchedCollector.assignedAreaIds,
                     assignedSubscriberIds: matchedCollector.assignedSubscriberIds
                   })
@@ -273,7 +273,7 @@ export default function DirectorateRootApp() {
                 setSubscriberAppProps({
                   role: 'collector',
                   userTitle: `محصل: ${colSess.name}`,
-                  canEdit: colSess.canEdit ?? true,
+                  canEdit: false,
                   assignedAreaIds: colSess.assignedAreaIds,
                   assignedSubscriberIds: colSess.assignedSubscriberIds
                 })
