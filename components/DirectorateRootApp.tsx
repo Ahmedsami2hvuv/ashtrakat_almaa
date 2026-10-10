@@ -181,7 +181,7 @@ export default function DirectorateRootApp() {
               setSubscriberAppData(subsData)
               const props = {
                 role: 'collector' as const,
-                userTitle: `محصل: ${matchedCollector.name}`,
+                userTitle: matchedCollector.name,
                 canEdit: false,
                 assignedAreaIds: matchedCollector.assignedAreaIds,
                 assignedSubscriberIds: matchedCollector.assignedSubscriberIds
@@ -272,7 +272,7 @@ export default function DirectorateRootApp() {
                 setSubscriberAppData(subsData)
                 setSubscriberAppProps({
                   role: 'collector',
-                  userTitle: `محصل: ${colSess.name}`,
+                  userTitle: colSess.name,
                   canEdit: false,
                   assignedAreaIds: colSess.assignedAreaIds,
                   assignedSubscriberIds: colSess.assignedSubscriberIds
