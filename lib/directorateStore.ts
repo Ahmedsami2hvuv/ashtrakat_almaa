@@ -241,10 +241,23 @@ export async function saveBranchSubscribersAndBilling(
   }
 }
 
-// قراءة بيانات المديرية من السحابة بأمان عبر مسار السيرفر (مع دعم الأوفلاين)
+// قراءة بيانات المديرية من السحابة بأمان عبر مسار السيرفر (مع دعم الأوفلاين الفوري)
 export async function loadDirectorateFromCloud(): Promise<DirectorateData> {
   let cloudDirectorate: DirectorateData | null = null
   let legacyData: any = null
+
+  // 1. إذا كان الهاتف بدون إنترنت حالياً، نقرأ الكاش المحلي فوراً بدون أي تأخير
+  if (typeof navigator !== 'undefined' && !navigator.onLine && typeof window !== 'undefined') {
+    try {
+      const cachedDir = localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (cachedDir) {
+        const parsed = JSON.parse(cachedDir)
+        if (parsed && parsed.branches && parsed.branches.length > 0) {
+          return parsed
+        }
+      }
+    } catch {}
+  }
 
   try {
     const res = await fetch('/api/directorate')
