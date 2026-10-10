@@ -181,7 +181,7 @@ export default function DirectorateRootApp() {
               setSubscriberAppData(subsData)
               const props = {
                 role: 'collector' as const,
-                userTitle: `محصل: ${matchedCollector.name} (${matchedBranch.name})`,
+                userTitle: `محصل: ${matchedCollector.name}`,
                 canEdit: matchedCollector.canEdit,
                 assignedAreaIds: matchedCollector.assignedAreaIds,
                 assignedSubscriberIds: matchedCollector.assignedSubscriberIds
@@ -243,7 +243,7 @@ export default function DirectorateRootApp() {
               setSubscriberAppData(subsData)
               setSubscriberAppProps({
                 role: 'writer',
-                userTitle: `كاتب: ${matchedWriter.name} (${matchedBranch.name})`,
+                userTitle: `كاتب: ${matchedWriter.name}`,
                 canEdit: true,
                 assignedAreaIds: matchedWriter.assignedAreaIds,
                 assignedSubscriberIds: matchedWriter.assignedSubscriberIds
@@ -272,7 +272,7 @@ export default function DirectorateRootApp() {
                 setSubscriberAppData(subsData)
                 setSubscriberAppProps({
                   role: 'collector',
-                  userTitle: `محصل: ${colSess.name} (${foundBranch.name})`,
+                  userTitle: `محصل: ${colSess.name}`,
                   canEdit: colSess.canEdit ?? true,
                   assignedAreaIds: colSess.assignedAreaIds,
                   assignedSubscriberIds: colSess.assignedSubscriberIds
@@ -458,18 +458,15 @@ export default function DirectorateRootApp() {
         customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}
         bypassAuth={true}
         onBack={
-          subscriberAppProps?.role === 'writer'
-            ? undefined
-            : () => {
-                try {
-                  localStorage.removeItem('ashtrakat_collector_session')
-                } catch {}
-                if (selectedBranch && subscriberAppProps?.role === 'manager') {
+          subscriberAppProps?.role === 'manager'
+            ? () => {
+                if (selectedBranch) {
                   setActiveView('branch_manager')
                 } else {
                   setActiveView('director_login')
                 }
               }
+            : undefined
         }
       />
     )

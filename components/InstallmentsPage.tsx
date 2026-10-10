@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import type { Subscriber, BillingRecords, Area, Pricing } from './MainApp'
 import { PERIODS } from './MainApp'
+import ReceiptScannerModal from './ReceiptScannerModal'
 
 export interface ConsignmentRow {
   id: string
@@ -35,6 +36,8 @@ interface InstallmentsPageProps {
 export default function InstallmentsPage({
   subscribers,
   areas,
+  billing,
+  pricing,
   onClose,
   onSaveConsignments
 }: InstallmentsPageProps) {
@@ -45,6 +48,16 @@ export default function InstallmentsPage({
 
   const [selectedYear, setSelectedYear] = useState<number>(currentYear)
   const [selectedPeriodIdx, setSelectedPeriodIdx] = useState<number>(currentPeriodIdx)
+  const [showScannerModal, setShowScannerModal] = useState<boolean>(false)
+  const [aiApiKeys] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('AI_GEMINI_API_KEYS')
+        if (saved) return JSON.parse(saved)
+      } catch {}
+    }
+    return []
+  })
 
   // صفوف الإرسالية
   const [rows, setRows] = useState<ConsignmentRow[]>([
@@ -358,8 +371,19 @@ export default function InstallmentsPage({
             </span>
           </div>
 
-          {/* الجانب الأيسر: زر حفظ واضح جداً وبارز وغير باهت إطلاقاً */}
+          {/* الجانب الأيسر: زر حفظ وزر مسح الوصولات الذكي كخيار إضافي */}
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowScannerModal(true)}
+              className="h-9 px-3 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              title="مسح وصولات الاستلام الورقية بالذكاء الاصطناعي وتنزيلها تلقائياً"
+            >
+              <span className="text-sm">📷</span>
+              <span className="hidden sm:inline">مسح الوصولات بالذكاء الاصطناعي</span>
+              <span className="sm:hidden">مسح ذكي</span>
+            </button>
+
             <button
               type="button"
               onClick={handleSave}
@@ -685,6 +709,38 @@ export default function InstallmentsPage({
             </div>
           </div>
         </div>
+      )}
+
+      {/* نافذة ماسح الوصولات بالذكاء الاصطناعي كخيار إضافي داخل الإرساليات */}
+      {showScannerModal && (
+        <ReceiptScannerModal
+          onClose={() => setShowScannerModal(false)}
+          apiKeys={aiApiKeys}
+          subscribers={subscribers}
+          billing={billing}
+          pricing={pricing}
+          onApplyPayments={(paymentsToApply) => {
+            const newScannedRows: ConsignmentRow[] = paymentsToApply.map((p, i) => {
+              const sub = subscribers.find((s) => s.id === p.subId)
+              return {
+                id: `scanned-${Date.now()}-${i}`,
+                subNumber: String(p.subId),
+                name: sub ? sub.name : '',
+                amount: String(p.amount),
+                isNew: !sub,
+                isFound: !!sub,
+                existingSub: sub,
+                statusMsg: sub ? 'تم مسحه بالذكاء الاصطناعي' : 'مشترك غير مسجل'
+              }
+            })
+            setRows((prev) => {
+              const cleanPrev = prev.filter((r) => r.subNumber.trim() !== '' || r.amount.trim() !== '')
+              return [...cleanPrev, ...newScannedRows]
+            })
+            setShowScannerModal(false)
+          }}
+          onOpenSettings={() => {}}
+        />
       )}
     </div>
   )

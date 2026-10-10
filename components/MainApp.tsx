@@ -2675,7 +2675,7 @@ export default function MainApp({
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-sky-100">
         <div className="max-w-[1100px] mx-auto px-4 h-[56px] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {onBack && userRole !== 'writer' && (
+            {onBack && userRole === 'manager' && (
               <button
                 type="button"
                 onClick={onBack}
@@ -2777,58 +2777,27 @@ export default function MainApp({
               </button>
             )}
 
-            {/* زر البحث */}
+            {/* زر البحث والفلترة المدمج - يفتح البحث والفلتر معاً بنقرة واحدة */}
             <button
               type="button"
-              aria-label="بحث"
+              aria-label="بحث وفلتر"
               onClick={() => {
-                setSearchOpen((p) => !p)
-                if (!searchOpen) setFilterDrawerOpen(false)
+                const nextOpen = !(searchOpen || filterDrawerOpen)
+                setSearchOpen(nextOpen)
+                setFilterDrawerOpen(nextOpen)
               }}
-              className={`depth-button w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
-                searchOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
+              className={`depth-button relative px-2.5 h-8 rounded-xl border flex items-center gap-1.5 transition-all ${
+                searchOpen || filterDrawerOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-sky-100 text-slate-600 hover:bg-sky-50'
               }`}
+              title="بحث وتصفية المشتركين"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="11" cy="11" r="6" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-            </button>
-
-
-            {/* زر ماسح الوصولات بالذكاء الاصطناعي */}
-            <button
-              type="button"
-              aria-label="ماسح الوصولات"
-              onClick={() => {
-                setShowReceiptScannerModal(true)
-                setSearchOpen(false)
-                setFilterDrawerOpen(false)
-              }}
-              className="h-8 px-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 flex items-center gap-1 transition-all text-[11px] font-medium shadow-2xs"
-              title="ماسح الوصولات بالذكاء الاصطناعي"
-            >
-              <span className="text-[12px] leading-none"></span>
-              <span className="hidden md:inline text-[10px]">ماسح الوصولات</span>
-            </button>
-
-            {/* زر الفلتر */}
-            <button
-              type="button"
-              aria-label="فلتر"
-              onClick={() => {
-                setFilterDrawerOpen((p) => !p)
-                if (!filterDrawerOpen) setSearchOpen(false)
-              }}
-              className={`depth-button relative w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
-                filterDrawerOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <path d="M3 6h18M7 12h10M10 18h4" />
-              </svg>
+              <span className="text-[11px] font-bold">بحث وفلتر</span>
               {activeFiltersBadge > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
                   {formatNumber(activeFiltersBadge)}
                 </span>
               )}
