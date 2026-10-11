@@ -95,17 +95,26 @@ export default function BranchManagerDashboard({
     }
   }
 
-  // تحميل المشتركين تلقائياً إذا فتح المسؤول تبويب المشتركين أو صفحة الإرساليات
+  // تحميل المشتركين تلقائياً إذا فتح المسؤول تبويب المشتركين أو المناطق أو صفحة الإرساليات
   useEffect(() => {
-    if ((activeTab === 'subscribers' || isConsignmentA4Open) && !hasLoadedSubscribers) {
+    if ((activeTab === 'subscribers' || activeTab === 'areas' || isConsignmentA4Open) && !hasLoadedSubscribers) {
       fetchBranchSubscribers()
     }
   }, [activeTab, isConsignmentA4Open, hasLoadedSubscribers])
 
-  // حالات المناطق
+  // حالات المناطق والبحث والتفاعل المتقدم
   const [newAreaName, setNewAreaName] = useState('')
   const [showAreasListModal, setShowAreasListModal] = useState(false)
   const [areasListText, setAreasListText] = useState('')
+  const [areaSearchQuery, setAreaSearchQuery] = useState('')
+  const [selectedAreaForModal, setSelectedAreaForModal] = useState<Area | null>(null)
+  const [isAssigningToArea, setIsAssigningToArea] = useState(false)
+  const [areaSubscribersSearch, setAreaSubscribersSearch] = useState('')
+  const [allSubscribersSearch, setAllSubscribersSearch] = useState('')
+  const [selectedNewSubIdsForArea, setSelectedNewSubIdsForArea] = useState<Set<number>>(new Set())
+  const [filterUnassignedOnly, setFilterUnassignedOnly] = useState(false)
+  const [isSavingAreaSubs, setIsSavingAreaSubs] = useState(false)
+  const [areaActionFeedback, setAreaActionFeedback] = useState<string | null>(null)
 
   // حالات استيراد المشتركين
   const [showImportModal, setShowImportModal] = useState(false)
@@ -442,6 +451,127 @@ export default function BranchManagerDashboard({
     if (confirm(`هل أنت متأكد من حذف منطقة (${areaName})؟`)) {
       const updatedAreas = branch.areas.filter(a => a.id !== areaId)
       onUpdateBranch({ ...branch, areas: updatedAreas })
+      if (selectedAreaForModal?.id === areaId) {
+        setSelectedAreaForModal(null)
+      }
+    }
+  }
+
+  // خريطة سريعة جداً لحساب عدد المشتركين في كل منطقة فورياً
+  const areaSubscribersCountMap = useMemo(() => {
+    const map = new Map<string, number>()
+    loadedSubscribers.forEach(s => {
+      if (s.areaId) {
+        map.set(s.areaId, (map.get(s.areaId) || 0) + 1)
+      }
+      if (s.areaIds && Array.isArray(s.areaIds)) {
+        s.areaIds.forEach(aid => {
+          map.set(aid, (map.get(aid) || 0) + 1)
+        })
+      }
+    })
+    return map
+  }, [loadedSubscribers])
+
+  // فلترة قائمة المناطق بالبحث
+  const filteredAreas = useMemo(() => {
+    const areas = branch.areas || []
+    if (!areaSearchQuery.trim()) return areas
+    const q = areaSearchQuery.trim().toLowerCase()
+    return areas.filter(a => a.name.toLowerCase().includes(q))
+  }, [branch.areas, areaSearchQuery])
+
+  // مشتركو المنطقة المحددة حالياً في المودال التفاعلي
+  const subscribersInSelectedArea = useMemo(() => {
+    if (!selectedAreaForModal) return []
+    const aid = selectedAreaForModal.id
+    let list = loadedSubscribers.filter(s => s.areaId === aid || (s.areaIds && s.areaIds.includes(aid)))
+    if (areaSubscribersSearch.trim()) {
+      const q = areaSubscribersSearch.trim().toLowerCase()
+      list = list.filter(s => s.name.toLowerCase().includes(q) || String(s.id).includes(q))
+    }
+    return list
+  }, [selectedAreaForModal, loadedSubscribers, areaSubscribersSearch])
+
+  // المشتركون المتاحون للإضافة إلى المنطقة
+  const availableSubscribersForArea = useMemo(() => {
+    if (!selectedAreaForModal) return []
+    const currentAid = selectedAreaForModal.id
+    let list = loadedSubscribers.filter(s => s.areaId !== currentAid && (!s.areaIds || !s.areaIds.includes(currentAid)))
+
+    if (filterUnassignedOnly) {
+      list = list.filter(s => !s.areaId && (!s.areaIds || s.areaIds.length === 0))
+    }
+
+    if (allSubscribersSearch.trim()) {
+      const q = allSubscribersSearch.trim().toLowerCase()
+      list = list.filter(s => s.name.toLowerCase().includes(q) || String(s.id).includes(q) || (s.detailedAddress && s.detailedAddress.toLowerCase().includes(q)))
+    }
+    return list
+  }, [selectedAreaForModal, loadedSubscribers, filterUnassignedOnly, allSubscribersSearch])
+
+  // حفظ تخصيص المشتركين للمنطقة
+  const handleAssignSubscribersToArea = async () => {
+    if (!selectedAreaForModal || selectedNewSubIdsForArea.size === 0) return
+    setIsSavingAreaSubs(true)
+    try {
+      const targetAreaId = selectedAreaForModal.id
+      const targetAreaName = selectedAreaForModal.name
+      const updated = loadedSubscribers.map(s => {
+        if (selectedNewSubIdsForArea.has(s.id)) {
+          let updatedAddress = s.detailedAddress || ''
+          if (updatedAddress.includes('المنطقة:')) {
+            updatedAddress = updatedAddress.replace(/المنطقة:[^|]+/, `المنطقة: ${targetAreaName}`)
+          } else {
+            updatedAddress = `${updatedAddress ? updatedAddress + ' | ' : ''}المنطقة: ${targetAreaName}`
+          }
+          return {
+            ...s,
+            areaId: targetAreaId,
+            detailedAddress: updatedAddress
+          }
+        }
+        return s
+      })
+
+      setLoadedSubscribers(updated)
+      await saveBranchSubscribersAndBilling(branch.id, updated, loadedBilling)
+      setSelectedNewSubIdsForArea(new Set())
+      setIsAssigningToArea(false)
+      setAreaActionFeedback(`تمت إضافة ${selectedNewSubIdsForArea.size} مشترك إلى منطقة (${targetAreaName}) بنجاح!`)
+      setTimeout(() => setAreaActionFeedback(null), 4000)
+    } catch (err) {
+      console.error(err)
+      alert('حدث خطأ أثناء حفظ المشتركين')
+    } finally {
+      setIsSavingAreaSubs(false)
+    }
+  }
+
+  // إزالة مشترك من المنطقة الحالية (فك التخصيص)
+  const handleRemoveSubscriberFromArea = async (subId: number, subName: string) => {
+    if (!selectedAreaForModal) return
+    if (!confirm(`هل أنت متأكد من إزالة المشترك (${subName}) من منطقة (${selectedAreaForModal.name})؟`)) return
+
+    try {
+      const updated = loadedSubscribers.map(s => {
+        if (s.id === subId) {
+          return {
+            ...s,
+            areaId: '',
+            areaIds: s.areaIds ? s.areaIds.filter(aid => aid !== selectedAreaForModal.id) : []
+          }
+        }
+        return s
+      })
+
+      setLoadedSubscribers(updated)
+      await saveBranchSubscribersAndBilling(branch.id, updated, loadedBilling)
+      setAreaActionFeedback(`تمت إزالة المشترك (${subName}) من المنطقة بنجاح.`)
+      setTimeout(() => setAreaActionFeedback(null), 3000)
+    } catch (err) {
+      console.error(err)
+      alert('حدث خطأ أثناء التحديث')
     }
   }
 
@@ -1729,16 +1859,45 @@ export default function BranchManagerDashboard({
             </div>
           )}
 
-          {/* تبويب المناطق */}
+          {/* تبويب المناطق - تصميم مدمج وأنيق وتفاعلي */}
           {activeTab === 'areas' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-5">
+              {/* ترويسة التبويب والتحكم */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pb-4 border-b border-slate-100">
                 <div>
-                  <h3 className="text-base md:text-lg font-black text-slate-900">المناطق المشمولة بالفرع</h3>
-                  <p className="text-xs text-slate-500">إدارة وتقسيم مناطق الجباية (إجمالي المناطق: {(branch.areas || []).length})</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base md:text-lg font-black text-slate-900">المناطق المشمولة بالفرع</h3>
+                    <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-black">
+                      {(branch.areas || []).length} منطقة
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    انقر على أي منطقة لعرض مشتركيها وإضافة مشتركين إليها فورياً
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* شريط البحث في المناطق */}
+                  <div className="relative min-w-[200px] sm:min-w-[240px]">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={areaSearchQuery}
+                      onChange={(e) => setAreaSearchQuery(e.target.value)}
+                      placeholder="بحث سريع في المناطق..."
+                      className="w-full pl-3 pr-9 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    {areaSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setAreaSearchQuery('')}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
                   {/* زر التوجيه لخيارات الاستيراد في الإعدادات */}
                   <button
                     type="button"
@@ -1746,7 +1905,7 @@ export default function BranchManagerDashboard({
                     className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-500" />
-                    <span>استيراد المناطق والإعدادات</span>
+                    <span className="hidden sm:inline">الإعدادات والاستيراد</span>
                   </button>
 
                   {/* نموذج إضافة سريعة لمنطقة واحدة */}
@@ -1756,11 +1915,11 @@ export default function BranchManagerDashboard({
                       value={newAreaName}
                       onChange={(e) => setNewAreaName(e.target.value)}
                       placeholder="اسم منطقة جديدة..."
-                      className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px]"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
                     >
                       <Plus className="w-4 h-4" />
                       <span>إضافة</span>
@@ -1769,34 +1928,77 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {(branch.areas || []).map((area) => {
-                  const subsInArea = (branch.subscribers || []).filter(s => s.areaId === area.id).length
-                  return (
-                    <div
-                      key={area.id}
-                      className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-blue-100 text-blue-700 rounded-xl">
-                          <MapPin className="w-4 h-4" />
+              {/* شبكة المناطق المدمجة والأنيقة */}
+              {filteredAreas.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm">لم يتم العثور على أي منطقة مطابقة لـ &quot;{areaSearchQuery}&quot;</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
+                  {filteredAreas.map((area) => {
+                    const subsCount = areaSubscribersCountMap.get(area.id) || 0
+                    const hasSubs = subsCount > 0
+
+                    return (
+                      <div
+                        key={area.id}
+                        onClick={() => {
+                          setSelectedAreaForModal(area)
+                          setIsAssigningToArea(false)
+                          setSelectedNewSubIdsForArea(new Set())
+                          setAreaSubscribersSearch('')
+                          setAllSubscribersSearch('')
+                        }}
+                        className={`group relative p-2.5 sm:p-3 rounded-2xl border text-right transition-all duration-150 cursor-pointer flex flex-col justify-between select-none ${
+                          hasSubs
+                            ? 'bg-white hover:bg-blue-50/50 border-slate-200/90 hover:border-blue-300 shadow-2xs hover:shadow-md'
+                            : 'bg-slate-50/80 hover:bg-slate-100 border-slate-200/60 hover:border-slate-300 text-slate-500'
+                        }`}
+                      >
+                        {/* أعلى البطاقة: الاسم وأيقونة الحذف المصغرة */}
+                        <div className="flex items-start justify-between gap-1 mb-1.5">
+                          <h4
+                            className="font-black text-slate-900 text-xs sm:text-sm line-clamp-1 group-hover:text-blue-700 transition"
+                            title={area.name}
+                          >
+                            {area.name}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteArea(area.id, area.name)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition shrink-0 -mt-1 -ml-1"
+                            title="حذف المنطقة"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
-                        <div>
-                          <h4 className="font-black text-slate-900 text-sm">{area.name}</h4>
-                          <p className="text-[11px] text-slate-500 font-bold mt-0.5">{subsInArea} مشترك مسجل</p>
+
+                        {/* أسفل البطاقة: شارة المشتركين ومؤشر النقر */}
+                        <div className="flex items-center justify-between mt-auto pt-1">
+                          <span
+                            className={`text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                              hasSubs
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                                : 'bg-slate-200/60 text-slate-500'
+                            }`}
+                          >
+                            <Users className="w-3 h-3" />
+                            <span>{subsCount} مشترك</span>
+                          </span>
+
+                          <span className="text-[10px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition hidden sm:inline">
+                            عرض التفاصيل ←
+                          </span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeleteArea(area.id, area.name)}
-                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition"
-                        title="حذف المنطقة"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -3691,6 +3893,356 @@ export default function BranchManagerDashboard({
           </div>
         )
       })()}
+
+      {/* نافذة تفاصيل المنطقة التفاعلية وإدارة مشتركيها */}
+      {selectedAreaForModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+            {/* رأس النافذة */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-sm">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900">{selectedAreaForModal.name}</h3>
+                    <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-black rounded-full">
+                      {areaSubscribersCountMap.get(selectedAreaForModal.id) || 0} مشترك
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-bold mt-0.5">
+                    إدارة مشتركي المنطقة وتخصيص المشتركين إليها
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAreaForModal(null)
+                  setIsAssigningToArea(false)
+                }}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* إشعار التغذية الراجعة */}
+            {areaActionFeedback && (
+              <div className="mx-4 mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black rounded-xl text-center flex items-center justify-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>{areaActionFeedback}</span>
+              </div>
+            )}
+
+            {/* أزرار التبديل بين مشتركي المنطقة وإضافة مشتركين جدد */}
+            <div className="p-3 bg-slate-100/70 border-b border-slate-200 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAssigningToArea(false)}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
+                  !isAssigningToArea
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>مشتركو المنطقة ({subscribersInSelectedArea.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAssigningToArea(true)}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 ${
+                  isAssigningToArea
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-blue-700 bg-blue-50 hover:bg-blue-100/80'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>إضافة وتخصيص مشتركين للمنطقة</span>
+              </button>
+            </div>
+
+            {/* جسم النافذة */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              {/* 1. وضع عرض مشتركي المنطقة الحاليين */}
+              {!isAssigningToArea ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={areaSubscribersSearch}
+                        onChange={(e) => setAreaSubscribersSearch(e.target.value)}
+                        placeholder="بحث في مشتركي هذه المنطقة..."
+                        className="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsAssigningToArea(true)}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1 shrink-0 shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>إضافة مشتركين</span>
+                    </button>
+                  </div>
+
+                  {subscribersInSelectedArea.length === 0 ? (
+                    <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+                      <Users className="w-8 h-8 text-slate-300 mx-auto" />
+                      <div>
+                        <p className="text-sm font-bold text-slate-700">لا يوجد مشتركون في هذه المنطقة حالياً</p>
+                        <p className="text-xs text-slate-400 mt-0.5">يمكنك إضافة وتحديد المشتركين لهذه المنطقة بضغطة زر واحدة</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAssigningToArea(true)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>إضافة مشتركين الآن</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 max-h-[50vh] overflow-y-auto">
+                      {subscribersInSelectedArea.map((sub) => (
+                        <div
+                          key={sub.id}
+                          className="p-3 hover:bg-slate-50 flex items-center justify-between gap-2 transition"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="px-2 py-1 bg-slate-100 text-blue-700 font-mono font-black text-xs rounded-lg shrink-0">
+                              #{sub.id}
+                            </span>
+                            <div className="min-w-0">
+                              <h5 className="font-black text-slate-900 text-xs sm:text-sm truncate">{sub.name}</h5>
+                              <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 font-bold mt-0.5">
+                                <span>{sub.propertyType}</span>
+                                <span>•</span>
+                                <span>{sub.meterType}</span>
+                                {sub.remainingPrev && sub.remainingPrev > 0 ? (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-rose-600 font-mono">{sub.remainingPrev.toLocaleString('ar-IQ')} د.ع</span>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedDetailSubscriber(sub)
+                                setDetailSubscriberYear(2026)
+                              }}
+                              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition"
+                              title="كشف حساب الديون"
+                            >
+                              كشف الحساب
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSubscriberFromArea(sub.id, sub.name)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                              title="إزالة المشترك من هذه المنطقة"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* 2. وضع تحديد وإضافة المشتركين للمنطقة */
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={allSubscribersSearch}
+                        onChange={(e) => setAllSubscribersSearch(e.target.value)}
+                        placeholder="بحث في كافة المشتركين بالاسم، رقم الاشتراك، أو العنوان..."
+                        className="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-600 px-1">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={filterUnassignedOnly}
+                          onChange={(e) => setFilterUnassignedOnly(e.target.checked)}
+                          className="w-4 h-4 rounded text-blue-600 border-slate-300"
+                        />
+                        <span>عرض المشتركين غير المخصصين لأي منطقة فقط</span>
+                      </label>
+
+                      <div className="flex items-center gap-3 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newSet = new Set(selectedNewSubIdsForArea)
+                            availableSubscribersForArea.slice(0, 100).forEach(s => newSet.add(s.id))
+                            setSelectedNewSubIdsForArea(newSet)
+                          }}
+                          className="text-blue-600 hover:underline"
+                        >
+                          تحديد نتائج البحث
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedNewSubIdsForArea(new Set())}
+                          className="text-rose-600 hover:underline"
+                        >
+                          إلغاء التحديد
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* قائمة المشتركين القابلة للاختيار */}
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 max-h-[45vh] overflow-y-auto">
+                    {availableSubscribersForArea.slice(0, 150).map((sub) => {
+                      const isSelected = selectedNewSubIdsForArea.has(sub.id)
+                      const currentAreaName = branch.areas?.find(a => a.id === sub.areaId)?.name
+
+                      return (
+                        <label
+                          key={sub.id}
+                          className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition select-none ${
+                            isSelected ? 'bg-blue-50/70 border-r-4 border-blue-600' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const next = new Set(selectedNewSubIdsForArea)
+                                if (e.target.checked) next.add(sub.id)
+                                else next.delete(sub.id)
+                                setSelectedNewSubIdsForArea(next)
+                              }}
+                              className="w-4 h-4 rounded text-blue-600 border-slate-300 cursor-pointer shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-black text-blue-700 text-xs">#{sub.id}</span>
+                                <h5 className="font-black text-slate-900 text-xs sm:text-sm truncate">{sub.name}</h5>
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-bold mt-0.5 flex flex-wrap items-center gap-1.5">
+                                <span>{sub.propertyType}</span>
+                                {currentAreaName ? (
+                                  <span className="text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                                    حالياً في: {currentAreaName}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                                    بدون منطقة
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
+                        </label>
+                      )
+                    })}
+
+                    {availableSubscribersForArea.length === 0 && (
+                      <div className="py-10 text-center text-slate-400 font-bold">
+                        لا توجد نتائج مطابقة لبحثك
+                      </div>
+                    )}
+                  </div>
+                  {availableSubscribersForArea.length > 150 && (
+                    <p className="text-[11px] text-slate-400 font-bold text-center">
+                      يتم عرض أول 150 نتيجة للسرعة، استخدم البحث لتحديد مشتركين بعينهم
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* أسفل النافذة */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
+              {isAssigningToArea ? (
+                <>
+                  <div className="text-xs font-black text-slate-700">
+                    تم اختيار: <span className="text-blue-700 font-mono font-black">{selectedNewSubIdsForArea.size}</span> مشترك
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAssigningToArea(false)}
+                      className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="button"
+                      disabled={selectedNewSubIdsForArea.size === 0 || isSavingAreaSubs}
+                      onClick={handleAssignSubscribersToArea}
+                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      {isSavingAreaSubs ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>جارِ الحفظ...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>تأكيد الإضافة للمنطقة</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenSubscriberApp({
+                        role: 'manager',
+                        userTitle: `مسؤول فرع (${branch.name})`,
+                        canEdit: true,
+                        assignedAreaIds: [selectedAreaForModal.id]
+                      })
+                      setSelectedAreaForModal(null)
+                    }}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>فتح المنطقة في تطبيق المشتركين</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAreaForModal(null)}
+                    className="px-5 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition"
+                  >
+                    إغلاق
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
