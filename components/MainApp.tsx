@@ -41,6 +41,8 @@ export interface Subscriber {
   remainingPrev?: number
   fee?: number
   createdAt?: string
+  dossier?: string
+  notes?: string
 }
 
 export type Pricing = Record<PropertyType, Record<MeterType, number>>
@@ -122,7 +124,13 @@ const STATUS_OPTIONS = [
   'يدفع باستمرار',
   'مفلش',
   'لا ينظم',
-  'فارغ'
+  'فارغ',
+  'مهدوم',
+  'إيقاف حساب',
+  'قطعة فارغة',
+  'مغلق',
+  'مقطوع',
+  'متجاوز'
 ] as const
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -134,12 +142,20 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
   'يدفع باستمرار': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
   'مفلش': { bg: 'bg-zinc-100', text: 'text-zinc-700', border: 'border-zinc-300', dot: 'bg-zinc-500' },
   'لا ينظم': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-  'فارغ': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', dot: 'bg-teal-500' }
+  'فارغ': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', dot: 'bg-teal-500' },
+  'مهدوم': { bg: 'bg-stone-100', text: 'text-stone-800', border: 'border-stone-300', dot: 'bg-stone-500' },
+  'إيقاف حساب': { bg: 'bg-rose-50', text: 'text-rose-800', border: 'border-rose-200', dot: 'bg-rose-500' },
+  'قطعة فارغة': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', dot: 'bg-amber-500' },
+  'مغلق': { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', dot: 'bg-slate-500' },
+  'مقطوع': { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200', dot: 'bg-red-500' },
+  'متجاوز': { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200', dot: 'bg-purple-500' }
 }
 
 // دالة فحص ما إذا كان المشترك مصفّر الحساب كلياً بناءً على حالته (مفلش، لا ينظم)
 export function isZeroAccountSubscriber(sub: Subscriber | null | undefined): boolean {
   if (!sub || !sub.statuses || sub.statuses.length === 0) return false
+  // إذا كان عليه ديون سابقة مسجلة لا نعتبره مصفّر الحساب حتى لو كان مهدوماً أو مفلشاً
+  if (sub.remainingPrev && sub.remainingPrev > 0) return false
   return sub.statuses.some((st) => {
     if (!st) return false
     const s = st.trim()
@@ -893,7 +909,10 @@ export default function MainApp({
     phone: '',
     propertyType: 'سكني' as PropertyType,
     meterType: '4 متر' as MeterType,
-    statuses: [] as string[]
+    statuses: [] as string[],
+    dossier: '',
+    notes: '',
+    remainingPrev: 0
   })
   const [editSub, setEditSub] = useState<Partial<Subscriber>>({})
   const [formError, setFormError] = useState<string>('')
@@ -1978,7 +1997,10 @@ export default function MainApp({
       phone: '',
       propertyType: 'سكني',
       meterType: '4 متر',
-      statuses: []
+      statuses: [],
+      dossier: '',
+      notes: '',
+      remainingPrev: 0
     })
     setShowInlineAddArea(false)
     setShowInlineAddBranch(false)
@@ -2103,7 +2125,10 @@ export default function MainApp({
       branchId,
       propertyType: newSub.propertyType,
       meterType,
-      detailedAddress: `قرب ${area?.name || ''}`,
+      detailedAddress: newSub.dossier || newSub.notes ? `إضبارة: ${newSub.dossier || '-'} | ملاحظة: ${newSub.notes || '-'}` : `قرب ${area?.name || ''}`,
+      dossier: newSub.dossier.trim() || undefined,
+      notes: newSub.notes.trim() || undefined,
+      remainingPrev: newSub.remainingPrev || 0,
       order: maxOrder + 1,
       statuses: newSub.statuses,
       createdAt: new Date().toISOString()
@@ -2116,7 +2141,10 @@ export default function MainApp({
       const copy = { ...prev }
       copy[id] = {}
       YEARS.forEach((y) => {
-        copy[id][y] = PERIODS.map(() => ({ oldDebtManual: null, paid: 0 }))
+        copy[id][y] = PERIODS.map((_, pIdx) => ({
+          oldDebtManual: (y === 2026 && pIdx === 0 && newSub.remainingPrev) ? newSub.remainingPrev : null,
+          paid: 0
+        }))
       })
       return copy
     })
@@ -2130,7 +2158,10 @@ export default function MainApp({
       phone: '',
       propertyType: 'سكني',
       meterType: '4 متر',
-      statuses: []
+      statuses: [],
+      dossier: '',
+      notes: '',
+      remainingPrev: 0
     })
     setAddSuccessMsg(`تمت إضافة المشترك (${formatNumber(id)} - ${created.name}) بنجاح! وسيبقى في أعلى القائمة لمدة ساعة.`)
     setTimeout(() => {
@@ -3549,6 +3580,15 @@ export default function MainApp({
                           <div className="text-[11.5px] text-slate-600 mt-1.5 flex items-center gap-1.5 flex-wrap">
                             <span className="px-2 py-0.5 bg-sky-50 text-sky-800 rounded-md border border-sky-100 font-medium">{areas.find((a) => a.id === sub.areaId)?.name}</span>
                             <span className="px-2 py-0.5 bg-slate-50 text-slate-700 rounded-md border border-slate-200/80 font-medium">{sub.propertyType}</span>
+                            
+                            {/* رقم الإضبارة */}
+                            {Boolean(sub.dossier || sub.detailedAddress?.includes('إضبارة:')) && (
+                              <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded-md border border-blue-100 font-mono text-[11px] font-bold">
+                                إضبارة: {sub.dossier || sub.detailedAddress?.match(/إضبارة:\s*([^|]+)/)?.[1]?.trim()}
+                              </span>
+                            )}
+
+                            {/* شارات الحالات */}
                             {(sub.statuses || []).map((st) => (
                               <span
                                 key={st}
@@ -3557,6 +3597,16 @@ export default function MainApp({
                                 {st}
                               </span>
                             ))}
+
+                            {/* الملاحظات إن وجدت */}
+                            {Boolean(sub.notes || sub.detailedAddress?.includes('ملاحظة:')) && (
+                              <span
+                                className="px-2 py-0.5 bg-amber-50 text-amber-900 rounded-md border border-amber-200 text-[11px] font-medium truncate max-w-[220px]"
+                                title={sub.notes || sub.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()}
+                              >
+                                {sub.notes || sub.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -4458,6 +4508,69 @@ export default function MainApp({
                 </div>
               </div>
 
+              {/* بطاقة التفاصيل الشاملة للمشترك: الإضبارة، الدين السابق، الملاحظات، الحالات */}
+              {(() => {
+                const dossierVal = activeSubscriber.dossier || 
+                  (activeSubscriber.detailedAddress?.match(/إضبارة:\s*([^|]+)/)?.[1]?.trim()) || ''
+                const notesVal = activeSubscriber.notes || 
+                  (activeSubscriber.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()) || ''
+                const prevDebt = activeSubscriber.remainingPrev ?? 0
+                const statusesList = activeSubscriber.statuses || []
+
+                return (
+                  <div className="subscriber-content px-4 py-2 space-y-2">
+                    {/* شريط الإضبارة والدين السابق والنوع والعداد */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {Boolean(dossierVal) && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 font-bold shadow-2xs">
+                          <span className="text-[11px] text-blue-700">رقم الإضبارة:</span>
+                          <span className="font-mono font-black text-[13px]">#{dossierVal}</span>
+                        </div>
+                      )}
+
+                      {prevDebt > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 font-bold shadow-2xs">
+                          <span className="text-[11px] text-rose-600">الدين السابق المسجل:</span>
+                          <span className="font-mono font-black text-[13px]">{formatNumber(prevDebt)} د.ع</span>
+                        </div>
+                      )}
+
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-bold shadow-2xs">
+                        <span className="text-[11px] text-slate-500">العقار والعداد:</span>
+                        <span>{activeSubscriber.propertyType} - {activeSubscriber.meterType}</span>
+                      </div>
+                    </div>
+
+                    {/* شارات الحالات الخاصة للمشترك */}
+                    {statusesList.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 bg-slate-50/80 p-2 rounded-xl border border-slate-200/60">
+                        <span className="text-[11px] font-bold text-slate-600 ml-1">حالات المشترك:</span>
+                        {statusesList.map((st) => (
+                          <span
+                            key={st}
+                            className={`px-2 py-0.5 text-[11px] rounded-lg font-bold shadow-2xs border ${
+                              STATUS_CONFIG[st]?.bg || 'bg-zinc-100'
+                            } ${STATUS_CONFIG[st]?.text || 'text-zinc-700'} ${
+                              STATUS_CONFIG[st]?.border || 'border-zinc-200'
+                            }`}
+                          >
+                            {st}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* كارت الملاحظات البارز */}
+                    {Boolean(notesVal) && (
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2 shadow-2xs">
+                        <span className="font-black text-amber-800 shrink-0 text-[12px]">ملاحظات المشترك:</span>
+                        <span className="font-bold leading-relaxed">{notesVal}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               {/* زر مراسلة المشترك عبر واتساب - كبير وواضح وبارز في واجهة الحساب */}
               {Boolean(activeSubscriber.phone && activeSubscriber.phone.trim()) && (
                 <div className="subscriber-content px-2 pt-1.5 pb-0.5">
@@ -5215,6 +5328,40 @@ export default function MainApp({
                 />
               </div>
 
+              {/* رقم الإضبارة والدين السابق */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">رقم الإضبارة (اختياري)</label>
+                  <input
+                    value={newSub.dossier}
+                    onChange={(e) => setNewSub((p) => ({ ...p, dossier: e.target.value }))}
+                    placeholder="مثال: 3197"
+                    className="w-full h-10 px-3 border border-slate-200 rounded-xl text-[12.5px] font-mono focus:outline-none focus:border-slate-900 bg-white shadow-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">الدين السابق (د.ع)</label>
+                  <input
+                    type="number"
+                    value={newSub.remainingPrev || ''}
+                    onChange={(e) => setNewSub((p) => ({ ...p, remainingPrev: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0"
+                    className="w-full h-10 px-3 border border-slate-200 rounded-xl text-[12.5px] font-mono focus:outline-none focus:border-slate-900 bg-white shadow-xs"
+                  />
+                </div>
+              </div>
+
+              {/* الملاحظات */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">ملاحظات المشترك (اختياري)</label>
+                <input
+                  value={newSub.notes}
+                  onChange={(e) => setNewSub((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="أي تفاصيل أو ملاحظات تخص المشترك..."
+                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-[12px] focus:outline-none focus:border-slate-900 bg-white shadow-xs"
+                />
+              </div>
+
               {/* حالات المشترك المتعددة (مدمجة وأنيقة بدون إطالة اللوحة) */}
               <div>
                 <label className="text-[11px] font-bold text-slate-700 block mb-1.5">حالات المشترك (اختياري):</label>
@@ -5324,6 +5471,41 @@ export default function MainApp({
                   onChange={(e) => setEditSub((p) => ({ ...p, phone: e.target.value }))}
                   className="mt-1.5 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white"
                   dir="ltr"
+                />
+              </div>
+
+              {/* رقم الإضبارة والدين السابق */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-600 font-medium">رقم الإضبارة</label>
+                  <input
+                    value={editSub.dossier || ''}
+                    onChange={(e) => setEditSub((p) => ({ ...p, dossier: e.target.value }))}
+                    placeholder="مثال: 3197"
+                    className="mt-1.5 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-600 font-medium">الدين السابق المسجل (د.ع)</label>
+                  <input
+                    type="number"
+                    value={editSub.remainingPrev ?? ''}
+                    onChange={(e) => setEditSub((p) => ({ ...p, remainingPrev: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0"
+                    className="mt-1.5 w-full h-10 px-4 border border-sky-100 rounded-2xl text-[13px] font-mono focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* الملاحظات */}
+              <div>
+                <label className="text-[11px] text-slate-600 font-medium">الملاحظات</label>
+                <textarea
+                  rows={2}
+                  value={editSub.notes || ''}
+                  onChange={(e) => setEditSub((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="أي ملاحظات تخص المشترك (مثال: مهدوم ولديه ديون، إيقاف حساب...)"
+                  className="mt-1.5 w-full p-3 border border-sky-100 rounded-2xl text-[12.5px] focus:outline-none focus:border-slate-900 bg-sky-50/30 focus:bg-white"
                 />
               </div>
 
@@ -5545,6 +5727,30 @@ export default function MainApp({
                       </svg>
                       <span>مشاركة عبر واتساب</span>
                     </a>
+                  </div>
+                )}
+              </div>
+
+              {/* تفاصيل الإضبارة والملاحظات والدين السابق */}
+              <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-bold">رقم الإضبارة:</span>
+                  <span className="font-mono font-bold text-blue-900 bg-white px-2 py-0.5 rounded-lg border border-blue-200">
+                    {activeSubscriber.dossier || activeSubscriber.detailedAddress?.match(/إضبارة:\s*([^|]+)/)?.[1]?.trim() || 'غير مسجل'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-bold">الدين السابق المسجل:</span>
+                  <span className="font-mono font-bold text-rose-700 bg-white px-2 py-0.5 rounded-lg border border-rose-200">
+                    {formatNumber(activeSubscriber.remainingPrev || 0)} د.ع
+                  </span>
+                </div>
+                {(activeSubscriber.notes || activeSubscriber.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()) && (
+                  <div className="pt-2 border-t border-sky-100 text-xs">
+                    <span className="text-slate-500 font-bold block mb-1">الملاحظات:</span>
+                    <div className="p-2 bg-amber-50 rounded-xl border border-amber-200 text-amber-950 font-medium">
+                      {activeSubscriber.notes || activeSubscriber.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()}
+                    </div>
                   </div>
                 )}
               </div>

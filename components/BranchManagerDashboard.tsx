@@ -754,6 +754,8 @@ export default function BranchManagerDashboard({
             existingSub.propertyType = propertyType
             existingSub.meterType = meterText as any
             existingSub.detailedAddress = detailedAddress
+            if (dossierText) existingSub.dossier = dossierText
+            if (noteText) existingSub.notes = noteText
             if (cleanDebt > 0) existingSub.remainingPrev = cleanDebt
             if (statuses.length > 0) {
               existingSub.statuses = Array.from(new Set([...(existingSub.statuses || []), ...statuses]))
@@ -771,6 +773,8 @@ export default function BranchManagerDashboard({
               propertyType,
               meterType: meterText as any,
               detailedAddress,
+              dossier: dossierText || undefined,
+              notes: noteText || undefined,
               remainingPrev: cleanDebt,
               fee: 0,
               order: maxOrder,
@@ -835,7 +839,28 @@ export default function BranchManagerDashboard({
     const newSubs = excelPreviewResult.subscribers
     setLoadedSubscribers(newSubs)
     setHasLoadedSubscribers(true)
-    saveBranchSubscribersAndBilling(branch.id, newSubs, loadedBilling)
+
+    // مزامنة الديون السابقة المستخرجة إلى سجلات الديون لسنة 2026
+    const updatedBilling = { ...loadedBilling }
+    newSubs.forEach(sub => {
+      if (sub.remainingPrev && sub.remainingPrev > 0) {
+        if (!updatedBilling[sub.id]) updatedBilling[sub.id] = {}
+        if (!updatedBilling[sub.id][2026]) {
+          updatedBilling[sub.id][2026] = [
+            { oldDebtManual: sub.remainingPrev, paid: 0, totalManual: null, remainingManual: null },
+            { oldDebtManual: null, paid: 0, totalManual: null, remainingManual: null },
+            { oldDebtManual: null, paid: 0, totalManual: null, remainingManual: null },
+            { oldDebtManual: null, paid: 0, totalManual: null, remainingManual: null },
+            { oldDebtManual: null, paid: 0, totalManual: null, remainingManual: null },
+            { oldDebtManual: null, paid: 0, totalManual: null, remainingManual: null }
+          ]
+        } else if (updatedBilling[sub.id][2026][0]) {
+          updatedBilling[sub.id][2026][0].oldDebtManual = sub.remainingPrev
+        }
+      }
+    })
+    setLoadedBilling(updatedBilling)
+    saveBranchSubscribersAndBilling(branch.id, newSubs, updatedBilling)
 
     onUpdateBranch({
       ...branch,
