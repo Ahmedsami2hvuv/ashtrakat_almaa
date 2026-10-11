@@ -570,40 +570,58 @@ export default function BranchManagerDashboard({
         const previewRows: any[] = []
 
         rawRows.forEach((row) => {
-          // استخراج اسم المشترك
-          const nameVal = extractFieldValue(row, [
-            'اسم المشترك', 'اسم_المشترك', 'الاسم المشترك', 'الاسم الثلاثي', 'اسم', 'الاسم', 'المشترك', 'name', 'subscriber'
-          ])
-          const name = String(nameVal || '').trim()
+          // 1. استخراج اسم المشترك (فحص جميع الأعمدة المحتملة لأن بعض الملفات تكرر عمود اسم المشترك)
+          let name = ''
+          const nameKeys = Object.keys(row).filter(k => 
+            k.includes('اسم المشترك') || k.includes('الاسم') || k.includes('المشترك') || k.toLowerCase().includes('name')
+          )
+          for (const nk of nameKeys) {
+            const val = String(row[nk] || '').trim()
+            if (val && !val.includes('سجل رقم') && val.length > name.length) {
+              name = val
+            }
+          }
+          if (!name) {
+            name = String(extractFieldValue(row, ['اسم', 'الاسم', 'المشترك', 'name']) || '').trim()
+          }
 
-          // استخراج رقم المشترك
+          // 2. استخراج رقم المشترك / الاشتراك
           const idVal = extractFieldValue(row, [
-            'رقم المشترك', 'رقم_المشترك', 'الرقم', 'التسلسل', 'تسلسل', 'ت', 'رقم', 'رمز المشترك', 'رمز', 'id', 'sub_id', 'no'
+            'الاشتراك', 'رقم الاشتراك', 'اشتراك', 'رقم المشترك', 'رقم_المشترك', 'الرقم', 'التسلسل', 'تسلسل', 'ت', 'رقم', 'رمز المشترك', 'رمز', 'id', 'sub_id', 'no'
           ])
           
-          let subId: number
-          const parsedId = parseInt(String(idVal).replace(/[^\d]/g, ''), 10)
+          let subId: number = 0
+          const parsedId = parseInt(String(idVal || '').replace(/[^\d]/g, ''), 10)
           if (!isNaN(parsedId) && parsedId > 0) {
             subId = parsedId
-          } else if (name) {
-            maxSubId++
-            subId = maxSubId
           } else {
-            // سطر فارغ تماماً نتجاهله
-            return
+            // فحص أي عمود يحتوي على رقم تسلسلي للمشترك
+            const firstNumericKey = Object.keys(row).find(k => {
+              const v = String(row[k] || '').trim()
+              return /^\d+$/.test(v) && parseInt(v, 10) > 0 && parseInt(v, 10) < 500000
+            })
+            if (firstNumericKey) {
+              subId = parseInt(String(row[firstNumericKey]).trim(), 10)
+            } else if (name) {
+              maxSubId++
+              subId = maxSubId
+            } else {
+              // سطر فارغ تماماً نتجاهله
+              return
+            }
           }
 
           // إذا لم يكن هناك اسم، نضع اسماً افتراضياً برقم المشترك
           const finalName = name || `مشترك رقم ${subId}`
 
-          // استخراج المنطقة
+          // 3. استخراج اسم المنطقة
           const areaVal = extractFieldValue(row, [
-            'المنطقة', 'منطقة', 'اسم المنطقة', 'الحي', 'حي', 'المحلة', 'محلة', 'الشارع', 'area'
+            'اسم المنطقة', 'المنطقة', 'منطقة', 'الحي', 'حي', 'المحلة', 'محلة', 'الشارع', 'area', 'areaName'
           ])
           const areaName = String(areaVal || '').trim()
           let assignedAreaId = ''
 
-          if (areaName) {
+          if (areaName && areaName !== 'بدون عنوان' && areaName !== 'متنوع') {
             const lowerArea = areaName.toLowerCase()
             if (areaMap.has(lowerArea)) {
               assignedAreaId = areaMap.get(lowerArea)!.id
@@ -621,7 +639,71 @@ export default function BranchManagerDashboard({
             }
           }
 
-          // استخراج اسم الكاتب
+          // 4. استخراج رقم الإضبارة
+          const dossierVal = extractFieldValue(row, [
+            'رقم الاضبارة', 'رقم_الاضبارة', 'رقم الاضباره', 'الاضبارة', 'الاضباره', 'اضبارة', 'اضباره', 'رقم الملف', 'الملف', 'dossier'
+          ])
+          const dossierText = String(dossierVal || '').trim()
+
+          // 5. استخراج الملاحظات
+          const noteVal = extractFieldValue(row, [
+            'ملاحظات', 'الملاحظات', 'ملاحظة', 'الملاحظة', 'notes', 'note'
+          ])
+          const noteText = String(noteVal || '').trim()
+
+          // 6. استخراج نوع العقار (الصنف) والحالات
+          const propVal = extractFieldValue(row, [
+            'الصنف', 'نوع العقار', 'العقار', 'النوع', 'سكني/تجاري', 'نوع الاشتراك', 'property', 'type'
+          ])
+          const propText = String(propVal || '').trim()
+          let propertyType: any = 'سكني'
+          if (propText.includes('تجاري') || propText.includes('محل') || propText.includes('مخزن') || propText.includes('معمل')) {
+            propertyType = 'تجاري'
+          } else if (propText.includes('حكومي') || propText.includes('دائرة')) {
+            propertyType = 'حكومي'
+          } else if (propText.includes('صناعي')) {
+            propertyType = 'صناعي'
+          }
+
+          // 7. استخراج المساحة / العداد (حجم العداد وحصة المتر المكعب)
+          const meterVal = extractFieldValue(row, [
+            'المساحة', 'المساحه', 'عدد المتر', 'المتر', 'العداد', 'نوع العداد', 'قطر العداد', 'القطر', 'meter', 'volume'
+          ])
+          const meterText = String(meterVal || '').trim() || '4/م مكعب'
+
+          // 8. فحص واستخراج الحالات (مغلق، مهدوم، إيقاف حساب، قطعه فارغه، إلخ)
+          const allRowText = Object.values(row).join(' ')
+          const statuses: string[] = []
+
+          if (allRowText.includes('مغلق')) statuses.push('مغلق')
+          if (allRowText.includes('مهدوم') || allRowText.includes('مفلش')) statuses.push('مهدوم')
+          if (allRowText.includes('إيقاف') || allRowText.includes('ايقاف') || allRowText.includes('متوقف')) statuses.push('إيقاف حساب')
+          if (allRowText.includes('مقطوع')) statuses.push('مقطوع')
+          if (allRowText.includes('متجاوز') || allRowText.includes('تجاوز')) statuses.push('متجاوز')
+          if (allRowText.includes('قطعه فارغه') || allRowText.includes('قطعة فارغة') || allRowText.includes('فارغه') || allRowText.includes('فارغة') || allRowText.includes('عرصه')) statuses.push('قطعة فارغة')
+          if (allRowText.includes('مرتحل') || allRowText.includes('مهجور')) statuses.push('مهجور/مرتحل')
+
+          // 9. استخراج الدين السابق بذكاء (من عمود الدين المخصص أو المكتوب داخل الملاحظات مثل: ديون (360608))
+          const debtColVal = extractFieldValue(row, [
+            'الدين السابق', 'الديون السابقة', 'المتبقي السابق', 'الرصيد السابق', 'المتبقي', 'الدين', 'الذمة', 'debt', 'balance'
+          ])
+          let cleanDebt = parseFloat(String(debtColVal || '').replace(/[^\d.-]/g, '')) || 0
+
+          if (cleanDebt === 0) {
+            // البحث عن نمط الديون في نص الملاحظات مثل: عليه ديون (310456) أو لديه ديون(12120) أو ديون 131040
+            const debtMatch = allRowText.match(/(?:ديون|دين|مطلوب|الديون|زياده)[^\d]*(\d+)/)
+            if (debtMatch && debtMatch[1]) {
+              cleanDebt = parseFloat(debtMatch[1]) || 0
+            }
+          }
+
+          // 10. استخراج الهاتف إن وجد
+          const phoneVal = extractFieldValue(row, [
+            'الهاتف', 'رقم الهاتف', 'الموبايل', 'الجوال', 'phone', 'mobile'
+          ])
+          const phoneText = String(phoneVal || '').trim()
+
+          // 11. استخراج اسم الكاتب إن وجد
           const writerVal = extractFieldValue(row, [
             'اسم الكاتب', 'اسم_الكاتب', 'الكاتب', 'القارئ', 'الجابي', 'الموظف', 'writer', 'reader'
           ])
@@ -631,7 +713,6 @@ export default function BranchManagerDashboard({
             const lowerWriter = writerName.toLowerCase()
             let writerObj = writerMap.get(lowerWriter)
             if (!writerObj) {
-              // إنشاء حساب كاتب جديد تلقائياً
               writerObj = {
                 id: 'wri_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
                 name: writerName,
@@ -645,7 +726,6 @@ export default function BranchManagerDashboard({
               writerMap.set(lowerWriter, writerObj)
               newWritersCount++
             } else {
-              // تحديث الكاتب القائم لربط المنطقة والمشترك
               if (assignedAreaId && !writerObj.assignedAreaIds.includes(assignedAreaId)) {
                 writerObj.assignedAreaIds.push(assignedAreaId)
               }
@@ -658,45 +738,12 @@ export default function BranchManagerDashboard({
             }
           }
 
-          // استخراج نوع العقار (سكني / تجاري)
-          const propVal = extractFieldValue(row, [
-            'نوع العقار', 'العقار', 'الصنف', 'النوع', 'سكني/تجاري', 'نوع الاشتراك', 'property', 'type'
-          ])
-          const propText = String(propVal || '').trim()
-          let propertyType: any = 'سكني'
-          if (propText.includes('تجاري')) propertyType = 'تجاري'
-          else if (propText.includes('حكومي')) propertyType = 'حكومي'
-          else if (propText.includes('صناعي')) propertyType = 'صناعي'
-
-          // استخراج العداد / عدد المتر
-          const meterVal = extractFieldValue(row, [
-            'عدد المتر', 'المتر', 'العداد', 'نوع العداد', 'قطر العداد', 'القطر', 'meter'
-          ])
-          const meterText = String(meterVal || '').trim() || 'نصف انج'
-
-          // استخراج الهاتف
-          const phoneVal = extractFieldValue(row, [
-            'الهاتف', 'رقم الهاتف', 'الموبايل', 'الجوال', 'phone', 'mobile'
-          ])
-          const phoneText = String(phoneVal || '').trim()
-
-          // استخراج الدين السابق
-          const debtVal = extractFieldValue(row, [
-            'الدين السابق', 'الديون السابقة', 'المتبقي السابق', 'الرصيد السابق', 'المتبقي', 'الدين', 'الذمة', 'debt', 'balance'
-          ])
-          const cleanDebt = parseFloat(String(debtVal).replace(/[^\d.-]/g, '')) || 0
-
-          // استخراج الحالات (مغلق، مهدوم، إيقاف حساب، إلخ)
-          const allRowText = Object.values(row).join(' ')
-          const statuses: string[] = []
-
-          if (allRowText.includes('مغلق')) statuses.push('مغلق')
-          if (allRowText.includes('مهدوم')) statuses.push('مهدوم')
-          if (allRowText.includes('إيقاف') || allRowText.includes('ايقاف')) statuses.push('إيقاف حساب')
-          if (allRowText.includes('متجاوز')) statuses.push('متجاوز')
-          if (allRowText.includes('لا يوجد عداد')) statuses.push('لا يوجد عداد')
-          if (allRowText.includes('عشوائي')) statuses.push('عشوائي')
-          if (allRowText.includes('متروك')) statuses.push('متروك')
+          // بناء العنوان والتفاصيل المدمجة لحفظ الإضبارة والملاحظات
+          const addrParts: string[] = []
+          if (areaName) addrParts.push(`المنطقة: ${areaName}`)
+          if (dossierText) addrParts.push(`إضبارة: ${dossierText}`)
+          if (noteText) addrParts.push(`ملاحظة: ${noteText}`)
+          const detailedAddress = addrParts.join(' | ') || 'تم الاستيراد من ملف إكسل'
 
           const existingSub = subscriberIdMap.get(subId)
           if (existingSub) {
@@ -706,6 +753,7 @@ export default function BranchManagerDashboard({
             if (assignedAreaId) existingSub.areaId = assignedAreaId
             existingSub.propertyType = propertyType
             existingSub.meterType = meterText as any
+            existingSub.detailedAddress = detailedAddress
             if (cleanDebt > 0) existingSub.remainingPrev = cleanDebt
             if (statuses.length > 0) {
               existingSub.statuses = Array.from(new Set([...(existingSub.statuses || []), ...statuses]))
@@ -722,7 +770,7 @@ export default function BranchManagerDashboard({
               branchId: branch.id,
               propertyType,
               meterType: meterText as any,
-              detailedAddress: areaName ? `المنطقة: ${areaName}` : 'تم الاستيراد من ملف إكسل',
+              detailedAddress,
               remainingPrev: cleanDebt,
               fee: 0,
               order: maxOrder,
@@ -734,16 +782,17 @@ export default function BranchManagerDashboard({
             newSubscribersCount++
           }
 
-          if (previewRows.length < 8) {
+          if (previewRows.length < 10) {
             previewRows.push({
               id: subId,
               name: finalName,
               area: areaName || 'بدون منطقة',
-              writer: writerName || 'بدون كاتب',
+              dossier: dossierText || '-',
               property: propertyType,
               meter: meterText,
               debt: cleanDebt,
-              statuses: statuses.join(', ') || 'طبيعي'
+              statuses: statuses.join('، ') || 'طبيعي',
+              note: noteText || '-'
             })
           }
         })
@@ -1361,7 +1410,8 @@ export default function BranchManagerDashboard({
                           <th className="p-3">رقم المشترك</th>
                           <th className="p-3">اسم المشترك</th>
                           <th className="p-3">المنطقة</th>
-                          <th className="p-3">النوع/العداد</th>
+                          <th className="p-3">رقم الإضبارة / الملاحظات</th>
+                          <th className="p-3">الصنف / العداد</th>
                           <th className="p-3">الدين السابق</th>
                         </tr>
                       </thead>
@@ -1399,7 +1449,14 @@ export default function BranchManagerDashboard({
                               )}
                               <td className="p-3 font-mono text-blue-700 bg-blue-50/40">#{sub.id}</td>
                               <td className="p-3 text-slate-900">
-                                <div>{sub.name}</div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span>{sub.name}</span>
+                                  {sub.statuses && sub.statuses.length > 0 && sub.statuses.map((st, i) => (
+                                    <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-700 font-bold">
+                                      {st}
+                                    </span>
+                                  ))}
+                                </div>
                                 {sub.phone && <div className="text-[10px] text-slate-400 font-mono font-normal">{sub.phone}</div>}
                               </td>
                               <td className="p-3 text-slate-600">
@@ -1408,6 +1465,9 @@ export default function BranchManagerDashboard({
                                   <span>{assignedAreaNames}</span>
                                 </span>
                               </td>
+                              <td className="p-3 text-slate-600 text-[11px] max-w-[200px] truncate" title={sub.detailedAddress}>
+                                {sub.detailedAddress || '-'}
+                              </td>
                               <td className="p-3 text-slate-500">{sub.propertyType} - {sub.meterType}</td>
                               <td className="p-3 text-rose-600 font-mono">{(sub.remainingPrev || 0).toLocaleString('ar-IQ')} د.ع</td>
                             </tr>
@@ -1415,7 +1475,7 @@ export default function BranchManagerDashboard({
                         })}
                         {filteredSubscribers.length === 0 && (
                           <tr>
-                            <td colSpan={isSelectMode ? 6 : 5} className="text-center py-8 text-slate-400 font-bold">
+                            <td colSpan={isSelectMode ? 7 : 6} className="text-center py-8 text-slate-400 font-bold">
                               لا توجد نتائج مطابقة للبحث
                             </td>
                           </tr>
@@ -2354,25 +2414,27 @@ export default function BranchManagerDashboard({
                     <table className="w-full text-right text-[11px]">
                       <thead>
                         <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
-                          <th className="p-2">الرقم</th>
-                          <th className="p-2">الاسم</th>
-                          <th className="p-2">المنطقة</th>
-                          <th className="p-2">الكاتب</th>
-                          <th className="p-2">العقار/العداد</th>
+                          <th className="p-2">الاشتراك</th>
+                          <th className="p-2">اسم المشترك</th>
+                          <th className="p-2">اسم المنطقة</th>
+                          <th className="p-2">رقم الاضبارة</th>
+                          <th className="p-2">الصنف/المساحة</th>
                           <th className="p-2">الحالة</th>
                           <th className="p-2">الدين السابق</th>
+                          <th className="p-2">ملاحظات</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {excelPreviewResult.previewRows.map((r, i) => (
                           <tr key={i} className="hover:bg-slate-50 font-bold">
-                            <td className="p-2 font-mono text-blue-700">{r.id}</td>
+                            <td className="p-2 font-mono text-blue-700">#{r.id}</td>
                             <td className="p-2 text-slate-900">{r.name}</td>
                             <td className="p-2 text-slate-600">{r.area}</td>
-                            <td className="p-2 text-slate-600">{r.writer}</td>
+                            <td className="p-2 font-mono text-slate-700">{r.dossier}</td>
                             <td className="p-2 text-slate-500">{r.property} - {r.meter}</td>
                             <td className="p-2 text-amber-700">{r.statuses}</td>
-                            <td className="p-2 font-mono text-rose-600">{r.debt.toLocaleString('ar-IQ')} د.ع</td>
+                            <td className="p-2 font-mono text-rose-600">{r.debt > 0 ? `${r.debt.toLocaleString('ar-IQ')} د.ع` : '-'}</td>
+                            <td className="p-2 text-[10px] text-slate-500 max-w-[130px] truncate" title={r.note}>{r.note}</td>
                           </tr>
                         ))}
                       </tbody>
