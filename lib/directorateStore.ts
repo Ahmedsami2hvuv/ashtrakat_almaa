@@ -104,13 +104,74 @@ export async function syncPendingOfflineData(): Promise<{ success: boolean; sync
   return { success: true, syncedCount }
 }
 
-// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط (يدعم وضع الأوفلاين التام)
+// ==================== دعم IndexedDB لتخزين مئات آلاف المشتركين بدون قيود ====================
+const IDB_NAME = 'AshtrakatDB'
+const IDB_VERSION = 1
+const IDB_STORE = 'branch_cache'
+
+function openLocalDatabase(): Promise<IDBDatabase | null> {
+  if (typeof window === 'undefined' || !window.indexedDB) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    try {
+      const request = window.indexedDB.open(IDB_NAME, IDB_VERSION)
+      request.onupgradeneeded = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { keyPath: 'branchId' })
+        }
+      }
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => {
+        console.warn('Could not open IndexedDB, falling back')
+        resolve(null)
+      }
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
+async function saveToIndexedDB(branchId: string, subscribers: Subscriber[], billing: BillingRecords): Promise<void> {
+  try {
+    const db = await openLocalDatabase()
+    if (!db) return
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    const store = tx.objectStore(IDB_STORE)
+    store.put({ branchId, subscribers, billing, timestamp: Date.now() })
+  } catch (e) {
+    console.warn('IndexedDB save failed:', e)
+  }
+}
+
+async function loadFromIndexedDB(branchId: string): Promise<{ subscribers: Subscriber[]; billing: BillingRecords } | null> {
+  try {
+    const db = await openLocalDatabase()
+    if (!db) return null
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly')
+      const store = tx.objectStore(IDB_STORE)
+      const req = store.get(branchId)
+      req.onsuccess = () => {
+        if (req.result && req.result.subscribers) {
+          resolve({ subscribers: req.result.subscribers, billing: req.result.billing || {} })
+        } else {
+          resolve(null)
+        }
+      }
+      req.onerror = () => resolve(null)
+    })
+  } catch {
+    return null
+  }
+}
+
+// جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط (يدعم وضع الأوفلاين التام والبيانات الضخمة)
 export async function loadBranchSubscribersAndBilling(
   branchId: string,
   forceRefresh = false
 ): Promise<{ subscribers: Subscriber[]; billing: BillingRecords }> {
   // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري
-  if (!forceRefresh && branchSubscribersCache[branchId]) {
+  if (!forceRefresh && branchSubscribersCache[branchId] && branchSubscribersCache[branchId].subscribers.length > 0) {
     return branchSubscribersCache[branchId]
   }
 
@@ -129,15 +190,17 @@ export async function loadBranchSubscribersAndBilling(
           billing = data.billing || {}
           loadedFromNetwork = true
 
-          // حفظ نسخة محلية دائمة في ذاكرة الهاتف للعمل بدون إنترنت
+          // حفظ نسخة محلية دائمة في IndexedDB (تتسع لمئات الآلاف من المشتركين)
           if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(
-                getBranchStorageKey(branchId),
-                JSON.stringify({ subscribers, billing, timestamp: Date.now() })
-              )
-            } catch (e) {
-              console.warn('LocalStorage quota or storage error:', e)
+            await saveToIndexedDB(branchId, subscribers, billing)
+            // محاولة تخزين خفيف في localStorage إذا كانت البيانات صغيرة
+            if (subscribers.length < 1500) {
+              try {
+                localStorage.setItem(
+                  getBranchStorageKey(branchId),
+                  JSON.stringify({ subscribers, billing, timestamp: Date.now() })
+                )
+              } catch {}
             }
           }
         }
@@ -147,17 +210,23 @@ export async function loadBranchSubscribersAndBilling(
     }
   }
 
-  // 3. إذا لم يتم التحميل من السيرفر (أوفلاين أو انقطاع الاتصال)، نقرأ فوراً من التخزين المحلي بالهاتف
+  // 3. إذا لم يتم التحميل من السيرفر (أوفلاين أو انقطاع الاتصال)، نقرأ فوراً من IndexedDB أو التخزين المحلي
   if (!loadedFromNetwork && typeof window !== 'undefined') {
-    try {
-      const cached = localStorage.getItem(getBranchStorageKey(branchId))
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        subscribers = parsed.subscribers || []
-        billing = parsed.billing || {}
+    const fromIdb = await loadFromIndexedDB(branchId)
+    if (fromIdb && fromIdb.subscribers.length > 0) {
+      subscribers = fromIdb.subscribers
+      billing = fromIdb.billing
+    } else {
+      try {
+        const cached = localStorage.getItem(getBranchStorageKey(branchId))
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          subscribers = parsed.subscribers || []
+          billing = parsed.billing || {}
+        }
+      } catch (err) {
+        console.error('Error reading offline cached branch subscribers:', err)
       }
-    } catch (err) {
-      console.error('Error reading offline cached branch subscribers:', err)
     }
   }
 
@@ -171,12 +240,13 @@ export async function loadBranchSubscribersAndBilling(
   return { subscribers, billing }
 }
 
-// حفظ مشتركي وسجلات ديون فرع معين (يعمل محلياً وفورياً ويضع العمليات في قائمة المزامنة إذا انقطع النت)
+// حفظ مشتركي وسجلات ديون فرع معين (يدعم التقسيم الذكي للدفعات الكبيرة و IndexedDB)
 export async function saveBranchSubscribersAndBilling(
   branchId: string,
   subscribers: Subscriber[],
-  billing: BillingRecords
-): Promise<void> {
+  billing: BillingRecords,
+  onProgress?: (progressText: string, percentage: number) => void
+): Promise<{ success: boolean; error?: string }> {
   // 1. تحديث الكاش السريع في الذاكرة فوراً
   branchSubscribersCache[branchId] = {
     subscribers,
@@ -184,60 +254,115 @@ export async function saveBranchSubscribersAndBilling(
     timestamp: Date.now()
   }
 
-  // 2. حفظ فوري في التخزين المحلي بالهاتف للضمان التام
+  // 2. حفظ فوري في التخزين المحلي الآمن عبر IndexedDB (يدعم ملفات ضخمة بلا حدود)
   if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(
-        getBranchStorageKey(branchId),
-        JSON.stringify({ subscribers, billing, timestamp: Date.now() })
-      )
-    } catch (e) {
-      console.warn('Error saving branch data to localStorage:', e)
+    await saveToIndexedDB(branchId, subscribers, billing)
+    if (subscribers.length < 1500) {
+      try {
+        localStorage.setItem(
+          getBranchStorageKey(branchId),
+          JSON.stringify({ subscribers, billing, timestamp: Date.now() })
+        )
+      } catch {}
     }
   }
 
-  // 3. محاولة الإرسال السحابي
-  let syncedSuccessfully = false
-  if (typeof navigator === 'undefined' || navigator.onLine) {
-    try {
+  // 3. الإرسال السحابي
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: true }
+  }
+
+  try {
+    const CHUNK_SIZE = 2000
+
+    // إذا كان عدد المشتركين كبيراً جداً، نقسمه تلقائياً إلى دفعات لتجنب حدود Vercel و Supabase
+    if (subscribers.length > CHUNK_SIZE) {
+      const totalChunks = Math.ceil(subscribers.length / CHUNK_SIZE)
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE
+        const end = Math.min(start + CHUNK_SIZE, subscribers.length)
+        const subsChunk = subscribers.slice(start, end)
+
+        // تجميع ديون هذا الجزء فقط لتخفيف الحجم
+        const chunkBilling: BillingRecords = {}
+        subsChunk.forEach(s => {
+          if (billing[s.id]) {
+            chunkBilling[s.id] = billing[s.id]
+          }
+        })
+
+        if (onProgress) {
+          const pct = Math.round(((i + 1) / totalChunks) * 90)
+          onProgress(`جارٍ حفظ الدفعة ${i + 1} من ${totalChunks} (${subsChunk.length} مشترك)...`, pct)
+        }
+
+        const res = await fetch('/api/branch-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            branchId,
+            isChunk: true,
+            chunkIndex: i,
+            totalChunks,
+            subscribersChunk: subsChunk,
+            billingChunk: chunkBilling
+          })
+        })
+
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(`فشل حفظ الدفعة ${i + 1}: ${errText}`)
+        }
+      }
+
+      // إنهاء وتثبيت الفهرس السحابي
+      if (onProgress) {
+        onProgress('جارٍ تثبيت فهرس البيانات في السحابة...', 95)
+      }
+
+      const finalizeRes = await fetch('/api/branch-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branchId,
+          isFinalize: true,
+          totalChunks,
+          totalSubscribers: subscribers.length
+        })
+      })
+
+      if (!finalizeRes.ok) {
+        throw new Error('فشل تثبيت الفهرس السحابي للفرع')
+      }
+
+      if (onProgress) {
+        onProgress('تم الحفظ السحابي بنجاح تام!', 100)
+      }
+
+      return { success: true }
+    } else {
+      // الحفظ المباشر إذا كان عدد المشتركين صغيراً
       const res = await fetch('/api/branch-sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           branchId,
           subscribers,
           billing
         })
       })
-      if (res.ok) {
-        syncedSuccessfully = true
-        // إزالة أي طلب معلق سابق
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(getPendingSyncKey(branchId))
-        }
-      }
-    } catch (err) {
-      console.warn(`Network error saving subscribers for branch ${branchId}, marked for offline sync:`, err)
-    }
-  }
 
-  // 4. إذا لم يتم الإرسال بسبب انقطاع النت، نضع العملية في قائمة المزامنة المعلقة
-  if (!syncedSuccessfully && typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(
-        getPendingSyncKey(branchId),
-        JSON.stringify({
-          branchId,
-          subscribers,
-          billing,
-          timestamp: Date.now()
-        })
-      )
-    } catch (e) {
-      console.error('Error queuing offline pending sync:', e)
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(errText)
+      }
+
+      return { success: true }
     }
+  } catch (err: any) {
+    console.error('Error saving subscribers to cloud:', err)
+    return { success: false, error: err?.message || 'خطأ في الاتصال بالسيرفر' }
   }
 }
 

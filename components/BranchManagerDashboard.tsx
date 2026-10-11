@@ -838,13 +838,15 @@ export default function BranchManagerDashboard({
     reader.readAsArrayBuffer(file)
   }
 
+  // حالة تقدم الحفظ السحابي لملف الإكسل
+  const [excelSavingProgress, setExcelSavingProgress] = useState<{ text: string; pct: number } | null>(null)
+
   // تأكيد حفظ بيانات الإكسل في الفرع
-  const handleConfirmExcelImport = () => {
+  const handleConfirmExcelImport = async () => {
     if (!excelPreviewResult) return
 
     const newSubs = excelPreviewResult.subscribers
-    setLoadedSubscribers(newSubs)
-    setHasLoadedSubscribers(true)
+    setExcelSavingProgress({ text: 'جارٍ تجهيز سجلات الديون وقاعدة البيانات...', pct: 5 })
 
     // مزامنة الديون السابقة المستخرجة إلى سجلات الديون لسنة 2026
     const updatedBilling = { ...loadedBilling }
@@ -865,8 +867,25 @@ export default function BranchManagerDashboard({
         }
       }
     })
+
+    const saveResult = await saveBranchSubscribersAndBilling(
+      branch.id,
+      newSubs,
+      updatedBilling,
+      (text, pct) => {
+        setExcelSavingProgress({ text, pct })
+      }
+    )
+
+    if (!saveResult.success) {
+      alert(`حدث خطأ أثناء حفظ المشتركين في السيرفر:\n${saveResult.error || 'يرجى المحاولة مرة أخرى'}`)
+      setExcelSavingProgress(null)
+      return
+    }
+
+    setLoadedSubscribers(newSubs)
     setLoadedBilling(updatedBilling)
-    saveBranchSubscribersAndBilling(branch.id, newSubs, updatedBilling)
+    setHasLoadedSubscribers(true)
 
     onUpdateBranch({
       ...branch,
@@ -876,13 +895,15 @@ export default function BranchManagerDashboard({
       subscribers: []
     })
 
-    const msg = `تم الاستيراد بنجاح!
+    const msg = `تم الاستيراد والحفظ السحابي بنجاح تام!
+• إجمالي المشتركين المسجلين: ${newSubs.length}
 • المشتركون الجدد: ${excelPreviewResult.newSubscribersCount}
 • المشتركون المحدثون: ${excelPreviewResult.updatedSubscribersCount}
 • المناطق الجديدة المضافة: ${excelPreviewResult.newAreasCount}
 • حسابات الكتاب الجديدة المنشأة: ${excelPreviewResult.newWritersCount}`
 
     alert(msg)
+    setExcelSavingProgress(null)
     setShowExcelModal(false)
     setExcelPreviewResult(null)
   }
@@ -2476,12 +2497,32 @@ export default function BranchManagerDashboard({
                   </div>
                 </div>
 
+                {/* شريط تقدم الحفظ السحابي */}
+                {excelSavingProgress && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-2 animate-in fade-in">
+                    <div className="flex items-center justify-between text-xs font-black text-blue-900">
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                        {excelSavingProgress.text}
+                      </span>
+                      <span>{excelSavingProgress.pct}%</span>
+                    </div>
+                    <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${excelSavingProgress.pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* أزرار الإجراءات */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                   <button
                     type="button"
+                    disabled={Boolean(excelSavingProgress)}
                     onClick={() => setExcelPreviewResult(null)}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition disabled:opacity-50"
                   >
                     اختيار ملف آخر
                   </button>
@@ -2489,21 +2530,32 @@ export default function BranchManagerDashboard({
                   <div className="flex gap-2">
                     <button
                       type="button"
+                      disabled={Boolean(excelSavingProgress)}
                       onClick={() => {
                         setShowExcelModal(false)
                         setExcelPreviewResult(null)
                       }}
-                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition disabled:opacity-50"
                     >
                       إلغاء
                     </button>
                     <button
                       type="button"
+                      disabled={Boolean(excelSavingProgress)}
                       onClick={handleConfirmExcelImport}
-                      className="px-4.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
+                      className="px-4.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>تأكيد واستيراد</span>
+                      {excelSavingProgress ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>جارِ الحفظ السحابي...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>تأكيد واستيراد</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
