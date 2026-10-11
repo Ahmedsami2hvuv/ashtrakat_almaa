@@ -7,7 +7,7 @@ import InstallmentsPage from './InstallmentsPage'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateStore'
 import type { Consignment, ConsignmentItem } from '../lib/directorateTypes'
-import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck } from 'lucide-react'
+import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell } from 'lucide-react'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -2782,26 +2782,32 @@ export default function MainApp({
           )}
 
           <div className="flex items-center gap-2">
-            {/* زر الإرساليات الجديدة المخصص للكاتب لتحديث السجل الورقي */}
+            {/* علامة إشعارات الكاتب (جرس الإشعارات مع عداد الإرساليات الجديدة لاشتراكاته) */}
             {userRole === 'writer' && (
               <button
                 type="button"
-                aria-label="الإرساليات الجديدة"
+                aria-label="إشعارات الإرساليات"
                 onClick={() => {
                   setShowWriterConsignmentsModal(true)
                   setSearchOpen(false)
                   setFilterDrawerOpen(false)
                 }}
-                className="h-8 px-2.5 rounded-xl border border-amber-400 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white flex items-center gap-1.5 transition-all text-xs font-black shadow-sm shadow-amber-500/20"
-                title="الإرساليات الجديدة لتعديل السجل الورقي"
+                className={`relative h-8 px-2.5 rounded-xl border flex items-center gap-1.5 transition-all text-xs font-black shadow-2xs active:scale-95 ${
+                  unrecordedWriterItems.length > 0
+                    ? 'bg-amber-500 hover:bg-amber-600 border-amber-600 text-white shadow-amber-500/20'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+                title="إشعارات الإرساليات الجديدة التي تخص اشتراكاتك"
               >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span className="inline">الإرساليات الجديدة</span>
-                {unrecordedWriterItems.length > 0 && (
-                  <span className="bg-white text-amber-700 text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
-                    {unrecordedWriterItems.length}
-                  </span>
-                )}
+                <div className="relative flex items-center justify-center">
+                  <Bell className={`w-4 h-4 ${unrecordedWriterItems.length > 0 ? 'animate-[bounce_2s_infinite]' : 'text-slate-500'}`} />
+                  {unrecordedWriterItems.length > 0 && (
+                    <span className="absolute -top-2.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+                      {unrecordedWriterItems.length}
+                    </span>
+                  )}
+                </div>
+                <span className="inline text-[11px] font-extrabold">الإشعارات</span>
               </button>
             )}
 
@@ -6781,20 +6787,23 @@ export default function MainApp({
             {/* رأس النافذة */}
             <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-amber-50 to-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
-                  <BookOpen className="w-5 h-5" />
+                <div className="relative w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                  <Bell className="w-5 h-5" />
+                  {unrecordedWriterItems.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white"></span>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
-                    <span>الإرساليات الجديدة (لتعديل السجل الورقي)</span>
+                    <span>إشعارات الإرساليات الجديدة (لتعديل السجل الورقي)</span>
                     {unrecordedWriterItems.length > 0 && (
-                      <span className="text-[11px] bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
-                        {unrecordedWriterItems.length} بانتظار التثبيت
+                      <span className="text-[11px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
+                        {unrecordedWriterItems.length} إرسالية تخص اشتراكاتك
                       </span>
                     )}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    الإرساليات والدفعات المسجلة على اشتراكاتك لتثبيتها في سجلك الورقي وتأشيرها
+                    إشعارات الإرساليات والدفعات التي طرأت على اشتراكاتك لتثبيتها في سجلك الورقي وتأشيرها
                   </p>
                 </div>
               </div>

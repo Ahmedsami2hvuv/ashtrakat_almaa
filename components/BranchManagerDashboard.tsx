@@ -3929,6 +3929,47 @@ export default function BranchManagerDashboard({
               </button>
             </div>
 
+            {/* شريط الكوادر المعينة لهذه المنطقة (تعدد المحصلين والكتاب) */}
+            {(() => {
+              const assignedCols = (branch.collectors || []).filter(c => c.assignedAreaIds?.includes(selectedAreaForModal.id))
+              const assignedWrs = (branch.writers || []).filter(w => w.assignedAreaIds?.includes(selectedAreaForModal.id))
+              return (
+                <div className="px-4 py-2.5 bg-slate-100/60 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Wallet className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="font-black text-slate-700 text-[11px]">المحصلون ({assignedCols.length}):</span>
+                    {assignedCols.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {assignedCols.map(c => (
+                          <span key={c.id} className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200/80 rounded-md font-bold text-[10px]">
+                            {c.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-[11px] font-bold">غير مخصصة لمحصل بعد</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    <span className="font-black text-slate-700 text-[11px]">الكتّاب ({assignedWrs.length}):</span>
+                    {assignedWrs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {assignedWrs.map(w => (
+                          <span key={w.id} className="px-2 py-0.5 bg-purple-50 text-purple-800 border border-purple-200/80 rounded-md font-bold text-[10px]">
+                            {w.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-[11px] font-bold">غير مخصصة لكاتب بعد</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* إشعار التغذية الراجعة */}
             {areaActionFeedback && (
               <div className="mx-4 mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black rounded-xl text-center flex items-center justify-center gap-2 animate-in fade-in">
