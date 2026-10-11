@@ -133,6 +133,7 @@ export default function BranchManagerDashboard({
   const [collectorPhone, setCollectorPhone] = useState('')
   const [collectorCanEdit, setCollectorCanEdit] = useState(false)
   const [selectedCollectorAreas, setSelectedCollectorAreas] = useState<string[]>([])
+  const [collectorAreaSearch, setCollectorAreaSearch] = useState('')
 
   // حالات الكتاب
   const [showWriterModal, setShowWriterModal] = useState(false)
@@ -140,8 +141,13 @@ export default function BranchManagerDashboard({
   const [writerName, setWriterName] = useState('')
   const [writerPhone, setWriterPhone] = useState('')
   const [selectedWriterAreas, setSelectedWriterAreas] = useState<string[]>([])
+  const [writerAreaSearch, setWriterAreaSearch] = useState('')
   const [copiedWriterId, setCopiedWriterId] = useState<string | null>(null)
   const [copiedCollectorId, setCopiedCollectorId] = useState<string | null>(null)
+
+  // حالة عرض تفاصيل حساب المشترك وبلوك ديونه للمسؤول
+  const [selectedDetailSubscriber, setSelectedDetailSubscriber] = useState<Subscriber | null>(null)
+  const [detailSubscriberYear, setDetailSubscriberYear] = useState<number>(2026)
 
 
   // حالات الذكاء الاصطناعي
@@ -1452,14 +1458,17 @@ export default function BranchManagerDashboard({
                             <tr
                               key={sub.id}
                               onClick={() => {
-                                if (isSelectMode) toggleSelectSubscriber(sub.id)
+                                if (isSelectMode) {
+                                  toggleSelectSubscriber(sub.id)
+                                } else {
+                                  setSelectedDetailSubscriber(sub)
+                                  setDetailSubscriberYear(2026)
+                                }
                               }}
-                              className={`font-bold transition ${
-                                isSelectMode ? 'cursor-pointer select-none' : ''
-                              } ${
+                              className={`font-bold transition cursor-pointer select-none ${
                                 isSelected
                                   ? 'bg-blue-50/90 text-blue-950 ring-1 ring-inset ring-blue-300'
-                                  : 'hover:bg-slate-50'
+                                  : 'hover:bg-blue-50/50 hover:text-blue-950'
                               }`}
                             >
                               {isSelectMode && (
@@ -2506,20 +2515,40 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل محصل */}
       {showCollectorModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-xl">
-            <h3 className="text-base font-black text-slate-900">
-              {editingCollector ? 'تعديل بيانات المحصل' : 'إضافة محصل جديد'}
-            </h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+            {/* الرأس */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900">
+                    {editingCollector ? 'تعديل بيانات المحصل' : 'إضافة محصل جديد'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-bold">تحديد صلاحيات ومناطق الجباية للمحصل</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCollectorModal(false)}
+                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <div className="space-y-3">
+            {/* المحتوى القابل للتمرير */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">الاسم الثلاثي:</label>
                 <input
                   type="text"
                   value={collectorName}
                   onChange={(e) => setCollectorName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="اسم المحصل..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
@@ -2529,11 +2558,12 @@ export default function BranchManagerDashboard({
                   type="text"
                   value={collectorPhone}
                   onChange={(e) => setCollectorPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
+                  placeholder="07xxxxxxxxx"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right font-mono"
                 />
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -2547,40 +2577,106 @@ export default function BranchManagerDashboard({
                 </label>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المناطق المخصصة:</label>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                  {(branch.areas || []).map(area => (
-                    <label key={area.id} className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={selectedCollectorAreas.includes(area.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedCollectorAreas([...selectedCollectorAreas, area.id])
-                          } else {
-                            setSelectedCollectorAreas(selectedCollectorAreas.filter(id => id !== area.id))
-                          }
-                        }}
-                        className="rounded text-blue-600 bg-white border-slate-300"
-                      />
-                      <span>{area.name}</span>
-                    </label>
-                  ))}
+              {/* قسم تخصيص المناطق المرتب مع البحث والتحكم السهل */}
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-800">المناطق المخصصة للجباية:</label>
+                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                    تم تحديد {selectedCollectorAreas.length} منطقة
+                  </span>
+                </div>
+
+                {/* حقل البحث في المناطق */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={collectorAreaSearch}
+                    onChange={(e) => setCollectorAreaSearch(e.target.value)}
+                    placeholder="ابحث عن اسم منطقة لتحديدها..."
+                    className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                {/* أزرار سريعة */}
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filteredIds = (branch.areas || [])
+                        .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
+                        .map(a => a.id)
+                      setSelectedCollectorAreas(Array.from(new Set([...selectedCollectorAreas, ...filteredIds])))
+                    }}
+                    className="text-blue-600 hover:underline"
+                  >
+                    تحديد نتائج البحث
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCollectorAreas([])}
+                    className="text-rose-600 hover:underline"
+                  >
+                    إلغاء تحديد الكل
+                  </button>
+                </div>
+
+                {/* قائمة المناطق في صندوق محكم مع تمرير سلس */}
+                <div className="max-h-56 overflow-y-auto space-y-1 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                  {(branch.areas || [])
+                    .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
+                    .map(area => {
+                      const isChecked = selectedCollectorAreas.includes(area.id)
+                      return (
+                        <label
+                          key={area.id}
+                          className={`flex items-center justify-between p-2 rounded-xl cursor-pointer font-bold transition border ${
+                            isChecked
+                              ? 'bg-blue-50 border-blue-300 text-blue-950 shadow-2xs'
+                              : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCollectorAreas([...selectedCollectorAreas, area.id])
+                                } else {
+                                  setSelectedCollectorAreas(selectedCollectorAreas.filter(id => id !== area.id))
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-blue-600 border-slate-300 cursor-pointer"
+                            />
+                            <span>{area.name}</span>
+                          </div>
+                          {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                        </label>
+                      )
+                    })}
+                  {(branch.areas || []).length === 0 && (
+                    <div className="text-center py-6 text-slate-400 font-bold">
+                      لا توجد مناطق مضافة في هذا الفرع بعد
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-2">
+            {/* أزرار الإجراءات في الأسفل مثبتة */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex gap-2 justify-end">
               <button
+                type="button"
                 onClick={() => setShowCollectorModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition"
               >
                 إلغاء
               </button>
               <button
+                type="button"
                 onClick={handleSaveCollector}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md"
               >
                 حفظ المحصل
               </button>
@@ -2591,20 +2687,40 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل كاتب */}
       {showWriterModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-xl">
-            <h3 className="text-base font-black text-slate-900">
-              {editingWriter ? 'تعديل بيانات الكاتب' : 'إضافة كاتب جديد'}
-            </h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+            {/* الرأس */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900">
+                    {editingWriter ? 'تعديل بيانات الكاتب' : 'إضافة كاتب جديد'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-bold">تحديد المناطق المخصصة للكاتب</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWriterModal(false)}
+                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <div className="space-y-3">
+            {/* المحتوى القابل للتمرير */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">اسم الكاتب:</label>
                 <input
                   type="text"
                   value={writerName}
                   onChange={(e) => setWriterName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="اسم الكاتب..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
                 />
               </div>
 
@@ -2614,44 +2730,111 @@ export default function BranchManagerDashboard({
                   type="text"
                   value={writerPhone}
                   onChange={(e) => setWriterPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right"
+                  placeholder="07xxxxxxxxx"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none dir-ltr text-right font-mono"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المناطق المخصصة:</label>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                  {(branch.areas || []).map(area => (
-                    <label key={area.id} className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={selectedWriterAreas.includes(area.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedWriterAreas([...selectedWriterAreas, area.id])
-                          } else {
-                            setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
-                          }
-                        }}
-                        className="rounded text-blue-600 bg-white border-slate-300"
-                      />
-                      <span>{area.name}</span>
-                    </label>
-                  ))}
+              {/* قسم تخصيص المناطق المرتب مع البحث والتحكم السهل */}
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-800">المناطق المخصصة للكاتب:</label>
+                  <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                    تم تحديد {selectedWriterAreas.length} منطقة
+                  </span>
+                </div>
+
+                {/* حقل البحث في المناطق */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={writerAreaSearch}
+                    onChange={(e) => setWriterAreaSearch(e.target.value)}
+                    placeholder="ابحث عن اسم منطقة لتحديدها..."
+                    className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
+
+                {/* أزرار سريعة */}
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filteredIds = (branch.areas || [])
+                        .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
+                        .map(a => a.id)
+                      setSelectedWriterAreas(Array.from(new Set([...selectedWriterAreas, ...filteredIds])))
+                    }}
+                    className="text-amber-700 hover:underline"
+                  >
+                    تحديد نتائج البحث
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWriterAreas([])}
+                    className="text-rose-600 hover:underline"
+                  >
+                    إلغاء تحديد الكل
+                  </button>
+                </div>
+
+                {/* قائمة المناطق في صندوق محكم مع تمرير سلس */}
+                <div className="max-h-56 overflow-y-auto space-y-1 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                  {(branch.areas || [])
+                    .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
+                    .map(area => {
+                      const isChecked = selectedWriterAreas.includes(area.id)
+                      return (
+                        <label
+                          key={area.id}
+                          className={`flex items-center justify-between p-2 rounded-xl cursor-pointer font-bold transition border ${
+                            isChecked
+                              ? 'bg-amber-50 border-amber-300 text-amber-950 shadow-2xs'
+                              : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedWriterAreas([...selectedWriterAreas, area.id])
+                                } else {
+                                  setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-amber-600 border-slate-300 cursor-pointer"
+                            />
+                            <span>{area.name}</span>
+                          </div>
+                          {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                        </label>
+                      )
+                    })}
+                  {(branch.areas || []).length === 0 && (
+                    <div className="text-center py-6 text-slate-400 font-bold">
+                      لا توجد مناطق مضافة في هذا الفرع بعد
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-2">
+            {/* أزرار الإجراءات في الأسفل مثبتة */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex gap-2 justify-end">
               <button
+                type="button"
                 onClick={() => setShowWriterModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition"
               >
                 إلغاء
               </button>
               <button
+                type="button"
                 onClick={handleSaveWriter}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition shadow-md"
               >
                 حفظ الكاتب
               </button>
@@ -3116,6 +3299,346 @@ export default function BranchManagerDashboard({
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          نافذة تفاصيل المشترك وكشف الحساب وبلوك الديون للمسؤول
+      ======================================================== */}
+      {selectedDetailSubscriber && (() => {
+        const sub = selectedDetailSubscriber
+        const meterAmount = Number.parseInt(sub.meterType, 10)
+        const due = sub.propertyType === 'تجاري'
+          ? (Number.isFinite(meterAmount) && meterAmount > 0 ? meterAmount * 60 * 200 : 0)
+          : (branch.pricing?.[sub.propertyType]?.[sub.meterType] ?? 24600)
+
+        const subBilling = loadedBilling[sub.id] || {}
+        let prevRemaining = sub.remainingPrev ?? 0
+        if (subBilling[2026]?.[0]?.oldDebtManual !== null && subBilling[2026]?.[0]?.oldDebtManual !== undefined) {
+          prevRemaining = subBilling[2026][0].oldDebtManual as number
+        }
+
+        const fee = prevRemaining >= due * 4 && due > 0 ? Math.round(prevRemaining * 0.1) : 0
+        const totalCarried = prevRemaining + fee
+
+        const periods = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
+        const rows: Array<{
+          periodLabel: string
+          old: number
+          due: number
+          total: number
+          paid: number
+          remaining: number
+        }> = []
+
+        for (let p = 0; p < 6; p++) {
+          const rec = subBilling[detailSubscriberYear]?.[p]
+          const paid = rec?.paid ?? 0
+          const manualOld = rec?.oldDebtManual
+          const isManual = manualOld !== null && manualOld !== undefined
+          const oldDebt: number = (p === 0)
+            ? (isManual ? (manualOld as number) : totalCarried)
+            : (isManual ? (manualOld as number) : rows[p - 1].remaining)
+
+          const manualTotal = rec?.totalManual
+          const isTotalManual = manualTotal !== null && manualTotal !== undefined
+          const total: number = isTotalManual ? (manualTotal as number) : (oldDebt + due)
+
+          const manualRemaining = rec?.remainingManual
+          const isRemainingManual = manualRemaining !== null && manualRemaining !== undefined
+          const remaining: number = isRemainingManual ? (manualRemaining as number) : (total - paid)
+
+          rows.push({
+            periodLabel: periods[p],
+            old: oldDebt,
+            due,
+            total,
+            paid,
+            remaining
+          })
+        }
+
+        const totalRemaining = rows.length > 0 ? rows[rows.length - 1].remaining : 0
+        const dossierVal = sub.dossier || (sub.detailedAddress?.match(/إضبارة:\s*([^|]+)/)?.[1]?.trim()) || ''
+        const notesVal = sub.notes || (sub.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()) || ''
+        const areaName = branch.areas?.find(a => a.id === sub.areaId)?.name || 'غير محدد'
+        const statusesList = sub.statuses || []
+
+        const whatsappMsg = `مرحبا مشتركنا العزيز ${sub.name} (رقم الاشتراك #${sub.id})، مجموع المستحق في ذمتك لفرع ${branch.name} هو ${totalRemaining.toLocaleString('ar-IQ')} د.ع`
+        const whatsappUrl = sub.phone ? generateWhatsAppLink(sub.phone, whatsappMsg) : ''
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+              
+              {/* الرأس */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-sm">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-base font-black text-blue-700">#{sub.id}</span>
+                      <h3 className="text-sm sm:text-base font-black text-slate-900">{sub.name}</h3>
+                    </div>
+                    <div className="text-[11px] font-bold text-slate-500 mt-0.5">
+                      {areaName} • {sub.propertyType} ({sub.meterType})
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenSubscriberApp({
+                        role: 'manager',
+                        userTitle: `مسؤول فرع (${branch.name})`,
+                        canEdit: true,
+                        assignedSubscriberIds: [sub.id]
+                      })
+                      setSelectedDetailSubscriber(null)
+                    }}
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition shadow-xs"
+                    title="فتح هذا المشترك في تطبيق المشتركين الكامل"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>تطبيق المشتركين</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDetailSubscriber(null)}
+                    className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* المحتوى الداخلي */}
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+                
+                {/* شريط الإضبارة والملاحظات والدين السابق والحالات */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {dossierVal && (
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 font-bold">
+                        <span className="text-[11px] text-blue-700">الإضبارة:</span>
+                        <span className="font-mono font-black">#{dossierVal}</span>
+                      </div>
+                    )}
+
+                    {sub.remainingPrev !== undefined && sub.remainingPrev > 0 && (
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 font-bold">
+                        <span className="text-[11px] text-rose-600">الدين السابق المسجل:</span>
+                        <span className="font-mono font-black">{sub.remainingPrev.toLocaleString('ar-IQ')} د.ع</span>
+                      </div>
+                    )}
+
+                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-bold">
+                      <span className="text-[11px] text-slate-500">القسط:</span>
+                      <span className="font-mono">{due.toLocaleString('ar-IQ')} د.ع</span>
+                    </div>
+
+                    {sub.phone && (
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-bold" dir="ltr">
+                        {sub.phone}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* الحالات الخاصة */}
+                  {statusesList.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[11px] font-bold text-slate-500">الحالات:</span>
+                      {statusesList.map((st) => (
+                        <span
+                          key={st}
+                          className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-rose-50 border border-rose-200 text-rose-800 shadow-2xs"
+                        >
+                          {st}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* الملاحظات */}
+                  {notesVal && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs font-bold leading-relaxed">
+                      <span className="text-amber-800 font-black ml-1">ملاحظة:</span>
+                      <span>{notesVal}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* أزرار اختيار السنة */}
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                  <div className="text-xs font-black text-slate-800">سجل الفواتير والديون:</div>
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                    {[2026, 2027, 2028].map((y) => {
+                      const isSelected = detailSubscriberYear === y
+                      return (
+                        <button
+                          key={y}
+                          type="button"
+                          onClick={() => setDetailSubscriberYear(y)}
+                          className={`px-3 py-1 rounded-lg text-xs font-black transition ${
+                            isSelected
+                              ? y === 2026
+                                ? 'bg-red-600 text-white shadow-xs'
+                                : 'bg-slate-900 text-white shadow-xs'
+                              : 'text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {y}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* بداية السنة */}
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>بداية سنة {detailSubscriberYear}:</span>
+                  <span className="font-mono text-slate-900 font-black">
+                    القديم ({prevRemaining.toLocaleString('ar-IQ')}) + الفائدة ({fee.toLocaleString('ar-IQ')}) = {totalCarried.toLocaleString('ar-IQ')} د.ع
+                  </span>
+                </div>
+
+                {/* جدول الفترات الست لسنة المشترك المحددة */}
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
+                  <table className="w-full text-right text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
+                        <th className="p-2.5 text-center">الفترة</th>
+                        <th className="p-2.5 text-center">القديم</th>
+                        <th className="p-2.5 text-center">المجموع</th>
+                        <th className="p-2.5 text-center">المدفوع</th>
+                        <th className="p-2.5 text-center">المتبقي</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-bold">
+                      {rows.map((row, idx) => {
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-2.5 text-center font-bold text-slate-800 bg-slate-50/50">
+                              {row.periodLabel}
+                            </td>
+                            <td className="p-2.5 text-center font-mono text-slate-600">
+                              {row.old.toLocaleString('ar-IQ')}
+                            </td>
+                            <td className="p-2.5 text-center font-mono text-slate-900 font-black">
+                              {row.total.toLocaleString('ar-IQ')}
+                            </td>
+                            <td className="p-2 text-center">
+                              <input
+                                type="number"
+                                defaultValue={row.paid || ''}
+                                placeholder="0"
+                                onBlur={(e) => {
+                                  const val = parseFloat(e.target.value) || 0
+                                  if (val !== row.paid) {
+                                    // حفظ المدفوع للمسؤول مباشرة
+                                    const updatedBilling = { ...loadedBilling }
+                                    if (!updatedBilling[sub.id]) updatedBilling[sub.id] = {}
+                                    if (!updatedBilling[sub.id][detailSubscriberYear]) {
+                                      updatedBilling[sub.id][detailSubscriberYear] = [
+                                        { oldDebtManual: null, paid: 0 },
+                                        { oldDebtManual: null, paid: 0 },
+                                        { oldDebtManual: null, paid: 0 },
+                                        { oldDebtManual: null, paid: 0 },
+                                        { oldDebtManual: null, paid: 0 },
+                                        { oldDebtManual: null, paid: 0 }
+                                      ]
+                                    }
+                                    const yRecs = [...updatedBilling[sub.id][detailSubscriberYear]]
+                                    yRecs[idx] = { ...yRecs[idx], paid: val, remainingManual: null }
+                                    updatedBilling[sub.id][detailSubscriberYear] = yRecs
+                                    setLoadedBilling(updatedBilling)
+                                    saveBranchSubscribersAndBilling(branch.id, loadedSubscribers, updatedBilling)
+                                  }
+                                }}
+                                className="w-20 px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </td>
+                            <td className={`p-2.5 text-center font-mono font-black ${
+                              row.remaining === 0 ? 'text-emerald-600 bg-emerald-50/40' : 'text-rose-600 bg-rose-50/20'
+                            }`}>
+                              {row.remaining.toLocaleString('ar-IQ')} د.ع
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* كارت ملخص الدين الكلي وزر الواتساب */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-bold text-blue-800">إجمالي المبلغ المستحق بذمة المشترك:</div>
+                    <div className="text-xl font-black text-blue-950 font-mono">
+                      {totalRemaining.toLocaleString('ar-IQ')} د.ع
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {sub.phone && whatsappUrl && (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>مراسلة واتساب</span>
+                      </a>
+                    )}
+                    {sub.phone && (
+                      <a
+                        href={`tel:${sub.phone}`}
+                        className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition hover:bg-slate-50"
+                      >
+                        اتصال
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* أسفل النافذة */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenSubscriberApp({
+                      role: 'manager',
+                      userTitle: `مسؤول فرع (${branch.name})`,
+                      canEdit: true,
+                      assignedSubscriberIds: [sub.id]
+                    })
+                    setSelectedDetailSubscriber(null)
+                  }}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 shadow-sm"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>فتح تطبيق المشتركين الكامل</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetailSubscriber(null)}
+                  className="px-5 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition"
+                >
+                  إغلاق
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )
+      })()}
 
     </div>
   )
