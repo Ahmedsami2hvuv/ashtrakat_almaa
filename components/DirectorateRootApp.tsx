@@ -69,6 +69,8 @@ export default function DirectorateRootApp() {
     canEdit: boolean
     assignedAreaIds?: string[]
     assignedSubscriberIds?: number[]
+    rangeFrom?: number
+    rangeTo?: number
   } | null>(null)
 
   // دالة فتح تطبيق المشتركين مع جلب بيانات هذا الفرع حصراً عند الطلب
@@ -243,10 +245,12 @@ export default function DirectorateRootApp() {
               setSubscriberAppData(subsData)
               setSubscriberAppProps({
                 role: 'writer',
-                userTitle: `كاتب: ${matchedWriter.name}`,
+                userTitle: `كاتب: ${matchedWriter.name}${matchedWriter.rangeFrom ? ` (سجل ${matchedWriter.rangeFrom} - ${matchedWriter.rangeTo})` : ''}`,
                 canEdit: true,
                 assignedAreaIds: matchedWriter.assignedAreaIds,
-                assignedSubscriberIds: matchedWriter.assignedSubscriberIds
+                assignedSubscriberIds: matchedWriter.assignedSubscriberIds,
+                rangeFrom: matchedWriter.rangeFrom,
+                rangeTo: matchedWriter.rangeTo
               })
               setActiveView('subscriber_app')
               setIsLoading(false)
@@ -455,6 +459,8 @@ export default function DirectorateRootApp() {
         canEdit={subscriberAppProps?.canEdit ?? true}
         assignedAreaIds={subscriberAppProps?.assignedAreaIds}
         assignedSubscriberIds={subscriberAppProps?.assignedSubscriberIds}
+        initialRangeFrom={subscriberAppProps?.rangeFrom}
+        initialRangeTo={subscriberAppProps?.rangeTo}
         customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}
         bypassAuth={true}
         onBack={

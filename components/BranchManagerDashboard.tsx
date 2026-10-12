@@ -2435,6 +2435,18 @@ export default function BranchManagerDashboard({
                           </span>
                         </div>
 
+                        {writer.rangeFrom !== undefined && writer.rangeTo !== undefined && (
+                          <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-amber-50 rounded-xl border border-amber-200">
+                            <span className="font-bold text-amber-900 text-[11px] flex items-center gap-1">
+                              <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                              <span>السجل الورقي:</span>
+                            </span>
+                            <span className="font-black text-amber-950 font-mono text-xs">
+                              {writer.rangeFrom} — {writer.rangeTo}
+                            </span>
+                          </div>
+                        )}
+
                         {/* 2. المناطق المسندة */}
                         <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
