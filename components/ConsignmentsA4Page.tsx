@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { Printer, Save, ArrowRight, Plus } from 'lucide-react'
+import { Printer, Save, ArrowRight, Plus, Layers } from 'lucide-react'
 import { DirectorateBranch, Consignment, ConsignmentItem } from '@/lib/directorateTypes'
 import { loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
@@ -10,6 +10,8 @@ interface ConsignmentsA4PageProps {
   branch: DirectorateBranch
   onSaveConsignment: (consignment: Consignment, updatedSubscribers: Subscriber[], updatedBilling: BillingRecords) => void
   onClose: () => void
+  initialConsignment?: Consignment | null
+  onOpenArchive?: () => void
 }
 
 interface RowData {
@@ -75,27 +77,65 @@ function tafqeet(num: number): string {
   return parts.join(' و')
 }
 
-export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose }: ConsignmentsA4PageProps) {
+export default function ConsignmentsA4Page({
+  branch,
+  onSaveConsignment,
+  onClose,
+  initialConsignment,
+  onOpenArchive
+}: ConsignmentsA4PageProps) {
   // الرقم التسلسلي المطبوع في أعلى الورقة
-  const [serialNumber, setSerialNumber] = useState<string>('02951')
-  const [paperRefNumber, setPaperRefNumber] = useState<string>('')
+  const [serialNumber, setSerialNumber] = useState<string>(
+    initialConsignment?.serialNumber || '02951'
+  )
+  const [paperRefNumber, setPaperRefNumber] = useState<string>(
+    initialConsignment?.paperRefNumber || ''
+  )
   const [branchNameDisplay, setBranchNameDisplay] = useState<string>(branch.name.replace(/^فرع\s*/, ''))
   
   // اسم المحصل وتاريخ الإرسالية
   const [selectedCollectorName, setSelectedCollectorName] = useState<string>(
-    branch.collectors[0]?.name || ''
+    initialConsignment?.collectorName || branch.collectors[0]?.name || ''
   )
   const [consignmentDate, setConsignmentDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    initialConsignment?.date || new Date().toISOString().split('T')[0]
   )
   const [baseReceiptNumber, setBaseReceiptNumber] = useState<string>('')
 
   // نسبة البلدية الافتراضية المأخوذة من المبلغ (بالنسبة المئوية %)
   const [municipalityRatio, setMunicipalityRatio] = useState<number>(20)
 
-  // إنشاء 23 صفاً افتراضياً لورقة A4 الرسمية كما طلب المستخدم
+  // إنشاء 23 صفاً افتراضياً لورقة A4 الرسمية (أو ملؤها ببيانات الإرسالية المحفوظة إن وجدت)
   const [rows, setRows] = useState<RowData[]>(() => {
     const today = new Date().toISOString().split('T')[0]
+    if (initialConsignment && initialConsignment.items && initialConsignment.items.length > 0) {
+      const initialRows: RowData[] = initialConsignment.items.map(it => ({
+        subscriberId: String(it.subscriberId || ''),
+        subscriberName: it.subscriberName || '',
+        areaName: it.areaName || '',
+        amount: it.amount ? String(it.amount) : '',
+        waterAmount: it.waterAmount ? String(it.waterAmount) : '',
+        municipalityAmount: it.municipalityAmount ? String(it.municipalityAmount) : '',
+        receiptNumber: it.receiptNumber || '',
+        paymentDate: it.paymentDate || initialConsignment.date || today,
+        paymentTime: ''
+      }))
+      while (initialRows.length < 23) {
+        initialRows.push({
+          subscriberId: '',
+          subscriberName: '',
+          areaName: '',
+          amount: '',
+          waterAmount: '',
+          municipalityAmount: '',
+          receiptNumber: '',
+          paymentDate: initialConsignment.date || today,
+          paymentTime: ''
+        })
+      }
+      return initialRows
+    }
+
     return Array.from({ length: 23 }, () => ({
       subscriberId: '',
       subscriberName: '',
@@ -513,7 +553,7 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
           ======================================================== */}
       <div className="no-print print:hidden max-w-6xl mx-auto mb-4 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={onClose}
               style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
@@ -522,8 +562,22 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
               <ArrowRight className="w-4 h-4 text-slate-700" />
               <span>رجوع للوحة التحكم</span>
             </button>
+
+            {onOpenArchive && (
+              <button
+                onClick={onOpenArchive}
+                style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}
+                className="px-3.5 py-2 hover:bg-blue-100 border rounded-xl font-bold transition flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 text-xs sm:text-sm"
+              >
+                <Layers className="w-4 h-4 text-blue-600" />
+                <span>مخزن الإرساليات (الأرشيف)</span>
+              </button>
+            )}
+
             <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900">استمارة تنزيل الإرساليات الرسمية</h1>
+              <h1 className="text-base sm:text-lg font-black text-slate-900">
+                {initialConsignment ? `إرسالية رسمية (رقم: ${serialNumber})` : 'استمارة تنزيل الإرساليات الرسمية'}
+              </h1>
               <p className="text-xs text-slate-500 font-bold">ورقة A4 الرسمية لمديرية ماء البصرة</p>
             </div>
           </div>
@@ -551,10 +605,20 @@ export default function ConsignmentsA4Page({ branch, onSaveConsignment, onClose 
         </div>
       </div>
 
-      {/* رسالة نجاح الحفظ */}
+      {/* رسالة نجاح الحفظ مع زر مباشر لمخزن الإرساليات */}
       {savedSuccessMessage && (
-        <div className="no-print print:hidden max-w-6xl mx-auto mb-4 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl font-bold text-center shadow-sm">
-          {savedSuccessMessage}
+        <div className="no-print print:hidden max-w-6xl mx-auto mb-4 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl font-bold flex flex-wrap items-center justify-between gap-3 shadow-sm">
+          <span>{savedSuccessMessage}</span>
+          {onOpenArchive && (
+            <button
+              onClick={onOpenArchive}
+              style={{ backgroundColor: '#059669', color: '#ffffff' }}
+              className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            >
+              <Layers className="w-4 h-4 text-white" />
+              <span>فتح مخزن الإرساليات الآن</span>
+            </button>
+          )}
         </div>
       )}
 

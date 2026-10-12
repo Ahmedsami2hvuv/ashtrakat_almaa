@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink, loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Area, Subscriber, calculateBilling, PERIODS, formatInputDisplay } from '@/components/MainApp'
@@ -66,6 +66,9 @@ export default function DirectorDashboard({
   // بحث المشتركين داخل الفرع
   const [branchSubscriberSearch, setBranchSubscriberSearch] = useState('')
 
+  // بحث المناطق المائية داخل الفرع
+  const [branchAreaSearch, setBranchAreaSearch] = useState('')
+
   // المشترك المختار للعرض فقط (Read-only للمدير)
   const [viewingSubscriber, setViewingSubscriber] = useState<Subscriber | null>(null)
   const [viewingSubscriberYear, setViewingSubscriberYear] = useState<number>(2026)
@@ -108,11 +111,37 @@ export default function DirectorDashboard({
     }
   }
 
+  // تحميل مشتركي الفرع تلقائياً عند فتح تفاصيل أي فرع لضمان ظهور الأعداد فوراً في المناطق والمشتركين
+  useEffect(() => {
+    if (selectedBranchId) {
+      handleLoadBranchDetailSubscribers(selectedBranchId)
+    } else {
+      setBranchDetailSubscribers([])
+    }
+  }, [selectedBranchId])
+
   // الفرع المختار حالياً
   const selectedBranch = useMemo(() => {
     if (!selectedBranchId) return null
     return directorateData.branches.find(b => b.id === selectedBranchId) || null
   }, [selectedBranchId, directorateData.branches])
+
+  // خريطة سريعة جداً لحساب عدد المشتركين في كل منطقة بالفرع فورياً
+  const branchAreaSubscribersCountMap = useMemo(() => {
+    const map = new Map<string, number>()
+    const subs = branchDetailSubscribers.length > 0 ? branchDetailSubscribers : (selectedBranch?.subscribers || [])
+    subs.forEach(s => {
+      if (s.areaId) {
+        map.set(s.areaId, (map.get(s.areaId) || 0) + 1)
+      }
+      if (s.areaIds && Array.isArray(s.areaIds)) {
+        s.areaIds.forEach(aid => {
+          map.set(aid, (map.get(aid) || 0) + 1)
+        })
+      }
+    })
+    return map
+  }, [branchDetailSubscribers, selectedBranch?.subscribers])
 
   // الإحصائيات العامة المجمعة (سريعة جداً وخفيفة بدون جلب مصفوفات المشتركين)
   const totalSubscribers = useMemo(() => {
@@ -1105,7 +1134,12 @@ export default function DirectorDashboard({
 
                 {/* 2. المناطق المائية */}
                 <button
-                  onClick={() => setBranchDetailTab('areas')}
+                  onClick={() => {
+                    setBranchDetailTab('areas')
+                    if (branchDetailSubscribers.length === 0) {
+                      handleLoadBranchDetailSubscribers(selectedBranch.id)
+                    }
+                  }}
                   style={{
                     background: branchDetailTab === 'areas' ? '#eff6ff' : '#ffffff',
                     border: branchDetailTab === 'areas' ? '2px solid #0056b3' : '1px solid #cbd5e1',
@@ -1359,9 +1393,76 @@ export default function DirectorDashboard({
               {/* 2. تبويب المناطق المائية */}
               {branchDetailTab === 'areas' && (
                 <div style={{ marginTop: '30px' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '15px', color: '#1e293b' }}>
-                    المناطق المائية المسجلة في ({selectedBranch.name})
-                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#1e293b' }}>
+                      المناطق المائية المسجلة في ({selectedBranch.name})
+                    </h3>
+
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          placeholder="بحث بالاسم أو الكود..."
+                          value={branchAreaSearch}
+                          onChange={e => setBranchAreaSearch(e.target.value)}
+                          style={{
+                            padding: '8px 14px',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '8px',
+                            fontSize: '0.85rem',
+                            outline: 'none',
+                            minWidth: '220px'
+                          }}
+                        />
+                        {branchAreaSearch && (
+                          <button
+                            onClick={() => setBranchAreaSearch('')}
+                            style={{
+                              position: 'absolute',
+                              left: '8px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#94a3b8',
+                              cursor: 'pointer',
+                              fontWeight: 800
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleLoadBranchDetailSubscribers(selectedBranch.id, true)}
+                        disabled={isLoadingBranchDetailSubscribers}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#f1f5f9',
+                          border: '1px solid #cbd5e1',
+                          color: '#1e293b',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: 800,
+                          cursor: isLoadingBranchDetailSubscribers ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoadingBranchDetailSubscribers ? 'animate-spin text-blue-600' : ''}`} />
+                        <span>{isLoadingBranchDetailSubscribers ? 'جارِ التحميل...' : 'تحديث الأعداد'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {isLoadingBranchDetailSubscribers && (
+                    <div style={{ textAlign: 'center', padding: '12px 20px', marginBottom: '15px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', color: '#0056b3', fontWeight: 800, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                      <span>جارِ جلب قاعدة بيانات المشتركين واحتساب توزيع الأعداد على المناطق المائية...</span>
+                    </div>
+                  )}
 
                   {(!selectedBranch.areas || selectedBranch.areas.length === 0) ? (
                     <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '10px', color: '#64748b' }}>
@@ -1380,26 +1481,36 @@ export default function DirectorDashboard({
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedBranch.areas.map(area => {
-                            const subCount = selectedBranch.subscribers?.filter(s => s.areaId === area.id).length || 0
-                            const assignedCollector = selectedBranch.collectors?.find(c => c.assignedAreaIds?.includes(area.id))
-                            const assignedWriter = selectedBranch.writers?.find(w => w.assignedAreaIds?.includes(area.id))
-                            return (
-                              <tr key={area.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>{area.name}</td>
-                                <td style={{ padding: '12px 15px', color: '#64748b', fontWeight: 700 }}>{area.id}</td>
-                                <td style={{ padding: '12px 15px', fontWeight: 800, color: '#0056b3' }}>
-                                  {subCount.toLocaleString('ar-IQ')} مشترك
-                                </td>
-                                <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedCollector ? '#15803d' : '#94a3b8' }}>
-                                  {assignedCollector ? assignedCollector.name : 'غير مسند'}
-                                </td>
-                                <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedWriter ? '#b45309' : '#94a3b8' }}>
-                                  {assignedWriter ? assignedWriter.name : 'غير مسند'}
-                                </td>
-                              </tr>
-                            )
-                          })}
+                          {selectedBranch.areas
+                            .filter(area => {
+                              if (!branchAreaSearch.trim()) return true
+                              const q = branchAreaSearch.trim().toLowerCase()
+                              return area.name.toLowerCase().includes(q) || area.id.toLowerCase().includes(q)
+                            })
+                            .map(area => {
+                              const subCount = branchAreaSubscribersCountMap.get(area.id) || (area.name ? branchAreaSubscribersCountMap.get(area.name) : 0) || 0
+                              const assignedCollector = selectedBranch.collectors?.find(c => c.assignedAreaIds?.includes(area.id))
+                              const assignedWriter = selectedBranch.writers?.find(w => w.assignedAreaIds?.includes(area.id))
+                              return (
+                                <tr key={area.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                  <td style={{ padding: '12px 15px', fontWeight: 800, color: '#1e293b' }}>{area.name}</td>
+                                  <td style={{ padding: '12px 15px', color: '#64748b', fontWeight: 700 }}>{area.id}</td>
+                                  <td style={{ padding: '12px 15px', fontWeight: 800, color: '#0056b3' }}>
+                                    {subCount > 0 ? (
+                                      <span>{subCount.toLocaleString('ar-IQ')} مشترك</span>
+                                    ) : (
+                                      <span style={{ color: '#94a3b8' }}>0 مشترك</span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedCollector ? '#15803d' : '#94a3b8' }}>
+                                    {assignedCollector ? assignedCollector.name : 'غير مسند'}
+                                  </td>
+                                  <td style={{ padding: '12px 15px', fontWeight: 700, color: assignedWriter ? '#b45309' : '#94a3b8' }}>
+                                    {assignedWriter ? assignedWriter.name : 'غير مسند'}
+                                  </td>
+                                </tr>
+                              )
+                            })}
                         </tbody>
                       </table>
                     </div>
