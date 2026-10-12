@@ -3,7 +3,19 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink, loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
-import { Area, Subscriber, calculateBilling, PERIODS, formatInputDisplay } from '@/components/MainApp'
+import {
+  Area,
+  Subscriber,
+  calculateBilling,
+  PERIODS,
+  YEARS,
+  STATUS_CONFIG,
+  isZeroAccountSubscriber,
+  formatNumber,
+  calculateDebtSummary,
+  formatInputDisplay,
+  BillingRecords
+} from '@/components/MainApp'
 import {
   Users,
   MapPin,
@@ -17,7 +29,12 @@ import {
   Copy,
   X,
   Search,
-  Loader2
+  Loader2,
+  ChevronRight,
+  ChevronLeft,
+  Phone,
+  ShieldCheck,
+  Share2
 } from 'lucide-react'
 
 interface DirectorDashboardProps {
@@ -61,6 +78,7 @@ export default function DirectorDashboard({
 
   // حالات المشتركين عند الطلب لصفحة الفرع المستقلة
   const [branchDetailSubscribers, setBranchDetailSubscribers] = useState<Subscriber[]>([])
+  const [branchDetailBilling, setBranchDetailBilling] = useState<BillingRecords>({})
   const [isLoadingBranchDetailSubscribers, setIsLoadingBranchDetailSubscribers] = useState(false)
 
   // بحث المشتركين داخل الفرع
@@ -72,6 +90,7 @@ export default function DirectorDashboard({
   // المشترك المختار للعرض فقط (Read-only للمدير)
   const [viewingSubscriber, setViewingSubscriber] = useState<Subscriber | null>(null)
   const [viewingSubscriberYear, setViewingSubscriberYear] = useState<number>(2026)
+  const [showViewingSubscriberContact, setShowViewingSubscriberContact] = useState(false)
 
   // المحصل المختار لعرض تفاصيل الجباية والمناطق
   const [viewingCollector, setViewingCollector] = useState<BranchCollector | null>(null)
@@ -106,6 +125,7 @@ export default function DirectorDashboard({
     try {
       const data = await loadBranchSubscribersAndBilling(branchId, force)
       setBranchDetailSubscribers(data.subscribers)
+      setBranchDetailBilling(data.billing || {})
     } finally {
       setIsLoadingBranchDetailSubscribers(false)
     }
@@ -117,6 +137,7 @@ export default function DirectorDashboard({
       handleLoadBranchDetailSubscribers(selectedBranchId)
     } else {
       setBranchDetailSubscribers([])
+      setBranchDetailBilling({})
     }
   }, [selectedBranchId])
 
@@ -3426,16 +3447,48 @@ export default function DirectorDashboard({
       )}
 
       {/* ======================================================== */}
-      {/* 5. نافذة معاينة بيانات المشترك وسجل الديون (للقراءة فقط)   */}
+      {/* 5. نافذة معاينة بيانات المشترك وسجل الديون (مطابقة للمحصل والكاتب - قراءة فقط) */}
       {/* ======================================================== */}
       {viewingSubscriber && (() => {
+        const activeSubsList = branchDetailSubscribers.length > 0
+          ? branchDetailSubscribers
+          : (loadedSubscribers.length > 0 ? loadedSubscribers : (selectedBranch?.subscribers || []))
+
+        const activeBillingRecords = (Object.keys(branchDetailBilling).length > 0
+          ? branchDetailBilling
+          : loadedBilling) || selectedBranch?.billing || {}
+
+        const currentIndex = activeSubsList.findIndex(s => s.id === viewingSubscriber.id)
+        const prevSub = currentIndex > 0 ? activeSubsList[currentIndex - 1] : null
+        const nextSub = currentIndex >= 0 && currentIndex < activeSubsList.length - 1 ? activeSubsList[currentIndex + 1] : null
+
         const subBilling = calculateBilling(
           viewingSubscriber.id,
           viewingSubscriberYear,
-          selectedBranch?.billing || {},
-          selectedBranch?.subscribers || [],
+          activeBillingRecords,
+          activeSubsList,
           selectedBranch?.pricing || { 'سكني': { '3 متر': 24600, '4 متر': 24600 }, 'تجاري': {} }
         )
+
+        const debtSummary = calculateDebtSummary(
+          viewingSubscriber.id,
+          activeBillingRecords,
+          activeSubsList,
+          selectedBranch?.pricing || { 'سكني': { '3 متر': 24600, '4 متر': 24600 }, 'تجاري': {} },
+          viewingSubscriberYear,
+          subBilling.rows
+        )
+
+        const dossierVal = (viewingSubscriber as any).dossier || 
+          (viewingSubscriber.detailedAddress?.match(/إضبارة:\s*([^|]+)/)?.[1]?.trim()) || ''
+        const notesVal = (viewingSubscriber as any).notes || 
+          (viewingSubscriber.detailedAddress?.match(/ملاحظة:\s*(.+)$/)?.[1]?.trim()) || ''
+        const prevDebt = viewingSubscriber.remainingPrev ?? 0
+        const statusesList = viewingSubscriber.statuses || []
+        const areaName = selectedBranch?.areas?.find(a => a.id === viewingSubscriber.areaId)?.name || 'غير محدد'
+
+        const directWaMsg = `السلام عليكم ${viewingSubscriber.name}\nحساب رقم: ${viewingSubscriber.id}\nالفرع: ${selectedBranch?.name || ''}\nصافي المبلغ المطلوب: ${(subBilling.totalRemaining || 0).toLocaleString('ar-IQ')} د.ع`
+        const waUrl = generateWhatsAppLink(viewingSubscriber.phone, directWaMsg)
 
         return (
           <div
@@ -3445,226 +3498,607 @@ export default function DirectorDashboard({
               left: 0,
               width: '100%',
               height: '100%',
-              background: 'rgba(0,0,0,0.5)',
+              background: 'rgba(15, 23, 42, 0.45)',
+              backdropFilter: 'blur(3px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              zIndex: 110
+              zIndex: 110,
+              padding: '12px'
             }}
           >
             <div
               style={{
-                background: '#fff',
-                padding: '25px',
-                borderRadius: '14px',
-                width: '740px',
-                maxWidth: '95%',
-                maxHeight: '92vh',
-                overflowY: 'auto',
-                boxShadow: '0 6px 30px rgba(0,0,0,0.25)'
+                background: '#f0f9ff',
+                borderRadius: '20px',
+                width: '760px',
+                maxWidth: '100%',
+                maxHeight: '94vh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+                border: '1px solid #bae6fd'
               }}
             >
-              {/* رأس النافذة */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '16px' }}>
-                <div>
-                  <h3 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b', margin: 0 }}>
-                    معاينة المشترك: {viewingSubscriber.name}
-                  </h3>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>
-                    (سجل رسمي للاطلاع والمعاينة فقط - فرع {selectedBranch?.name} • بدون صلاحية تعديل)
-                  </span>
+              {/* 1. رأس البطاقة (Hero Header) */}
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderBottom: '1px solid #e0f2fe',
+                  padding: '14px 18px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '12px'
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div
+                      style={{
+                        backgroundColor: '#e0f2fe',
+                        border: '1px solid #bae6fd',
+                        borderRadius: '8px',
+                        padding: '4px 10px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: '#0369a1'
+                      }}
+                    >
+                      {viewingSubscriber.propertyType || 'سكني'} - {viewingSubscriber.meterType || 'ميكانيكي'}
+                    </div>
+
+                    <button
+                      onClick={() => setShowViewingSubscriberContact(true)}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #bae6fd',
+                        color: '#0284c7',
+                        borderRadius: '8px',
+                        padding: '4px 12px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <span>التواصل والموقع والصور</span>
+                    </button>
+
+                    {Boolean(viewingSubscriber.phone && viewingSubscriber.phone.trim()) && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          backgroundColor: '#16a34a',
+                          color: '#ffffff',
+                          borderRadius: '8px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        }}
+                        title="مراسلة المشترك بمطالبة الدين عبر واتساب"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>مراسلة واتساب ({viewingSubscriber.phone})</span>
+                      </a>
+                    )}
+
+                    <div
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '4px 10px',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        color: '#334155'
+                      }}
+                    >
+                      المستحق: {formatNumber(subBilling.due)} د.ع
+                    </div>
+
+                    <div
+                      style={{
+                        backgroundColor: '#fef3c7',
+                        border: '1px solid #fde68a',
+                        borderRadius: '8px',
+                        padding: '3px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        color: '#b45309',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>قراءة فقط للمدير</span>
+                    </div>
+                  </div>
                 </div>
+
                 <button
-                  onClick={() => setViewingSubscriber(null)}
-                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={() => {
+                    setViewingSubscriber(null)
+                    setShowViewingSubscriberContact(false)
+                  }}
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    flexShrink: 0
+                  }}
+                  title="إغلاق المعاينة"
                 >
-                  <X className="w-4 h-4 text-slate-600" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* بطاقة معلومات المشترك المختصرة */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px', background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                <div>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>رقم الهاتف:</span>
-                  <span style={{ fontWeight: 800, color: '#0056b3', fontSize: '0.9rem' }} dir="ltr">{viewingSubscriber.phone || 'غير مسجل'}</span>
-                </div>
-                <div>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>المنطقة المائية:</span>
-                  <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>
-                    {selectedBranch?.areas?.find(a => a.id === viewingSubscriber.areaId)?.name || 'غير محدد'}
+              {/* 2. جسم البطاقة القابل للتمرير */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+                
+                {/* شريط السنوات (2026 أحمر أيقوني، 2027، 2028) */}
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e0f2fe',
+                    borderRadius: '12px',
+                    padding: '8px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', marginLeft: '6px' }}>
+                    السنة المالية:
                   </span>
-                </div>
-                <div>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>نوع العقار:</span>
-                  <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>{viewingSubscriber.propertyType || 'سكني'}</span>
-                </div>
-                <div>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'block' }}>نوع المقياس:</span>
-                  <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>{viewingSubscriber.meterType || 'ميكانيكي'}</span>
-                </div>
-                {viewingSubscriber.detailedAddress && (
-                  <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '4px' }}>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700 }}>العنوان: </span>
-                    <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.85rem' }}>{viewingSubscriber.detailedAddress}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* سجل الديون وفترات الجباية (مطابق تماماً لما يظهر عند المحصل والكاتب) */}
-              <div style={{ marginTop: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    <span>سجل الديون وفترات الجباية</span>
-                    <span style={{ fontSize: '0.75rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>
-                      قراءة فقط
-                    </span>
-                  </h4>
-
-                  {/* شريط اختيار السنة */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', padding: '0 6px' }}>السنة:</span>
-                    {[2026, 2027, 2028].map(yr => (
+                  {YEARS.map(y => {
+                    const is2026 = y === 2026
+                    const isSelected = viewingSubscriberYear === y
+                    return (
                       <button
-                        key={yr}
-                        onClick={() => setViewingSubscriberYear(yr)}
+                        key={y}
+                        onClick={() => setViewingSubscriberYear(y)}
                         style={{
-                          backgroundColor: viewingSubscriberYear === yr ? '#0056b3' : 'transparent',
-                          color: viewingSubscriberYear === yr ? '#ffffff' : '#334155',
-                          border: 'none',
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
+                          height: '32px',
+                          padding: '0 16px',
+                          borderRadius: '9999px',
+                          border: is2026
+                            ? (isSelected ? '1px solid #ef4444' : '1px solid #fecaca')
+                            : (isSelected ? '1px solid #0f172a' : '1px solid #e0f2fe'),
+                          backgroundColor: is2026
+                            ? (isSelected ? '#ef4444' : '#fef2f2')
+                            : (isSelected ? '#0f172a' : '#ffffff'),
+                          color: is2026
+                            ? (isSelected ? '#ffffff' : '#dc2626')
+                            : (isSelected ? '#ffffff' : '#475569'),
                           fontWeight: 800,
-                          fontSize: '0.8rem',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
                           transition: 'all 0.15s'
                         }}
                       >
-                        {yr}
+                        {y}
                       </button>
-                    ))}
+                    )
+                  })}
+                </div>
+
+                {/* بداية السنة أو تنبيه تصفير الحساب */}
+                <div style={{ marginBottom: '12px' }}>
+                  {isZeroAccountSubscriber(viewingSubscriber) ? (
+                    <div
+                      style={{
+                        borderRadius: '14px',
+                        border: '1px solid #e4e4e7',
+                        backgroundColor: '#f4f4f5',
+                        padding: '10px 16px',
+                        fontSize: '0.82rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#a1a1aa' }}></span>
+                        <strong style={{ color: '#27272a' }}>الحساب مصفّر كلياً (0 د.ع)</strong>
+                        <span style={{ color: '#71717a', fontSize: '0.75rem' }}>
+                          بسبب حالة المشترك ({statusesList.join('، ')})
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', backgroundColor: '#e4e4e7', color: '#3f3f46', padding: '2px 8px', borderRadius: '9999px', fontWeight: 800 }}>
+                        بدون ديون
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        borderRadius: '14px',
+                        border: '1px solid #e0f2fe',
+                        backgroundColor: '#ffffff',
+                        padding: '10px 16px',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontFamily: 'monospace',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <strong style={{ color: '#1e293b', fontFamily: 'inherit' }}>بداية السنة:</strong>
+                      <span style={{ color: '#475569' }}>
+                        القديم {formatNumber(subBilling.remainingPrev)} + الفائدة {formatNumber(subBilling.fee)} = {formatNumber(subBilling.totalCarried)} د.ع
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* اسم ورقم المشترك والفرع والمنطقة */}
+                <div style={{ padding: '4px 6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#0284c7' }}>#{formatNumber(viewingSubscriber.id)}</span>
+                      <span>-</span>
+                      <span>{viewingSubscriber.name}</span>
+                    </h3>
+                    <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700, marginTop: '3px' }}>
+                      (منطقة: {areaName} • {selectedBranch?.name || ''})
+                    </div>
                   </div>
                 </div>
 
-                {/* جدول فترات الديون الأربعة أعمدة المطابق لمحاسبة النظام */}
-                <div style={{ border: '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+                {/* بطاقة التفاصيل الشاملة: الإضبارة، الدين السابق، العقار والعداد، الحالات، الملاحظات */}
+                <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                    {Boolean(dossierVal) && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '10px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', fontWeight: 800, fontSize: '0.78rem' }}>
+                        <span style={{ color: '#1d4ed8' }}>رقم الإضبارة:</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 900 }}>#{dossierVal}</span>
+                      </div>
+                    )}
+
+                    {prevDebt > 0 && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '10px', backgroundColor: '#fff1f2', border: '1px solid #fecdd3', color: '#9f1239', fontWeight: 800, fontSize: '0.78rem' }}>
+                        <span style={{ color: '#e11d48' }}>الدين السابق المسجل:</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 900 }}>{formatNumber(prevDebt)} د.ع</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '10px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', color: '#1e293b', fontWeight: 700, fontSize: '0.78rem' }}>
+                      <span style={{ color: '#64748b' }}>العقار والعداد:</span>
+                      <span>{viewingSubscriber.propertyType || 'سكني'} - {viewingSubscriber.meterType || 'ميكانيكي'}</span>
+                    </div>
+                  </div>
+
+                  {/* شارات الحالات الخاصة للمشترك */}
+                  {statusesList.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginLeft: '4px' }}>حالات المشترك:</span>
+                      {statusesList.map(st => {
+                        const cfg = STATUS_CONFIG[st]
+                        return (
+                          <span
+                            key={st}
+                            style={{
+                              padding: '2px 8px',
+                              fontSize: '0.75rem',
+                              borderRadius: '6px',
+                              fontWeight: 800,
+                              backgroundColor: cfg?.bg === 'bg-red-50' ? '#fef2f2' : (cfg?.bg === 'bg-emerald-50' ? '#ecfdf5' : '#f4f4f5'),
+                              color: cfg?.text === 'text-red-700' ? '#b91c1c' : (cfg?.text === 'text-emerald-700' ? '#047857' : '#3f3f46'),
+                              border: '1px solid #e2e8f0'
+                            }}
+                          >
+                            {st}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* كارت الملاحظات البارز */}
+                  {Boolean(notesVal) && (
+                    <div style={{ padding: '10px 14px', borderRadius: '12px', backgroundColor: '#fefce8', border: '1px solid #fef08a', color: '#713f12', fontSize: '0.8rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <strong style={{ color: '#854d0e', flexShrink: 0 }}>ملاحظات المشترك:</strong>
+                      <span style={{ fontWeight: 700, lineHeight: 1.5 }}>{notesVal}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* أزرار التنقل السلس بين المشتركين (التالي والسابق) */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                  <button
+                    onClick={() => {
+                      if (prevSub) {
+                        setViewingSubscriber(prevSub)
+                        setViewingSubscriberYear(2026)
+                      }
+                    }}
+                    disabled={!prevSub}
+                    style={{
+                      flex: 1,
+                      minHeight: '44px',
+                      borderRadius: '12px',
+                      border: prevSub ? '1px solid #bae6fd' : '1px solid #e2e8f0',
+                      backgroundColor: prevSub ? '#ffffff' : '#f8fafc',
+                      color: prevSub ? '#1e293b' : '#94a3b8',
+                      cursor: prevSub ? 'pointer' : 'not-allowed',
+                      fontWeight: 800,
+                      fontSize: '0.8rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '6px 12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4 text-slate-600" />
+                    <div style={{ textAlign: 'right', overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>السابق</div>
+                      <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '160px', fontWeight: 800 }}>
+                        {prevSub ? `${formatNumber(prevSub.id)} - ${prevSub.name}` : 'لا يوجد سابق'}
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (nextSub) {
+                        setViewingSubscriber(nextSub)
+                        setViewingSubscriberYear(2026)
+                      }
+                    }}
+                    disabled={!nextSub}
+                    style={{
+                      flex: 1,
+                      minHeight: '44px',
+                      borderRadius: '12px',
+                      border: nextSub ? '1px solid #bae6fd' : '1px solid #e2e8f0',
+                      backgroundColor: nextSub ? '#ffffff' : '#f8fafc',
+                      color: nextSub ? '#1e293b' : '#94a3b8',
+                      cursor: nextSub ? 'pointer' : 'not-allowed',
+                      fontWeight: 800,
+                      fontSize: '0.8rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '6px 12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>التالي</div>
+                      <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '160px', fontWeight: 800 }}>
+                        {nextSub ? `${formatNumber(nextSub.id)} - ${nextSub.name}` : 'لا يوجد تالي'}
+                      </div>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 text-slate-600" />
+                  </button>
+                </div>
+
+                {/* 3. جدول فترات الجباية الأربعة أعمدة (مطابق لمحاسبة الكاتب والمحصل) */}
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '14px',
+                    border: '1px solid #bae6fd',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                  }}
+                >
                   {/* رأس جدول الديون */}
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '22% 26% 26% 26%',
-                      backgroundColor: '#1e293b',
+                      gridTemplateColumns: '25% 25% 25% 25%',
+                      backgroundColor: '#0f172a',
                       color: '#ffffff',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 800,
                       textAlign: 'center',
-                      padding: '10px 0'
+                      padding: '10px 4px'
                     }}
                   >
-                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>الديون السابقة</div>
-                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>المجموع</div>
-                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}>المدفوع</div>
-                    <div>المجموع الكلي</div>
+                    <div style={{ padding: '0 4px' }}>الديون السابقة</div>
+                    <div style={{ padding: '0 4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>المجموع</div>
+                    <div style={{ padding: '0 4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>المدفوع</div>
+                    <div style={{ padding: '0 4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>المجموع الكلي</div>
                   </div>
 
-                  {/* صفوف الفترات الست */}
-                  {subBilling.rows.map((row, idx) => (
-                    <div
-                      key={row.periodLabel}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '22% 26% 26% 26%',
-                        borderBottom: idx === 5 ? 'none' : '1px solid #e2e8f0',
-                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
-                        padding: '6px 4px',
-                        alignItems: 'center',
-                        fontSize: '0.9rem',
-                        fontWeight: 700
-                      }}
-                    >
-                      {/* 1. الديون السابقة */}
-                      <div style={{ padding: '0 4px' }}>
-                        <div
-                          style={{
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '6px 4px',
-                            textAlign: 'center',
-                            fontWeight: 800,
-                            color: '#1e293b',
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          {formatInputDisplay(row.old) || '0'}
+                  {/* صفوف الفترات الست (قراءة فقط بدون إمكانية التعديل للمدير) */}
+                  {subBilling.rows.map((row, idx) => {
+                    const isCurrentPeriod = viewingSubscriberYear === 2026 && idx === 1 // الفترة الحالية
+                    return (
+                      <div
+                        key={row.periodLabel}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '25% 25% 25% 25%',
+                          borderBottom: idx === 5 ? 'none' : '1px solid #e0f2fe',
+                          backgroundColor: isCurrentPeriod
+                            ? '#fef2f2'
+                            : (idx % 2 === 0 ? '#ffffff' : 'rgba(240, 249, 255, 0.4)'),
+                          padding: '6px 4px',
+                          alignItems: 'center',
+                          borderRight: isCurrentPeriod ? '4px solid #ef4444' : 'none'
+                        }}
+                      >
+                        {/* 1. الديون السابقة */}
+                        <div style={{ padding: '0 4px' }}>
+                          <input
+                            readOnly
+                            value={formatInputDisplay(row.old) || '0'}
+                            style={{
+                              width: '100%',
+                              height: '32px',
+                              fontSize: '13.5px',
+                              padding: '0 2px',
+                              borderRadius: '8px',
+                              border: isCurrentPeriod ? '1px solid #fecaca' : '1px solid #e0f2fe',
+                              backgroundColor: '#ffffff',
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              color: isCurrentPeriod ? '#ef4444' : '#1e293b',
+                              outline: 'none',
+                              cursor: 'default',
+                              boxSizing: 'border-box'
+                            }}
+                          />
                         </div>
-                      </div>
 
-                      {/* 2. المجموع */}
-                      <div style={{ padding: '0 4px' }}>
-                        <div
-                          style={{
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '6px 4px',
-                            textAlign: 'center',
-                            fontWeight: 800,
-                            color: '#1e293b',
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          {formatInputDisplay(row.total) || '0'}
+                        {/* 2. المجموع */}
+                        <div style={{ padding: '0 4px', borderRight: '1px solid #f0f9ff' }}>
+                          <input
+                            readOnly
+                            value={formatInputDisplay(row.total) || '0'}
+                            style={{
+                              width: '100%',
+                              height: '32px',
+                              fontSize: '13.5px',
+                              padding: '0 2px',
+                              borderRadius: '8px',
+                              border: '1px solid #e0f2fe',
+                              backgroundColor: '#ffffff',
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              color: '#1e293b',
+                              outline: 'none',
+                              cursor: 'default',
+                              boxSizing: 'border-box'
+                            }}
+                          />
                         </div>
-                      </div>
 
-                      {/* 3. المدفوع */}
-                      <div style={{ padding: '0 4px' }}>
-                        <div
-                          style={{
-                            backgroundColor: row.paid > 0 ? '#ecfdf5' : '#ffffff',
-                            border: row.paid > 0 ? '1px solid #86efac' : '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '6px 4px',
-                            textAlign: 'center',
-                            fontWeight: 800,
-                            color: row.paid > 0 ? '#15803d' : '#94a3b8',
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          {row.paid > 0 ? formatInputDisplay(row.paid) : '0'}
+                        {/* 3. المدفوع */}
+                        <div style={{ padding: '0 4px', borderRight: '1px solid #f0f9ff' }}>
+                          <input
+                            readOnly
+                            value={row.paid > 0 ? formatInputDisplay(row.paid) : '0'}
+                            style={{
+                              width: '100%',
+                              height: '32px',
+                              fontSize: '13.5px',
+                              padding: '0 2px',
+                              borderRadius: '8px',
+                              border: row.paid > 0 ? '1px solid #86efac' : '1px solid #e0f2fe',
+                              backgroundColor: row.paid > 0 ? '#ecfdf5' : '#ffffff',
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              color: row.paid > 0 ? '#15803d' : '#94a3b8',
+                              outline: 'none',
+                              cursor: 'default',
+                              boxSizing: 'border-box'
+                            }}
+                          />
                         </div>
-                      </div>
 
-                      {/* 4. المجموع الكلي / المتبقي */}
-                      <div style={{ padding: '0 4px' }}>
-                        <div
-                          style={{
-                            backgroundColor: row.remaining > 0 ? '#fff1f2' : '#f8fafc',
-                            border: row.remaining > 0 ? '1px solid #fecdd3' : '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '6px 4px',
-                            textAlign: 'center',
-                            fontWeight: 800,
-                            color: row.remaining > 0 ? '#be123c' : '#475569',
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          {formatInputDisplay(row.remaining) || '0'}
+                        {/* 4. المجموع الكلي */}
+                        <div style={{ padding: '0 4px', borderRight: '1px solid #f0f9ff' }}>
+                          <input
+                            readOnly
+                            value={formatInputDisplay(row.remaining) || '0'}
+                            style={{
+                              width: '100%',
+                              height: '32px',
+                              fontSize: '13.5px',
+                              padding: '0 2px',
+                              borderRadius: '8px',
+                              border: row.remaining === 0 ? '1px solid #a7f3d0' : (row.remaining < 0 ? '1px solid #fecaca' : '1px solid #0f172a'),
+                              backgroundColor: row.remaining === 0
+                                ? '#ecfdf5'
+                                : (row.remaining < 0
+                                ? '#fef2f2'
+                                : (isCurrentPeriod ? '#ffffff' : '#0f172a')),
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              color: row.remaining === 0
+                                ? '#047857'
+                                : (row.remaining < 0
+                                ? '#b91c1c'
+                                : (isCurrentPeriod ? '#ef4444' : '#ffffff')),
+                              outline: 'none',
+                              cursor: 'default',
+                              boxSizing: 'border-box'
+                            }}
+                          />
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
-                {/* شريط الإجمالي والحسابات النهائية */}
-                <div style={{ marginTop: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '12px 18px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                {/* مفتاح الألوان التوضيحي */}
+                <div style={{ marginTop: '10px', display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '0.75rem', color: '#64748b', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></span> مسدد
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0f172a' }}></span> متبقي
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }}></span> الفترة الحالية
+                  </span>
+                </div>
+
+                {/* ملخص الدين والتاريخ وأيام التأخير */}
+                {debtSummary && debtSummary.months > 0 && (
+                  <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 700 }}>
+                      <span>مدة الدين التراكمي: </span>
+                      <strong style={{ color: '#0f172a' }}>{debtSummary.durationText}</strong>
+                    </div>
+                    {debtSummary.startPeriod && (
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                        يبدأ من: <strong style={{ color: '#0284c7' }}>{debtSummary.startPeriod} ({debtSummary.startYear})</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* شريط الإجمالي وصافي المبلغ المطلوب حالياً */}
+                <div
+                  style={{
+                    marginTop: '12px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #bae6fd',
+                    padding: '12px 18px',
+                    borderRadius: '14px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px'
+                  }}
+                >
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>استحقاق الفترة الواحدة: </span>
-                    <span style={{ fontSize: '0.85rem', color: '#0056b3', fontWeight: 800 }}>{(subBilling.due || 24600).toLocaleString('ar-IQ')} د.ع</span>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>استحقاق الدورة: </span>
+                    <strong style={{ fontSize: '0.9rem', color: '#0284c7' }}>{(subBilling.due || 24600).toLocaleString('ar-IQ')} د.ع</strong>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: 800 }}>صافي المبلغ المطلوب حالياً:</span>
+                    <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 800 }}>صافي المبلغ المطلوب حالياً:</span>
                     <span
                       style={{
                         fontSize: '1.25rem',
@@ -3672,7 +4106,7 @@ export default function DirectorDashboard({
                         color: subBilling.totalRemaining > 0 ? '#dc2626' : '#16a34a',
                         backgroundColor: subBilling.totalRemaining > 0 ? '#fee2e2' : '#dcfce7',
                         padding: '4px 14px',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         border: subBilling.totalRemaining > 0 ? '1px solid #fca5a5' : '1px solid #bbf7d0'
                       }}
                     >
@@ -3682,25 +4116,142 @@ export default function DirectorDashboard({
                 </div>
               </div>
 
-              {/* زر الإغلاق */}
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              {/* 4. أسفل البطاقة (Footer) */}
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderTop: '1px solid #e0f2fe',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                  🔒 شاشة رقابة ومعاينة للمدير العام (قراءة فقط - لحماية السجلات من أي تعديل غير مصرح به)
+                </div>
+
                 <button
-                  onClick={() => setViewingSubscriber(null)}
+                  onClick={() => {
+                    setViewingSubscriber(null)
+                    setShowViewingSubscriberContact(false)
+                  }}
                   style={{
-                    background: '#1e293b',
-                    color: '#fff',
+                    backgroundColor: '#0f172a',
+                    color: '#ffffff',
                     border: 'none',
-                    padding: '9px 24px',
-                    borderRadius: '8px',
+                    padding: '8px 24px',
+                    borderRadius: '10px',
                     cursor: 'pointer',
                     fontWeight: 800,
-                    fontSize: '0.9rem'
+                    fontSize: '0.88rem'
                   }}
                 >
                   إغلاق المعاينة
                 </button>
               </div>
             </div>
+
+            {/* نافذة التواصل والموقع والصور المنبثقة للمشترك */}
+            {showViewingSubscriberContact && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 120,
+                  padding: '16px'
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '16px',
+                    width: '460px',
+                    maxWidth: '100%',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.25)',
+                    border: '1px solid #e2e8f0',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1e293b' }}>
+                      تفاصيل التواصل والموقع والصور
+                    </h4>
+                    <button
+                      onClick={() => setShowViewingSubscriberContact(false)}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '3px' }}>رقم الهاتف:</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#0284c7' }} dir="ltr">{viewingSubscriber.phone || 'غير مسجل'}</strong>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '3px' }}>العنوان التفصيلي:</span>
+                      <span style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 700 }}>{viewingSubscriber.detailedAddress || 'غير محدد'}</span>
+                    </div>
+
+                    {viewingSubscriber.location && (
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '3px' }}>الموقع الجغرافي:</span>
+                        <a
+                          href={viewingSubscriber.location.link || `https://www.google.com/maps?q=${viewingSubscriber.location.lat},${viewingSubscriber.location.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#0284c7', fontSize: '0.85rem', fontWeight: 800, textDecoration: 'underline' }}
+                        >
+                          فتح الموقع على خرائط جوجل ↗
+                        </a>
+                      </div>
+                    )}
+
+                    {viewingSubscriber.doorImage && (
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '6px' }}>صورة الباب / العداد:</span>
+                        <div style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0', maxHeight: '200px' }}>
+                          <img
+                            src={viewingSubscriber.doorImage}
+                            alt="صورة المشترك"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ padding: '12px 18px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setShowViewingSubscriberContact(false)}
+                      style={{
+                        backgroundColor: '#f1f5f9',
+                        color: '#334155',
+                        border: '1px solid #cbd5e1',
+                        padding: '6px 16px',
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      إغلاق
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )
       })()}

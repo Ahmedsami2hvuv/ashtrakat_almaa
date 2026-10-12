@@ -105,7 +105,7 @@ async function saveToCloud(data: Record<string, unknown>): Promise<void> {
 }
 
 // السنوات المطلوبة حصراً
-const YEARS = [2026, 2027, 2028]
+export const YEARS = [2026, 2027, 2028]
 export const PERIODS = ['1 و 2', '3 و 4', '5 و 6', '7 و 8', '9 و 10', '11 و 12']
 const RESIDENTIAL_METERS: MeterType[] = ['3 متر', '4 متر']
 const COMMERCIAL_METERS: MeterType[] = Array.from({ length: 70 }, (_, index) => `${index + 1} متر`)
@@ -133,7 +133,7 @@ const STATUS_OPTIONS = [
   'متجاوز'
 ] as const
 
-const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+export const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
   'ممتنع': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
   'مؤجر': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', dot: 'bg-sky-500' },
   'مؤجر لا يعلم بالتفاصيل': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', dot: 'bg-amber-800' },
@@ -189,7 +189,7 @@ const DEFAULT_PRICING: Pricing = {
   تجاري: {}
 }
 
-function formatNumber(n: number | string | null | undefined): string {
+export function formatNumber(n: number | string | null | undefined): string {
   if (n === null || n === undefined || isNaN(Number(n))) return '0'
   return Number(n).toLocaleString('en-US')
 }
@@ -462,7 +462,7 @@ export function applyAutoStatuses(
 
 
 // حساب ملخص مدة وتاريخ الدين المتراكم للمشترك
-function calculateDebtSummary(
+export function calculateDebtSummary(
   subId: number,
   billingRecords: BillingRecords,
   subscribers: Subscriber[],
