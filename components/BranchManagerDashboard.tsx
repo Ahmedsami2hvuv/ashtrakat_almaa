@@ -2767,71 +2767,97 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
-      {/* نافذة إضافة / تعديل محصل - تصميم متناسق ومدمج مع 4 مناطق في السطر */}
+      {/* نافذة إضافة / تعديل محصل - تصميم مصغر مدمج ومحكوم مع 4 مناطق في السطر دائماً */}
       {showCollectorModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-          <div className="bg-white rounded-3xl max-w-4xl w-full h-[88vh] max-h-[88vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95">
-            {/* الرأس - مثبت */}
-            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
-                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px'
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '750px',
+              height: '75vh',
+              maxHeight: '75vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #cbd5e1'
+            }}
+          >
+            {/* الرأس - مثبت ومصغر */}
+            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc' }}>
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                  <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900">
-                    {editingCollector ? 'تعديل بيانات المحصل ومناطقه' : 'إضافة محصل جديد'}
+                  <h3 className="text-sm font-black text-slate-900">
+                    {editingCollector ? 'تعديل بيانات ومناطق المحصل' : 'إضافة محصل جديد'}
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-bold">تحديد الصلاحيات والمناطق المخصصة لهذا المحصل</p>
+                  <p className="text-[10px] text-slate-500 font-bold">حدد المناطق المخصصة لهذا المحصل</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCollectorModal(false)}
-                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
+                className="p-1 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-lg transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* الحقول العلوية السريعة - مثبتة أو خفيفة */}
-            <div className="shrink-0 p-3 sm:p-4 pb-2 space-y-2.5 bg-white border-b border-slate-100">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* الحقول العلوية وأدوات البحث - مثبتة ومدمجة */}
+            <div style={{ flexShrink: 0, padding: '10px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">الاسم الثلاثي:</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">اسم المحصل:</label>
                   <input
                     type="text"
                     value={collectorName}
                     onChange={(e) => setCollectorName(e.target.value)}
-                    placeholder="اسم المحصل..."
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="الاسم الثلاثي..."
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رقم الهاتف:</label>
                   <input
                     type="text"
                     value={collectorPhone}
                     onChange={(e) => setCollectorPhone(e.target.value)}
                     placeholder="07xxxxxxxxx"
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right font-mono"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right font-mono"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-slate-700">
                   <input
                     type="checkbox"
                     checked={collectorCanEdit}
                     onChange={(e) => setCollectorCanEdit(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 rounded bg-white border-slate-300"
+                    className="w-3.5 h-3.5 text-blue-600 rounded bg-white border-slate-300"
                   />
-                  <span>السماح للمحصل بالتعديل على المشتركين والديون</span>
+                  <span>السماح للمحصل بالتعديل</span>
                 </label>
 
-                <div className="flex items-center gap-2 text-[11px] font-bold">
-                  <span className="text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200 font-mono">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                  <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-mono">
                     المحدد: {selectedCollectorAreas.length} منطقة
                   </span>
                   <button
@@ -2842,14 +2868,14 @@ export default function BranchManagerDashboard({
                         .map(a => a.id)
                       setSelectedCollectorAreas(Array.from(new Set([...selectedCollectorAreas, ...filteredIds])))
                     }}
-                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
+                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition"
                   >
                     تحديد المعروض
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedCollectorAreas([])}
-                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
+                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded transition"
                   >
                     إلغاء التحديد
                   </button>
@@ -2857,21 +2883,35 @@ export default function BranchManagerDashboard({
               </div>
 
               {/* شريط البحث المباشر */}
-              <div className="relative pt-1">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={collectorAreaSearch}
                   onChange={(e) => setCollectorAreaSearch(e.target.value)}
-                  placeholder="ابحث عن اسم أي منطقة لتحديدها بسرعة..."
-                  className="w-full pr-8 pl-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="ابحث عن اسم منطقة..."
+                  className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
             </div>
 
-            {/* صندوق شبكة المناطق التفاعلية - يتمرر فقط داخل هذا القسم بدون تمدد */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-3 bg-slate-50/80">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+            {/* صندوق شبكة المناطق: 4 مناطق في السطر دائماً ومقاس مصغر */}
+            <div 
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '10px 12px',
+                backgroundColor: '#f8fafc'
+              }}
+            >
+              <div 
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  gap: '6px'
+                }}
+              >
                 {(branch.areas || [])
                   .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
                   .map(area => {
@@ -2879,10 +2919,10 @@ export default function BranchManagerDashboard({
                     return (
                       <label
                         key={area.id}
-                        className={`flex items-center gap-1.5 p-2 rounded-xl cursor-pointer transition border text-xs select-none ${
+                        className={`flex items-center gap-1.5 p-1.5 rounded-lg cursor-pointer transition border select-none text-[11px] ${
                           isChecked
                             ? 'bg-blue-50 border-blue-400 text-blue-950 font-black shadow-2xs'
-                            : 'bg-white hover:bg-slate-100 border-slate-200/90 text-slate-700 font-bold'
+                            : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 font-bold'
                         }`}
                       >
                         <input
@@ -2895,40 +2935,51 @@ export default function BranchManagerDashboard({
                               setSelectedCollectorAreas(selectedCollectorAreas.filter(id => id !== area.id))
                             }
                           }}
-                          className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 cursor-pointer shrink-0"
+                          className="w-3 h-3 rounded text-blue-600 border-slate-300 cursor-pointer shrink-0"
                         />
-                        <span className="truncate text-[11px]" title={area.name}>{area.name}</span>
+                        <span className="truncate" title={area.name}>{area.name}</span>
                       </label>
                     )
                   })}
               </div>
               {(branch.areas || []).length === 0 && (
-                <div className="text-center py-10 text-slate-400 font-bold text-xs">
+                <div className="text-center py-8 text-slate-400 font-bold text-xs">
                   لا توجد مناطق مضافة في هذا الفرع بعد
                 </div>
               )}
             </div>
 
-            {/* أزرار الإجراءات في الأسفل مثبتة دائماً وظاهرة أمام المستخدم */}
-            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-2">
+            {/* أزرار الإجراءات في الأسفل مثبتة دائماً وظاهرة بحجم مدمج */}
+            <div 
+              style={{
+                flexShrink: 0,
+                padding: '10px 16px',
+                borderTop: '1px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px'
+              }}
+            >
               <div className="text-xs font-black text-slate-700">
-                المناطق المحددة: <span className="text-blue-700 font-mono font-black text-sm">{selectedCollectorAreas.length}</span> منطقة
+                المحدد: <span className="text-blue-700 font-mono font-black text-xs">{selectedCollectorAreas.length}</span> منطقة
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowCollectorModal(false)}
-                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs"
+                  className="px-3.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-100 transition shadow-2xs"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveCollector}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl transition shadow-md flex items-center gap-1.5"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition shadow-sm flex items-center gap-1.5"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>حفظ بيانات المحصل</span>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>حفظ المحصل</span>
                 </button>
               </div>
             </div>
@@ -2936,68 +2987,92 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
-      {/* نافذة إضافة / تعديل كاتب - تصميم متناسق ومدمج مع 4 مناطق في السطر */}
-      {/* نافذة إضافة / تعديل كاتب - تصميم متناسق ومدمج مع 4 مناطق في السطر وبارتفاع محكوم */}
+      {/* نافذة إضافة / تعديل كاتب - تصميم مصغر مدمج ومحكوم مع 4 مناطق في السطر دائماً */}
       {showWriterModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-          <div className="bg-white rounded-3xl max-w-4xl w-full h-[88vh] max-h-[88vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95">
-            {/* الرأس - مثبت */}
-            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
-                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px'
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '750px',
+              height: '75vh',
+              maxHeight: '75vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #cbd5e1'
+            }}
+          >
+            {/* الرأس - مثبت ومصغر */}
+            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc' }} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                  <BookOpen className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900">
-                    {editingWriter ? 'تعديل بيانات الكاتب' : 'إضافة كاتب جديد'}
+                  <h3 className="text-sm font-black text-slate-900">
+                    {editingWriter ? 'تعديل بيانات ومناطق الكاتب' : 'إضافة كاتب جديد'}
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-bold">تحديد المناطق المخصصة للكاتب</p>
+                  <p className="text-[10px] text-slate-500 font-bold">تحديد المناطق المخصصة للكاتب</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowWriterModal(false)}
-                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
+                className="p-1 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-lg transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* الحقول العلوية وأدوات البحث - مثبتة بدون تمدد */}
-            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 bg-white">
-              {/* حقول اسم الكاتب ورقم الهاتف في سطر واحد لتوفير المساحة */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* الحقول العلوية وأدوات البحث - مثبتة ومدمجة */}
+            <div style={{ flexShrink: 0, padding: '10px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">اسم الكاتب:</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">اسم الكاتب:</label>
                   <input
                     type="text"
                     value={writerName}
                     onChange={(e) => setWriterName(e.target.value)}
-                    placeholder="اسم الكاتب..."
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                    placeholder="الاسم..."
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رقم الهاتف:</label>
                   <input
                     type="text"
                     value={writerPhone}
                     onChange={(e) => setWriterPhone(e.target.value)}
                     placeholder="07xxxxxxxxx"
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none dir-ltr text-right font-mono"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none dir-ltr text-right font-mono"
                   />
                 </div>
               </div>
 
               {/* شريط الإجراءات والبحث */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <span className="text-xs font-black text-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
+                <span className="text-[11px] font-bold text-slate-700">
                   حدد المناطق المسندة للكاتب:
                 </span>
 
-                <div className="flex items-center gap-2 text-[11px] font-bold">
-                  <span className="text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 font-mono">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                  <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono">
                     المحدد: {selectedWriterAreas.length} منطقة
                   </span>
                   <button
@@ -3008,14 +3083,14 @@ export default function BranchManagerDashboard({
                         .map(a => a.id)
                       setSelectedWriterAreas(Array.from(new Set([...selectedWriterAreas, ...filteredIds])))
                     }}
-                    className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg transition"
+                    className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded transition"
                   >
                     تحديد المعروض
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedWriterAreas([])}
-                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
+                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded transition"
                   >
                     إلغاء التحديد
                   </button>
@@ -3023,21 +3098,35 @@ export default function BranchManagerDashboard({
               </div>
 
               {/* شريط البحث المباشر */}
-              <div className="relative pt-1">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={writerAreaSearch}
                   onChange={(e) => setWriterAreaSearch(e.target.value)}
-                  placeholder="ابحث عن اسم أي منطقة..."
-                  className="w-full pr-8 pl-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                  placeholder="ابحث عن اسم منطقة..."
+                  className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
                 />
               </div>
             </div>
 
-            {/* صندوق شبكة المناطق: كل 4 مناطق جنب بعض وقابل للتمرير داخلياً فقط */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-3 bg-slate-50/80">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+            {/* صندوق شبكة المناطق: 4 مناطق في السطر دائماً ومقاس مصغر */}
+            <div 
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '10px 12px',
+                backgroundColor: '#f8fafc'
+              }}
+            >
+              <div 
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  gap: '6px'
+                }}
+              >
                 {(branch.areas || [])
                   .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
                   .map(area => {
@@ -3045,10 +3134,10 @@ export default function BranchManagerDashboard({
                     return (
                       <label
                         key={area.id}
-                        className={`flex items-center gap-1.5 p-2 rounded-xl cursor-pointer transition border text-xs select-none ${
+                        className={`flex items-center gap-1.5 p-1.5 rounded-lg cursor-pointer transition border select-none text-[11px] ${
                           isChecked
                             ? 'bg-amber-50 border-amber-400 text-amber-950 font-black shadow-2xs'
-                            : 'bg-white hover:bg-slate-100 border-slate-200/90 text-slate-700 font-bold'
+                            : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 font-bold'
                         }`}
                       >
                         <input
@@ -3061,40 +3150,51 @@ export default function BranchManagerDashboard({
                               setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
                             }
                           }}
-                          className="w-3.5 h-3.5 rounded text-amber-600 border-slate-300 cursor-pointer shrink-0"
+                          className="w-3 h-3 rounded text-amber-600 border-slate-300 cursor-pointer shrink-0"
                         />
-                        <span className="truncate text-[11px]" title={area.name}>{area.name}</span>
+                        <span className="truncate" title={area.name}>{area.name}</span>
                       </label>
                     )
                   })}
               </div>
               {(branch.areas || []).length === 0 && (
-                <div className="text-center py-10 text-slate-400 font-bold text-xs">
+                <div className="text-center py-8 text-slate-400 font-bold text-xs">
                   لا توجد مناطق مضافة في هذا الفرع بعد
                 </div>
               )}
             </div>
 
-            {/* أزرار الإجراءات في الأسفل مثبتة دائماً ومرئية */}
-            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-2">
+            {/* أزرار الإجراءات في الأسفل مثبتة ومصغرة */}
+            <div 
+              style={{
+                flexShrink: 0,
+                padding: '10px 16px',
+                borderTop: '1px solid #e2e8f0',
+                backgroundColor: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px'
+              }}
+            >
               <div className="text-xs font-black text-slate-700">
-                المناطق المحددة: <span className="text-amber-700 font-mono font-black text-sm">{selectedWriterAreas.length}</span> منطقة
+                المحدد: <span className="text-amber-700 font-mono font-black text-xs">{selectedWriterAreas.length}</span> منطقة
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowWriterModal(false)}
-                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs"
+                  className="px-3.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-100 transition shadow-2xs"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveWriter}
-                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl transition shadow-md flex items-center gap-1.5"
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-lg transition shadow-sm flex items-center gap-1.5"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>حفظ بيانات الكاتب</span>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>حفظ الكاتب</span>
                 </button>
               </div>
             </div>
