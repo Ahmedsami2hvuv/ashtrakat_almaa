@@ -273,10 +273,10 @@ export default function ConsignmentAiScannerModal({
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '24px',
-          width: '100%',
-          maxWidth: scannedResult ? '1100px' : '650px',
-          height: '88vh',
-          maxHeight: '88vh',
+          width: '95vw',
+          maxWidth: scannedResult ? '1250px' : '1020px',
+          height: '90vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -288,7 +288,7 @@ export default function ConsignmentAiScannerModal({
         <div
           style={{
             flexShrink: 0,
-            padding: '14px 20px',
+            padding: '16px 24px',
             borderBottom: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
@@ -296,12 +296,12 @@ export default function ConsignmentAiScannerModal({
             backgroundColor: '#f8fafc'
           }}
         >
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-gradient-to-tr from-purple-600 to-blue-600 text-white rounded-xl shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-tr from-purple-600 to-blue-600 text-white rounded-xl shadow-md">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 leading-tight">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
                 استيراد وقراءة الإرسالية من الصورة بالذكاء الاصطناعي
               </h3>
               <p className="text-xs text-slate-500 font-bold leading-tight mt-0.5">
@@ -313,90 +313,160 @@ export default function ConsignmentAiScannerModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
+            className="p-2 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-xl transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* ===================== المحتوى الداخلي ===================== */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px' }} className="space-y-4">
-          {/* الخطوة 1: اختيار الصورة (إذا لم يتم الفحص بعد أو لإعادة المسح) */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px' }} className="space-y-4">
+          {/* الخطوة 1: اختيار الصورة ومعاينتها بتصميم عريض ومريح */}
           {!scannedResult && (
-            <div className="space-y-4 max-w-xl mx-auto py-4">
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 select-none ${
-                  imagePreview
-                    ? 'border-blue-400 bg-blue-50/30'
-                    : 'border-slate-300 hover:border-blue-400 bg-slate-50 hover:bg-blue-50/20'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+            <div>
+              {!imagePreview ? (
+                /* شاشة رفع الصورة الأولية - واسعة وواضحة */
+                <div className="max-w-2xl mx-auto py-8">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/70 hover:bg-blue-50/30 rounded-3xl p-10 text-center cursor-pointer transition flex flex-col items-center justify-center gap-4 select-none shadow-xs group"
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
 
-                {imagePreview ? (
-                  <div className="space-y-3 w-full">
-                    <div className="relative max-h-64 mx-auto overflow-hidden rounded-xl border border-slate-200 bg-white">
-                      <img
-                        src={imagePreview}
-                        alt="معاينة الإرسالية"
-                        className="max-h-64 w-auto mx-auto object-contain"
-                      />
+                    <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-105 transition shadow-sm">
+                      <Upload className="w-8 h-8" />
                     </div>
-                    <p className="text-xs font-bold text-blue-700">
-                      انقر لتغيير الصورة (تم اختيار: {selectedFile?.name})
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                      <Upload className="w-7 h-7" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-800">
+
+                    <div className="space-y-1">
+                      <h4 className="text-base font-black text-slate-800">
                         انقر لاختيار أو التقاط صورة استمارة الإرسالية
                       </h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1">
-                        يدعم صور الهاتف والكاميرا واستمارات A4 المسحوبة بالسكنر
+                      <p className="text-xs text-slate-500 font-bold">
+                        يدعم صور الهاتف، الكاميرا المباشرة، واستمارات A4 المسحوبة بجهاز السكنر
                       </p>
                     </div>
-                  </>
-                )}
-              </div>
 
-              {analysisError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{analysisError}</span>
+                    <span className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>تحديد ملف الصورة</span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* شاشة معاينة الصورة المختارة - تقسيم عريض من عمودين متناسقين */
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                  {/* العمود الأيمن: معاينة صورة الإرسالية بكامل وضوحها دون قص */}
+                  <div className="lg:col-span-7 bg-slate-900 rounded-2xl p-2.5 border border-slate-700 shadow-md flex flex-col">
+                    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-slate-300 font-bold border-b border-slate-800 mb-2">
+                      <span className="truncate max-w-[220px]">
+                        {selectedFile?.name || 'صورة الإرسالية'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer"
+                      >
+                        تغيير الصورة
+                      </button>
+                    </div>
+
+                    <div className="relative w-full h-[48vh] sm:h-[54vh] flex items-center justify-center bg-slate-950/60 rounded-xl overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="معاينة ورقة الإرسالية"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* العمود الأيسر: بطاقة الإجراءات والذكاء الاصطناعي */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3.5">
+                      <div className="flex items-center gap-2.5 text-purple-700">
+                        <Sparkles className="w-5 h-5" />
+                        <h4 className="font-black text-sm text-slate-900">
+                          جاهز للفحص بالذكاء الاصطناعي
+                        </h4>
+                      </div>
+
+                      <p className="text-xs text-slate-600 leading-relaxed font-bold">
+                        يقوم النظام الذكي بمسح ورقة الإرسالية واستخراج:
+                      </p>
+
+                      <ul className="text-xs font-bold text-slate-700 space-y-2 pr-1">
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>رقم تسلسل الإرسالية الرسمي وتاريخها</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>اسم الجابي / المحصل المكتوب بالورقة</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>جميع أسطر المشتركين وأرقام وصولاتهم والمبالغ</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>توزيع حصص الماء والبلدية ومطابقة المشتركين تلقائياً</span>
+                        </li>
+                      </ul>
+
+                      {analysisError && (
+                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>{analysisError}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          disabled={isAnalyzing}
+                          onClick={handleStartScan}
+                          className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl text-sm font-black transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-98"
+                        >
+                          {isAnalyzing ? (
+                            <>
+                              <RefreshCw className="w-5 h-5 animate-spin" />
+                              <span>جارِ قراءة وفحص الورقة بالذكاء الاصطناعي...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-5 h-5" />
+                              <span>بدء قراءة وفحص الإرسالية الآن</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="text-center pt-1">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+                        >
+                          اختيار ورقة إرسالية أخرى
+                        </button>
+                      </div>
+                    </div>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
               )}
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  disabled={!imagePreview || isAnalyzing}
-                  onClick={handleStartScan}
-                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl text-sm font-black transition shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>جارِ قراءة وفحص الإرسالية بالذكاء الاصطناعي...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>بدء الفحص واستخراج البيانات</span>
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           )}
 
@@ -655,22 +725,44 @@ export default function ConsignmentAiScannerModal({
         <div
           style={{
             flexShrink: 0,
-            padding: '12px 20px',
+            padding: '14px 24px',
             borderTop: '1px solid #e2e8f0',
             backgroundColor: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '10px'
+            gap: '12px'
           }}
         >
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
           >
             إغلاق
           </button>
+
+          {/* إذا كانت هناك صورة مختارة ولم يتم الفحص بعد، يظهر زر البدء في الشريط السفلي الثابت أيضاً */}
+          {!scannedResult && imagePreview && (
+            <button
+              type="button"
+              disabled={isAnalyzing}
+              onClick={handleStartScan}
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl text-xs sm:text-sm font-black transition shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
+            >
+              {isAnalyzing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>جارِ قراءة وفحص الإرسالية...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>بدء قراءة وفحص الإرسالية الآن</span>
+                </>
+              )}
+            </button>
+          )}
 
           {scannedResult && (
             <div className="flex items-center gap-2">
