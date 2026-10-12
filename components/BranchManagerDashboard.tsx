@@ -4159,19 +4159,28 @@ export default function BranchManagerDashboard({
         >
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
             {/* 1. رأس النافذة */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white flex items-center justify-between shrink-0">
+            <div
+              style={{ backgroundColor: '#1e1b4b', color: '#ffffff' }}
+              className="p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md"
+            >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-inner">
-                  <BarChart3 className="w-6 h-6" />
+                <div
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.25)' }}
+                  className="w-12 h-12 rounded-2xl border flex items-center justify-center text-white shadow-inner"
+                >
+                  <BarChart3 className="w-6 h-6 text-purple-300" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-black">{statsSelectedWriter.name}</h3>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-white/20 text-white border border-white/25">
+                    <h3 className="text-base sm:text-lg font-black text-white">{statsSelectedWriter.name}</h3>
+                    <span
+                      style={{ backgroundColor: '#4338ca', color: '#ffffff', borderColor: '#6366f1' }}
+                      className="px-2.5 py-0.5 rounded-md text-[11px] font-black border"
+                    >
                       كاتب معتمد
                     </span>
                   </div>
-                  <p className="text-xs text-purple-200 mt-0.5 flex items-center gap-2">
+                  <p className="text-xs text-purple-200 mt-1 flex items-center gap-2 font-bold">
                     <span>الهاتف: {statsSelectedWriter.phone}</span>
                     <span>•</span>
                     <span>توقيت العراق الرسمي (Asia/Baghdad)</span>
@@ -4184,16 +4193,18 @@ export default function BranchManagerDashboard({
                   type="button"
                   onClick={handleRefreshWriterStats}
                   disabled={isLoadingWriterStats}
-                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition border border-white/15 flex items-center gap-1.5 text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.25)' }}
+                  className="p-2 hover:bg-white/25 text-white rounded-xl transition border flex items-center gap-1.5 text-xs font-bold disabled:opacity-50 cursor-pointer"
                   title="تحديث البيانات لحظياً من السيرفر"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoadingWriterStats ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">تحديث</span>
+                  <span className="hidden sm:inline font-black">تحديث</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowWriterStatsModal(false)}
-                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition border border-white/15 cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.25)' }}
+                  className="p-2 hover:bg-white/25 text-white rounded-xl transition border cursor-pointer"
                   title="إغلاق"
                 >
                   <X className="w-5 h-5" />
@@ -4202,16 +4213,23 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* 2. شريط التبويبات الزمنية (اليوم، هذا الشهر، هذه السنة، السجل الشامل) */}
-            <div className="px-4 sm:px-6 pt-3 pb-2 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-              <div className="flex items-center gap-1 bg-slate-200/80 p-1 rounded-2xl text-xs font-bold">
+            <div
+              style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1' }}
+              className="px-4 sm:px-6 pt-3 pb-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0"
+            >
+              <div
+                style={{ backgroundColor: '#e2e8f0', borderColor: '#cbd5e1' }}
+                className="flex items-center gap-1 p-1 rounded-2xl text-xs font-bold border"
+              >
                 <button
                   type="button"
                   onClick={() => setStatsTimeTab('today')}
-                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                  style={
                     statsTimeTab === 'today'
-                      ? 'bg-purple-600 text-white shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
+                      ? { backgroundColor: '#4f46e5', color: '#ffffff' }
+                      : { backgroundColor: '#ffffff', color: '#1e293b' }
+                  }
+                  className="px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 font-black shadow-2xs"
                 >
                   <Clock className="w-3.5 h-3.5" />
                   <span>أعمال اليوم</span>
@@ -4219,11 +4237,12 @@ export default function BranchManagerDashboard({
                 <button
                   type="button"
                   onClick={() => setStatsTimeTab('month')}
-                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                  style={
                     statsTimeTab === 'month'
-                      ? 'bg-purple-600 text-white shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
+                      ? { backgroundColor: '#4f46e5', color: '#ffffff' }
+                      : { backgroundColor: '#ffffff', color: '#1e293b' }
+                  }
+                  className="px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 font-black shadow-2xs"
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   <span>هذا الشهر</span>
@@ -4231,11 +4250,12 @@ export default function BranchManagerDashboard({
                 <button
                   type="button"
                   onClick={() => setStatsTimeTab('year')}
-                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                  style={
                     statsTimeTab === 'year'
-                      ? 'bg-purple-600 text-white shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
+                      ? { backgroundColor: '#4f46e5', color: '#ffffff' }
+                      : { backgroundColor: '#ffffff', color: '#1e293b' }
+                  }
+                  className="px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 font-black shadow-2xs"
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   <span>هذه السنة</span>
@@ -4243,11 +4263,12 @@ export default function BranchManagerDashboard({
                 <button
                   type="button"
                   onClick={() => setStatsTimeTab('all')}
-                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                  style={
                     statsTimeTab === 'all'
-                      ? 'bg-purple-600 text-white shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
+                      ? { backgroundColor: '#4f46e5', color: '#ffffff' }
+                      : { backgroundColor: '#ffffff', color: '#1e293b' }
+                  }
+                  className="px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 font-black shadow-2xs"
                 >
                   <Layers className="w-3.5 h-3.5" />
                   <span>السجل الشامل</span>
@@ -4256,15 +4277,15 @@ export default function BranchManagerDashboard({
 
               {/* آخر ظهور للكاتب */}
               {writerStats?.lastLogin && (
-                <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1">
+                <div className="text-xs text-slate-700 font-bold flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs">
                   <span>آخر دخول للنظام:</span>
-                  <span className="text-purple-700 font-black">{writerStats.lastLogin.date} ({writerStats.lastLogin.time})</span>
+                  <span className="text-indigo-700 font-black">{writerStats.lastLogin.date} ({writerStats.lastLogin.time})</span>
                 </div>
               )}
             </div>
 
             {/* 3. بطاقات الإحصائيات الأربعة الكبيرة */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-white">
               {(() => {
                 const currentPeriod: PeriodStats = writerStats
                   ? statsTimeTab === 'today'
@@ -4291,39 +4312,45 @@ export default function BranchManagerDashboard({
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     {/* بطاقة 1: فتح النظام */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                    <div
+                      style={{ backgroundColor: '#eff6ff', borderColor: '#93c5fd' }}
+                      className="border-2 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-2"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-blue-900">فتح النظام</span>
-                        <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                        <span style={{ color: '#1e3a8a' }} className="text-xs font-black">فتح النظام</span>
+                        <div style={{ backgroundColor: '#dbeafe', color: '#1d4ed8' }} className="w-8 h-8 rounded-xl flex items-center justify-center">
                           <Eye className="w-4 h-4" />
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl sm:text-3xl font-black text-blue-950 font-mono">
+                        <div style={{ color: '#172554' }} className="text-3xl font-black font-mono">
                           {currentPeriod.loginCount}
                         </div>
-                        <p className="text-[11px] text-blue-700 font-bold mt-0.5">
+                        <p style={{ color: '#1e40af' }} className="text-xs font-bold mt-1">
                           {statsTimeTab === 'today' ? 'مرات فتح النظام اليوم' : 'مرات تسجيل الدخول'}
                         </p>
                       </div>
-                      <div className="text-[10px] text-blue-600 font-bold pt-1 border-t border-blue-200/60">
+                      <div style={{ color: '#2563eb', borderTopColor: '#bfdbfe' }} className="text-[11px] font-bold pt-1.5 border-t">
                         {statsTimeTab === 'today' ? 'حسب التوقيت العراقي' : 'خلال هذه الفترة'}
                       </div>
                     </div>
 
                     {/* بطاقة 2: الأسماء المعدلة */}
-                    <div className="bg-gradient-to-br from-amber-50 to-orange-50/60 border border-amber-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                    <div
+                      style={{ backgroundColor: '#fffbeb', borderColor: '#fcd34d' }}
+                      className="border-2 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-2"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-amber-900">الأسماء المعدلة</span>
-                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <span style={{ color: '#78350f' }} className="text-xs font-black">الأسماء المعدلة</span>
+                        <div style={{ backgroundColor: '#fef3c7', color: '#b45309' }} className="w-8 h-8 rounded-xl flex items-center justify-center">
                           <Edit3 className="w-4 h-4" />
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl sm:text-3xl font-black text-amber-950 font-mono">
+                        <div style={{ color: '#451a03' }} className="text-3xl font-black font-mono">
                           {currentPeriod.editedSubscribersCount}
                         </div>
-                        <p className="text-[11px] text-amber-700 font-bold mt-0.5">
+                        <p style={{ color: '#92400e' }} className="text-xs font-bold mt-1">
                           مشترك تم تعديل بياناته
                         </p>
                       </div>
@@ -4336,7 +4363,8 @@ export default function BranchManagerDashboard({
                             subscribers: currentPeriod.uniqueEditedSubscribers
                           })
                         }
-                        className="text-[10px] text-amber-800 hover:text-amber-950 font-black pt-1 border-t border-amber-200/60 flex items-center justify-between disabled:opacity-40 cursor-pointer"
+                        style={{ color: '#78350f', borderTopColor: '#fde68a' }}
+                        className="text-xs font-black pt-1.5 border-t flex items-center justify-between disabled:opacity-40 cursor-pointer hover:underline"
                       >
                         <span>عرض قائمة الأسماء</span>
                         <span>←</span>
@@ -4344,22 +4372,25 @@ export default function BranchManagerDashboard({
                     </div>
 
                     {/* بطاقة 3: تنزيل وتعديل الديون */}
-                    <div className="bg-gradient-to-br from-rose-50 to-pink-50/60 border border-rose-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                    <div
+                      style={{ backgroundColor: '#fff1f2', borderColor: '#fda4af' }}
+                      className="border-2 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-2"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-rose-900">تنزيل الديون</span>
-                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                        <span style={{ color: '#881337' }} className="text-xs font-black">تنزيل الديون</span>
+                        <div style={{ backgroundColor: '#ffe4e6', color: '#e11d48' }} className="w-8 h-8 rounded-xl flex items-center justify-center">
                           <DollarSign className="w-4 h-4" />
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl sm:text-3xl font-black text-rose-950 font-mono">
+                        <div style={{ color: '#4c0519' }} className="text-3xl font-black font-mono">
                           {currentPeriod.debtSubscribersCount}
                         </div>
-                        <p className="text-[11px] text-rose-700 font-bold mt-0.5">
+                        <p style={{ color: '#9f1239' }} className="text-xs font-bold mt-1">
                           مشترك نُزّلت/عُدّلت له ديون
                         </p>
                         {currentPeriod.totalDebtAmount > 0 && (
-                          <p className="text-[10px] text-rose-600 font-black mt-0.5 font-mono">
+                          <p style={{ color: '#be123c' }} className="text-xs font-black mt-0.5 font-mono">
                             {currentPeriod.totalDebtAmount.toLocaleString('ar-IQ')} د.ع
                           </p>
                         )}
@@ -4373,7 +4404,8 @@ export default function BranchManagerDashboard({
                             subscribers: currentPeriod.uniqueDebtSubscribers
                           })
                         }
-                        className="text-[10px] text-rose-800 hover:text-rose-950 font-black pt-1 border-t border-rose-200/60 flex items-center justify-between disabled:opacity-40 cursor-pointer"
+                        style={{ color: '#881337', borderTopColor: '#fecdd3' }}
+                        className="text-xs font-black pt-1.5 border-t flex items-center justify-between disabled:opacity-40 cursor-pointer hover:underline"
                       >
                         <span>عرض قائمة المشتركين</span>
                         <span>←</span>
@@ -4381,21 +4413,24 @@ export default function BranchManagerDashboard({
                     </div>
 
                     {/* بطاقة 4: تنزيل المدفوعات */}
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50/60 border border-emerald-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                    <div
+                      style={{ backgroundColor: '#ecfdf5', borderColor: '#6ee7b7' }}
+                      className="border-2 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-2"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-emerald-900">تنزيل المدفوعات</span>
-                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <span style={{ color: '#064e3b' }} className="text-xs font-black">تنزيل المدفوعات</span>
+                        <div style={{ backgroundColor: '#d1fae5', color: '#059669' }} className="w-8 h-8 rounded-xl flex items-center justify-center">
                           <Wallet className="w-4 h-4" />
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl sm:text-3xl font-black text-emerald-950 font-mono">
+                        <div style={{ color: '#022c22' }} className="text-3xl font-black font-mono">
                           {currentPeriod.paymentSubscribersCount}
                         </div>
-                        <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
+                        <p style={{ color: '#065f46' }} className="text-xs font-bold mt-1">
                           مشترك نُزّلت له مدفوعات
                         </p>
-                        <p className="text-[10px] text-emerald-700 font-black mt-0.5 font-mono">
+                        <p style={{ color: '#047857' }} className="text-xs font-black mt-0.5 font-mono">
                           {currentPeriod.totalPaymentAmount.toLocaleString('ar-IQ')} د.ع ({currentPeriod.paymentTransactionsCount} دفعة)
                         </p>
                       </div>
@@ -4408,7 +4443,8 @@ export default function BranchManagerDashboard({
                             subscribers: currentPeriod.uniquePaymentSubscribers
                           })
                         }
-                        className="text-[10px] text-emerald-800 hover:text-emerald-950 font-black pt-1 border-t border-emerald-200/60 flex items-center justify-between disabled:opacity-40 cursor-pointer"
+                        style={{ color: '#064e3b', borderTopColor: '#a7f3d0' }}
+                        className="text-xs font-black pt-1.5 border-t flex items-center justify-between disabled:opacity-40 cursor-pointer hover:underline"
                       >
                         <span>عرض قائمة المشتركين</span>
                         <span>←</span>
@@ -4419,11 +4455,17 @@ export default function BranchManagerDashboard({
               })()}
 
               {/* 4. قسم السجل الزمني التفصيلي للحركات */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <div
+                style={{ backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }}
+                className="border-2 rounded-2xl p-4 space-y-3 shadow-2xs"
+              >
+                <div
+                  style={{ borderBottomColor: '#cbd5e1' }}
+                  className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b"
+                >
                   <div className="flex items-center gap-2">
                     <Activity className="w-4 h-4 text-purple-700" />
-                    <h4 className="text-xs sm:text-sm font-black text-slate-800">
+                    <h4 className="text-xs sm:text-sm font-black text-slate-900">
                       السجل الزمني للعمليات ({filteredEventsForTable.length} عملية)
                     </h4>
                   </div>
@@ -4433,7 +4475,8 @@ export default function BranchManagerDashboard({
                     <select
                       value={statsActionFilter}
                       onChange={(e) => setStatsActionFilter(e.target.value as any)}
-                      className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-purple-500"
+                      style={{ backgroundColor: '#ffffff', color: '#0f172a', borderColor: '#94a3b8' }}
+                      className="px-3 py-1.5 border-2 rounded-xl text-xs font-black focus:outline-none focus:border-purple-600"
                     >
                       <option value="all">جميع أنواع العمليات</option>
                       <option value="login">فتح النظام (دخول)</option>
@@ -4443,13 +4486,14 @@ export default function BranchManagerDashboard({
                     </select>
 
                     <div className="relative flex-1 sm:w-48">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         placeholder="بحث بالمشترك..."
                         value={statsSearchTerm}
                         onChange={(e) => setStatsSearchTerm(e.target.value)}
-                        className="w-full pr-8 pl-2 py-1 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500"
+                        style={{ backgroundColor: '#ffffff', color: '#0f172a', borderColor: '#94a3b8' }}
+                        className="w-full pr-8 pl-2 py-1.5 border-2 rounded-xl text-xs font-bold placeholder-slate-400 focus:outline-none focus:border-purple-600"
                       />
                     </div>
                   </div>
@@ -4457,12 +4501,15 @@ export default function BranchManagerDashboard({
 
                 {/* قائمة العمليات */}
                 {isLoadingWriterStats ? (
-                  <div className="py-12 text-center text-slate-500 font-bold text-xs">
+                  <div className="py-12 text-center text-slate-700 font-bold text-xs">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-purple-600" />
                     <span>جارِ تحميل سجل العمليات من السحابة...</span>
                   </div>
                 ) : filteredEventsForTable.length === 0 ? (
-                  <div className="py-10 text-center text-slate-400 font-bold text-xs bg-white rounded-xl border border-dashed border-slate-200">
+                  <div
+                    style={{ backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1' }}
+                    className="py-10 text-center font-black text-xs rounded-xl border-2 border-dashed shadow-2xs"
+                  >
                     لا توجد أي حركات مسجلة لهذا الكاتب في هذه الفترة المحددة
                   </div>
                 ) : (
@@ -4476,19 +4523,20 @@ export default function BranchManagerDashboard({
                       return (
                         <div
                           key={ev.id}
-                          className="p-2.5 bg-white rounded-xl border border-slate-200 hover:border-purple-300 shadow-2xs transition flex flex-wrap items-center justify-between gap-2 text-xs"
+                          style={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1' }}
+                          className="p-3 rounded-xl border-2 hover:border-purple-400 shadow-2xs transition flex flex-wrap items-center justify-between gap-2 text-xs"
                         >
                           <div className="flex items-center gap-2">
                             {/* شارة نوع الحركة */}
                             <span
-                              className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 ${
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black shrink-0 ${
                                 isLogin
-                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  ? 'bg-blue-100 text-blue-900 border border-blue-300'
                                   : isEdit
-                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
                                   : isDebt
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                                  : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                               }`}
                             >
                               {isLogin
@@ -4503,11 +4551,11 @@ export default function BranchManagerDashboard({
                             {/* اسم المشترك والتفاصيل */}
                             <div>
                               {ev.subscriberName ? (
-                                <div className="font-black text-slate-900 text-xs">
+                                <div className="font-black text-slate-950 text-xs">
                                   {ev.subscriberName} {ev.subscriberId ? `(#${ev.subscriberId})` : ''}
                                 </div>
                               ) : null}
-                              <div className="text-[11px] text-slate-500 font-bold">
+                              <div className="text-[11px] text-slate-600 font-bold">
                                 {ev.details || (isLogin ? 'تسجيل دخول وفتح النظام' : '')}
                               </div>
                             </div>
@@ -4516,14 +4564,17 @@ export default function BranchManagerDashboard({
                           {/* الوقت والتاريخ والمبلغ */}
                           <div className="flex items-center gap-3 mr-auto">
                             {ev.amount ? (
-                              <span className="font-mono font-black text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                              <span
+                                style={{ backgroundColor: '#f3e8ff', color: '#6b21a8', borderColor: '#d8b4fe' }}
+                                className="font-mono font-black text-xs px-2.5 py-1 rounded-lg border"
+                              >
                                 {ev.amount.toLocaleString('ar-IQ')} د.ع
                               </span>
                             ) : null}
 
-                            <div className="text-left text-[10px] font-mono text-slate-400 font-bold dir-ltr">
+                            <div className="text-left text-[10px] font-mono text-slate-500 font-bold dir-ltr">
                               <div>{ev.date}</div>
-                              <div className="text-slate-600 font-black">{ev.time}</div>
+                              <div className="text-slate-800 font-black">{ev.time}</div>
                             </div>
                           </div>
                         </div>
