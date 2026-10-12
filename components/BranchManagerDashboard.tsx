@@ -2509,19 +2509,19 @@ export default function BranchManagerDashboard({
                           </div>
                         </div>
 
-                        {/* 2. المناطق المسندة */}
-                        <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
-                              <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                              <span>المناطق المسندة:</span>
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
-                              {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
-                            </span>
-                          </div>
+                        {/* 2. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
+                        {assignedCount > 0 && (
+                          <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
+                                <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                                <span>المناطق المسندة:</span>
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                                {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
+                              </span>
+                            </div>
 
-                          {assignedCount > 0 ? (
                             <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
                               {assignedAreas.slice(0, 4).map((a) => (
                                 <span
@@ -2537,10 +2537,8 @@ export default function BranchManagerDashboard({
                                 </span>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-[11px] text-slate-400 font-bold">لم يتم إسناد أي مناطق لهذا المحصل بعد</p>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {/* المشتركون المخصصون مباشرة للمحصل */}
                         {collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0 && (
@@ -2748,19 +2746,19 @@ export default function BranchManagerDashboard({
                           </span>
                         </div>
 
-                        {/* 2. المناطق المسندة */}
-                        <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
-                              <MapPin className="w-3.5 h-3.5 text-purple-600" />
-                              <span>المناطق المسندة:</span>
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-50 text-purple-700 border border-purple-200">
-                              {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
-                            </span>
-                          </div>
+                        {/* 2. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
+                        {assignedCount > 0 && (
+                          <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
+                                <MapPin className="w-3.5 h-3.5 text-purple-600" />
+                                <span>المناطق المسندة:</span>
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                                {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
+                              </span>
+                            </div>
 
-                          {assignedCount > 0 ? (
                             <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
                               {assignedAreas.slice(0, 4).map((a) => (
                                 <span
@@ -2776,10 +2774,8 @@ export default function BranchManagerDashboard({
                                 </span>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-[11px] text-slate-400 font-bold">لم يتم إسناد أي مناطق لهذا الكاتب بعد</p>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {/* المشتركون المخصصون مباشرة للكاتب */}
                         {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 && (
