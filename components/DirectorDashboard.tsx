@@ -307,40 +307,82 @@ export default function DirectorDashboard({
     }
   }
 
-  // حفظ مسؤول
+  // حفظ أو تعديل مسؤول
   const handleSaveManager = () => {
     if (!managerFullName.trim()) {
       alert('الرجاء كتابة اسم المسؤول')
       return
     }
-    const targetBranchId = selectedBranchForManager || (selectedBranch ? selectedBranch.id : directorateData.branches[0]?.id)
+
+    const currentBranchOfEditingManager = editingManager
+      ? directorateData.branches.find(b => b.managers?.some(m => m.id === editingManager.id))
+      : null
+
+    const targetBranchId = selectedBranchForManager || currentBranchOfEditingManager?.id || (selectedBranch ? selectedBranch.id : directorateData.branches[0]?.id)
     if (!targetBranchId) {
       alert('الرجاء اختيار الفرع')
       return
     }
 
-    const updatedBranches = directorateData.branches.map(b => {
-      if (b.id !== targetBranchId) return b
+    let updatedBranches = directorateData.branches
 
-      let updatedManagers = [...(b.managers || [])]
-      if (editingManager) {
-        updatedManagers = updatedManagers.map(m =>
-          m.id === editingManager.id
-            ? { ...m, name: managerFullName.trim(), phone: managerPhone.trim() }
-            : m
-        )
+    if (editingManager) {
+      const oldBranchId = currentBranchOfEditingManager?.id || targetBranchId
+
+      if (oldBranchId === targetBranchId) {
+        // نفس الفرع: تحديث الاسم ورقم الهاتف
+        updatedBranches = directorateData.branches.map(b => {
+          if (b.id !== targetBranchId) return b
+          return {
+            ...b,
+            managers: (b.managers || []).map(m =>
+              m.id === editingManager.id
+                ? { ...m, name: managerFullName.trim(), phone: managerPhone.trim() || m.phone }
+                : m
+            )
+          }
+        })
       } else {
-        const newMgr: BranchManager = {
-          id: 'mgr_' + Date.now().toString(36),
+        // نقل المسؤول إلى فرع جديد
+        const existingMgr = currentBranchOfEditingManager?.managers?.find(m => m.id === editingManager.id)
+        const updatedMgr: BranchManager = {
+          ...(existingMgr || editingManager),
           name: managerFullName.trim(),
-          phone: managerPhone.trim() || '07700000000',
-          token: generateSecureToken('mgr'),
-          createdAt: new Date().toISOString()
+          phone: managerPhone.trim() || (existingMgr?.phone || '07700000000')
         }
-        updatedManagers.push(newMgr)
+        updatedBranches = directorateData.branches.map(b => {
+          if (b.id === oldBranchId) {
+            return {
+              ...b,
+              managers: (b.managers || []).filter(m => m.id !== editingManager.id)
+            }
+          }
+          if (b.id === targetBranchId) {
+            return {
+              ...b,
+              managers: [...(b.managers || []), updatedMgr]
+            }
+          }
+          return b
+        })
       }
-      return { ...b, managers: updatedManagers }
-    })
+    } else {
+      // إضافة مسؤول جديد
+      const newMgr: BranchManager = {
+        id: 'mgr_' + Date.now().toString(36),
+        name: managerFullName.trim(),
+        phone: managerPhone.trim() || '07700000000',
+        token: generateSecureToken('mgr'),
+        createdAt: new Date().toISOString()
+      }
+      updatedBranches = directorateData.branches.map(b => {
+        if (b.id !== targetBranchId) return b
+        return {
+          ...b,
+          managers: [...(b.managers || []), newMgr]
+        }
+      })
+    }
 
     onUpdateDirectorate({ ...directorateData, branches: updatedBranches })
     setShowAddManagerModal(false)
@@ -1714,7 +1756,28 @@ export default function DirectorDashboard({
                               <td style={{ padding: '12px 15px', fontWeight: 800 }}>{manager.name}</td>
                               <td style={{ padding: '12px 15px', fontWeight: 700, color: '#0056b3' }} dir="ltr">{manager.phone}</td>
                               <td style={{ padding: '12px 15px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <button
+                                    onClick={() => {
+                                      setEditingManager(manager)
+                                      setManagerFullName(manager.name)
+                                      setManagerPhone(manager.phone)
+                                      setSelectedBranchForManager(selectedBranch.id)
+                                      setShowAddManagerModal(true)
+                                    }}
+                                    style={{
+                                      backgroundColor: '#0284c7',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '6px 12px',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    تعديل
+                                  </button>
                                   <button
                                     onClick={() => handleOpenManagerPage(manager, selectedBranch)}
                                     style={{
@@ -3159,7 +3222,7 @@ export default function DirectorDashboard({
             }}
           >
             <h3 style={{ marginBottom: '18px', fontWeight: 800, fontSize: '1.2rem', color: '#1e293b' }}>
-              إضافة مسؤول فرع جديد
+              {editingManager ? `تعديل بيانات المسؤول (${editingManager.name})` : 'إضافة مسؤول فرع جديد'}
             </h3>
 
             <div style={{ marginBottom: '15px' }}>
@@ -3265,7 +3328,7 @@ export default function DirectorDashboard({
                   fontSize: '0.9rem'
                 }}
               >
-                حفظ البيانات
+                {editingManager ? 'حفظ التعديلات' : 'حفظ البيانات'}
               </button>
             </div>
           </div>

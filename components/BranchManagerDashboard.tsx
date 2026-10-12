@@ -2166,174 +2166,170 @@ export default function BranchManagerDashboard({
                   <p className="text-xs font-bold text-slate-500">لا توجد نتائج مطابقة لبحثك</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="bg-slate-100/90 text-slate-700 font-black border-b border-slate-200 text-[11px]">
-                        <th className="py-3 px-3.5">المحصل</th>
-                        <th className="py-3 px-3.5">المناطق المائية المسندة</th>
-                        <th className="py-3 px-3.5">حالة الصلاحية</th>
-                        <th className="py-3 px-3.5 text-center">الإجراءات والروابط</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {filteredCollectors.map((collector) => {
-                        const assignedAreas = (branch.areas || []).filter(a => (collector.assignedAreaIds || []).includes(a.id))
-                        const assignedCount = assignedAreas.length
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {filteredCollectors.map((collector) => {
+                    const assignedAreas = (branch.areas || []).filter(a => (collector.assignedAreaIds || []).includes(a.id))
+                    const assignedCount = assignedAreas.length
 
-                        return (
-                          <tr key={collector.id} className="hover:bg-slate-50/70 transition-colors">
-                            {/* 1. المحصل */}
-                            <td className="py-3 px-3.5 align-middle">
-                              <div className="space-y-0.5">
-                                <div className="font-black text-slate-900 text-sm">{collector.name}</div>
-                                <div className="flex items-center gap-1 text-slate-500 text-[11px] font-mono dir-ltr justify-end">
-                                  <span>{collector.phone}</span>
-                                  <Phone className="w-3 h-3 text-slate-400" />
-                                </div>
+                    return (
+                      <div 
+                        key={collector.id} 
+                        className="bg-slate-50/70 hover:bg-white rounded-2xl p-4 border border-slate-200/90 hover:border-blue-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3"
+                      >
+                        {/* 1. رأس البطاقة: الاسم، الهاتف، وحالة الصلاحية */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                                <Wallet className="w-4 h-4" />
                               </div>
-                            </td>
+                              <h4 className="font-black text-slate-900 text-sm sm:text-base">{collector.name}</h4>
+                            </div>
 
-                            {/* 2. المناطق المائية المسندة */}
-                            <td className="py-3 px-3.5 align-middle">
-                              {assignedCount > 0 ? (
-                                <div className="space-y-1.5 max-w-xs sm:max-w-md">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
-                                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                                      <span>{assignedCount} {assignedCount === 1 ? 'منطقة مسندة' : assignedCount === 2 ? 'منطقتان مسندتان' : 'مناطق مسندة'}</span>
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {assignedAreas.slice(0, 3).map((a) => (
-                                      <span
-                                        key={a.id}
-                                        className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200"
-                                      >
-                                        {a.name}
-                                      </span>
-                                    ))}
-                                    {assignedAreas.length > 3 && (
-                                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
-                                        +{assignedAreas.length - 3} أخرى
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                            <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono dir-ltr justify-end pr-1">
+                              <span>{collector.phone}</span>
+                              <Phone className="w-3 h-3 text-slate-400" />
+                            </div>
+                          </div>
+
+                          {/* زر وحالة الصلاحية */}
+                          <div className="flex flex-col items-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCollectorEdit(collector.id, collector.canEdit)}
+                              className={`text-[10px] px-2.5 py-1 rounded-full font-bold transition border flex items-center gap-1 ${
+                                collector.canEdit
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                              }`}
+                              title={collector.canEdit ? 'انقر لإيقاف صلاحية التعديل' : 'انقر للسماح بالتعديل'}
+                            >
+                              {collector.canEdit ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>مسموح بالتعديل</span>
+                                </>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>غير مسند لأي منطقة</span>
+                                <>
+                                  <XCircle className="w-3 h-3 text-amber-600" />
+                                  <span>للقراءة فقط</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 2. المناطق المسندة */}
+                        <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
+                              <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                              <span>المناطق المسندة:</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                              {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
+                            </span>
+                          </div>
+
+                          {assignedCount > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
+                              {assignedAreas.slice(0, 4).map((a) => (
+                                <span
+                                  key={a.id}
+                                  className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/80"
+                                >
+                                  {a.name}
+                                </span>
+                              ))}
+                              {assignedAreas.length > 4 && (
+                                <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200">
+                                  +{assignedAreas.length - 4} أخرى
                                 </span>
                               )}
-                            </td>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 font-bold">لم يتم إسناد أي مناطق لهذا المحصل بعد</p>
+                          )}
+                        </div>
 
-                            {/* 3. حالة الصلاحية */}
-                            <td className="py-3 px-3.5 align-middle whitespace-nowrap">
-                              <div className="space-y-1">
-                                {collector.canEdit ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                    <span>مسموح بالتعديل</span>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">
-                                    <XCircle className="w-3 h-3 text-amber-500" />
-                                    <span>للقراءة فقط</span>
-                                  </span>
-                                )}
-                                <div>
-                                  <button
-                                    onClick={() => handleToggleCollectorEdit(collector.id, collector.canEdit)}
-                                    className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition border ${
-                                      collector.canEdit
-                                        ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                    }`}
-                                  >
-                                    {collector.canEdit ? 'إيقاف التعديل' : 'سماح بالتعديل'}
-                                  </button>
-                                </div>
-                              </div>
-                            </td>
+                        {/* 3. شريط الأيقونات السريعة للأكشنز */}
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
+                          <span className="text-[10px] font-bold text-slate-400">إجراءات وروابط:</span>
 
-                            {/* 4. الإجراءات والروابط */}
-                            <td className="py-3 px-3.5 align-middle whitespace-nowrap text-center">
-                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <button
-                                  onClick={() => {
-                                    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-                                    const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
-                                    window.open(directLink, '_blank')
-                                  }}
-                                  className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
-                                  title="فتح حساب المحصل في نافذة جديدة مستقلة"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                  <span>فتح الحساب</span>
-                                </button>
+                          <div className="flex items-center gap-1.5">
+                            {/* زر فتح الحساب - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                                const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
+                                window.open(directLink, '_blank')
+                              }}
+                              className="p-2 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-blue-200 shadow-2xs group"
+                              title="فتح حساب المحصل في نافذة جديدة"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
 
-                                <button
-                                  onClick={() => handleCopyCollectorLink(collector)}
-                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs border ${
-                                    copiedCollectorId === collector.id
-                                      ? 'bg-emerald-600 text-white border-emerald-600'
-                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                                  }`}
-                                  title="نسخ رابط الدخول المباشر لحساب المحصل"
-                                >
-                                  {copiedCollectorId === collector.id ? (
-                                    <>
-                                      <Check className="w-3.5 h-3.5 text-white" />
-                                      <span>تم النسخ</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-3.5 h-3.5" />
-                                      <span>نسخ الرابط</span>
-                                    </>
-                                  )}
-                                </button>
+                            {/* زر نسخ الرابط - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCollectorLink(collector)}
+                              className={`p-2 rounded-xl transition border shadow-2xs ${
+                                copiedCollectorId === collector.id
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : 'bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border-indigo-200'
+                              }`}
+                              title={copiedCollectorId === collector.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
+                            >
+                              {copiedCollectorId === collector.id ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
 
-                                <button
-                                  onClick={() => handleShareCollectorWhatsApp(collector)}
-                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
-                                  title="مشاركة الرابط عبر واتساب"
-                                >
-                                  <Share2 className="w-3.5 h-3.5" />
-                                  <span>واتساب</span>
-                                </button>
+                            {/* زر الواتساب - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => handleShareCollectorWhatsApp(collector)}
+                              className="p-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-emerald-200 shadow-2xs"
+                              title="مشاركة رابط الدخول عبر واتساب"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </button>
 
-                                <button
-                                  onClick={() => {
-                                    setEditingCollector(collector)
-                                    setCollectorName(collector.name)
-                                    setCollectorPhone(collector.phone)
-                                    setCollectorCanEdit(collector.canEdit)
-                                    setSelectedCollectorAreas(collector.assignedAreaIds || [])
-                                    setShowCollectorModal(true)
-                                  }}
-                                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200"
-                                  title="تعديل بيانات المحصل والمناطق المسندة"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                  <span>تعديل</span>
-                                </button>
+                            {/* زر التعديل - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCollector(collector)
+                                setCollectorName(collector.name)
+                                setCollectorPhone(collector.phone)
+                                setCollectorCanEdit(collector.canEdit)
+                                setSelectedCollectorAreas(collector.assignedAreaIds || [])
+                                setShowCollectorModal(true)
+                              }}
+                              className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs"
+                              title="تعديل بيانات المحصل ومناطقه"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
 
-                                <button
-                                  onClick={() => handleDeleteCollector(collector.id, collector.name)}
-                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition border border-transparent hover:border-rose-200"
-                                  title="حذف المحصل"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                            {/* زر الحذف - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCollector(collector.id, collector.name)}
+                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-rose-200 shadow-2xs"
+                              title="حذف المحصل"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -2408,151 +2404,147 @@ export default function BranchManagerDashboard({
                   <p className="text-xs font-bold text-slate-500">لا توجد نتائج مطابقة لبحثك</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="bg-slate-100/90 text-slate-700 font-black border-b border-slate-200 text-[11px]">
-                        <th className="py-3 px-3.5">الكاتب</th>
-                        <th className="py-3 px-3.5">المناطق المائية المسندة</th>
-                        <th className="py-3 px-3.5">الصلاحية</th>
-                        <th className="py-3 px-3.5 text-center">الإجراءات والروابط</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {filteredWriters.map((writer) => {
-                        const assignedAreas = (branch.areas || []).filter(a => (writer.assignedAreaIds || []).includes(a.id))
-                        const assignedCount = assignedAreas.length
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {filteredWriters.map((writer) => {
+                    const assignedAreas = (branch.areas || []).filter(a => (writer.assignedAreaIds || []).includes(a.id))
+                    const assignedCount = assignedAreas.length
 
-                        return (
-                          <tr key={writer.id} className="hover:bg-slate-50/70 transition-colors">
-                            {/* 1. الكاتب */}
-                            <td className="py-3 px-3.5 align-middle">
-                              <div className="space-y-0.5">
-                                <div className="font-black text-slate-900 text-sm">{writer.name}</div>
-                                <div className="flex items-center gap-1 text-slate-500 text-[11px] font-mono dir-ltr justify-end">
-                                  <span>{writer.phone}</span>
-                                  <Phone className="w-3 h-3 text-slate-400" />
-                                </div>
+                    return (
+                      <div 
+                        key={writer.id} 
+                        className="bg-slate-50/70 hover:bg-white rounded-2xl p-4 border border-slate-200/90 hover:border-purple-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3"
+                      >
+                        {/* 1. رأس البطاقة: الاسم والهاتف */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 bg-purple-100 text-purple-700 rounded-lg">
+                                <BookOpen className="w-4 h-4" />
                               </div>
-                            </td>
+                              <h4 className="font-black text-slate-900 text-sm sm:text-base">{writer.name}</h4>
+                            </div>
 
-                            {/* 2. المناطق المائية المسندة */}
-                            <td className="py-3 px-3.5 align-middle">
-                              {assignedCount > 0 ? (
-                                <div className="space-y-1.5 max-w-xs sm:max-w-md">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-black bg-purple-50 text-purple-700 border border-purple-200">
-                                      <MapPin className="w-3.5 h-3.5 text-purple-600" />
-                                      <span>{assignedCount} {assignedCount === 1 ? 'منطقة مسندة' : assignedCount === 2 ? 'منطقتان مسندتان' : 'مناطق مسندة'}</span>
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {assignedAreas.slice(0, 3).map((a) => (
-                                      <span
-                                        key={a.id}
-                                        className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200"
-                                      >
-                                        {a.name}
-                                      </span>
-                                    ))}
-                                    {assignedAreas.length > 3 && (
-                                      <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-100">
-                                        +{assignedAreas.length - 3} أخرى
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>غير مسند لأي منطقة</span>
+                            <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono dir-ltr justify-end pr-1">
+                              <span>{writer.phone}</span>
+                              <Phone className="w-3 h-3 text-slate-400" />
+                            </div>
+                          </div>
+
+                          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            كاتب معتمد
+                          </span>
+                        </div>
+
+                        {/* 2. المناطق المسندة */}
+                        <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
+                              <MapPin className="w-3.5 h-3.5 text-purple-600" />
+                              <span>المناطق المسندة:</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                              {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
+                            </span>
+                          </div>
+
+                          {assignedCount > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
+                              {assignedAreas.slice(0, 4).map((a) => (
+                                <span
+                                  key={a.id}
+                                  className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/80"
+                                >
+                                  {a.name}
+                                </span>
+                              ))}
+                              {assignedAreas.length > 4 && (
+                                <span className="text-[10px] font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-200">
+                                  +{assignedAreas.length - 4} أخرى
                                 </span>
                               )}
-                            </td>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 font-bold">لم يتم إسناد أي مناطق لهذا الكاتب بعد</p>
+                          )}
+                        </div>
 
-                            {/* 3. الصلاحية */}
-                            <td className="py-3 px-3.5 align-middle whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 text-[11px] bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full font-bold">
-                                <span>صلاحية تعديل الديون</span>
-                              </span>
-                            </td>
+                        {/* 3. شريط الأيقونات السريعة للأكشنز */}
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
+                          <span className="text-[10px] font-bold text-slate-400">إجراءات وروابط:</span>
 
-                            {/* 4. الإجراءات والروابط */}
-                            <td className="py-3 px-3.5 align-middle whitespace-nowrap text-center">
-                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                <button
-                                  onClick={() => {
-                                    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-                                    const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
-                                    window.open(directLink, '_blank')
-                                  }}
-                                  className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
-                                  title="فتح حساب الكاتب في نافذة جديدة مستقلة"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                  <span>فتح الحساب</span>
-                                </button>
+                          <div className="flex items-center gap-1.5">
+                            {/* زر فتح الحساب - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                                const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
+                                window.open(directLink, '_blank')
+                              }}
+                              className="p-2 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-blue-200 shadow-2xs group"
+                              title="فتح حساب الكاتب في نافذة جديدة"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
 
-                                <button
-                                  onClick={() => handleCopyWriterLink(writer)}
-                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs border ${
-                                    copiedWriterId === writer.id
-                                      ? 'bg-emerald-600 text-white border-emerald-600'
-                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                                  }`}
-                                  title="نسخ رابط الدخول المباشر لحساب الكاتب"
-                                >
-                                  {copiedWriterId === writer.id ? (
-                                    <>
-                                      <Check className="w-3.5 h-3.5 text-white" />
-                                      <span>تم النسخ</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-3.5 h-3.5" />
-                                      <span>نسخ الرابط</span>
-                                    </>
-                                  )}
-                                </button>
+                            {/* زر نسخ الرابط - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyWriterLink(writer)}
+                              className={`p-2 rounded-xl transition border shadow-2xs ${
+                                copiedWriterId === writer.id
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : 'bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border-indigo-200'
+                              }`}
+                              title={copiedWriterId === writer.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
+                            >
+                              {copiedWriterId === writer.id ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
 
-                                <button
-                                  onClick={() => handleShareWriterWhatsApp(writer)}
-                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
-                                  title="مشاركة الرابط عبر واتساب"
-                                >
-                                  <Share2 className="w-3.5 h-3.5" />
-                                  <span>واتساب</span>
-                                </button>
+                            {/* زر الواتساب - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => handleShareWriterWhatsApp(writer)}
+                              className="p-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-emerald-200 shadow-2xs"
+                              title="مشاركة رابط الدخول عبر واتساب"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </button>
 
-                                <button
-                                  onClick={() => {
-                                    setEditingWriter(writer)
-                                    setWriterName(writer.name)
-                                    setWriterPhone(writer.phone)
-                                    setSelectedWriterAreas(writer.assignedAreaIds || [])
-                                    setShowWriterModal(true)
-                                  }}
-                                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200"
-                                  title="تعديل بيانات الكاتب والمناطق المسندة"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                  <span>تعديل</span>
-                                </button>
+                            {/* زر التعديل - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingWriter(writer)
+                                setWriterName(writer.name)
+                                setWriterPhone(writer.phone)
+                                setSelectedWriterAreas(writer.assignedAreaIds || [])
+                                setShowWriterModal(true)
+                              }}
+                              className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs"
+                              title="تعديل بيانات الكاتب ومناطقه"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
 
-                                <button
-                                  onClick={() => handleDeleteWriter(writer.id, writer.name)}
-                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition border border-transparent hover:border-rose-200"
-                                  title="حذف الكاتب"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                            {/* زر الحذف - أيقونة */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteWriter(writer.id, writer.name)}
+                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-rose-200 shadow-2xs"
+                              title="حذف الكاتب"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
