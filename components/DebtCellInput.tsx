@@ -11,6 +11,7 @@ interface DebtCellInputProps {
   style?: React.CSSProperties
   isZeroEmpty?: boolean
   inputMode?: 'numeric' | 'text'
+  readOnly?: boolean
   onSave: (val: string) => void
 }
 
@@ -27,6 +28,7 @@ const DebtCellInput = memo(function DebtCellInput({
   style,
   isZeroEmpty = false,
   inputMode = 'numeric',
+  readOnly = false,
   onSave
 }: DebtCellInputProps) {
   const formatVal = (v: string | number | null | undefined) => {
@@ -71,6 +73,7 @@ const DebtCellInput = memo(function DebtCellInput({
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return
     const newVal = e.target.value
     // تنسيق سريع محلي فوري دون إثقال الصفحة ككل
     const formatted = formatInputDisplay(newVal)
@@ -84,6 +87,7 @@ const DebtCellInput = memo(function DebtCellInput({
   }
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (readOnly) return
     const text = e.clipboardData.getData('text')
     if (text) {
       e.preventDefault()
@@ -95,10 +99,13 @@ const DebtCellInput = memo(function DebtCellInput({
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(false)
-    commitSave(e.target.value)
+    if (!readOnly) {
+      commitSave(e.target.value)
+    }
   }
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (readOnly) return
     setIsFocused(true)
     setTimeout(() => {
       try {
@@ -108,6 +115,7 @@ const DebtCellInput = memo(function DebtCellInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (readOnly) return
     if (e.key === 'Enter') {
       commitSave(localVal)
       inputRef.current?.blur()
@@ -119,13 +127,15 @@ const DebtCellInput = memo(function DebtCellInput({
       ref={inputRef}
       id={id}
       value={localVal}
+      readOnly={readOnly}
+      tabIndex={readOnly ? -1 : undefined}
       onChange={handleChange}
       onPaste={handlePaste}
       onFocus={handleFocus}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={className}
+      className={`${className} ${readOnly ? 'cursor-default select-all' : ''}`}
       inputMode={inputMode}
       type="text"
       style={style}

@@ -17,6 +17,26 @@ export interface BranchCollector {
   assignedSubscriberIds?: number[]
   canEdit: boolean // هل يملك صلاحية التعديل على المشتركين والديون
   createdAt: string
+  lastLoginAt?: string // تاريخ وتوقيت آخر فتح للنظام
+  loginCountToday?: number // عدد مرات فتح النظام اليوم
+  activityLogs?: CollectorActivityEvent[]
+}
+
+export interface CollectorActivityEvent {
+  id: string
+  collectorId: string
+  collectorName: string
+  branchId: string
+  actionType: 'login' | 'view_subscriber' | 'add_payment' | 'edit_subscriber'
+  subscriberId?: number
+  subscriberName?: string
+  details?: string
+  amount?: number
+  timestamp: string // ISO string
+  date: string // "YYYY-MM-DD"
+  time: string // "02:30 مساءً"
+  year: number
+  month: number
 }
 
 export interface WriterActivityEvent {

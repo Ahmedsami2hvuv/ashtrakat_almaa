@@ -8,6 +8,7 @@ import { Subscriber, BillingRecords } from '@/components/MainApp'
 import { Clock, Lock, RefreshCw, AlertTriangle } from 'lucide-react'
 import { checkWriterWorkHours, formatTimeArabic } from '@/lib/iraqTime'
 import { logWriterActivity } from '@/lib/writerActivityStore'
+import { logCollectorActivity } from '@/lib/collectorActivityStore'
 
 const DirectorDashboard = dynamic(() => import('./DirectorDashboard'), {
   ssr: false,
@@ -75,6 +76,8 @@ export default function DirectorateRootApp() {
     assignedSubscriberIds?: number[]
     writerId?: string
     writerName?: string
+    collectorId?: string
+    collectorName?: string
   } | null>(null)
 
   // بيانات حظر الكاتب عند محاولة الدخول خارج ساعات العمل المحددة بالتوقيت العراقي
@@ -194,12 +197,24 @@ export default function DirectorateRootApp() {
               setSelectedBranch(matchedBranch)
               const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
               setSubscriberAppData(subsData)
+
+              // تسجيل نشاط فتح النظام للمحصل بالتوقيت العراقي
+              logCollectorActivity({
+                branchId: matchedBranch.id,
+                collectorId: matchedCollector.id,
+                collectorName: matchedCollector.name,
+                actionType: 'login',
+                details: 'تسجيل دخول وفتح النظام'
+              })
+
               const props = {
                 role: 'collector' as const,
                 userTitle: matchedCollector.name,
                 canEdit: false,
                 assignedAreaIds: matchedCollector.assignedAreaIds,
-                assignedSubscriberIds: matchedCollector.assignedSubscriberIds
+                assignedSubscriberIds: matchedCollector.assignedSubscriberIds,
+                collectorId: matchedCollector.id,
+                collectorName: matchedCollector.name
               }
               setSubscriberAppProps(props)
 
@@ -209,6 +224,7 @@ export default function DirectorateRootApp() {
                   'ashtrakat_collector_session',
                   JSON.stringify({
                     branchId: matchedBranch.id,
+                    id: matchedCollector.id,
                     token: matchedCollector.token,
                     name: matchedCollector.name,
                     branchName: matchedBranch.name,
@@ -309,6 +325,16 @@ export default function DirectorateRootApp() {
               const colSess = JSON.parse(savedCollectorStr)
               const foundBranch = data.branches.find(b => b.id === colSess.branchId) || data.branches[0]
               if (foundBranch) {
+                const colId = colSess.id || colSess.token || 'col_saved'
+                // تسجيل فتح النظام للمحصل من الجلسة المحفوظة بالتوقيت العراقي
+                logCollectorActivity({
+                  branchId: foundBranch.id,
+                  collectorId: colId,
+                  collectorName: colSess.name,
+                  actionType: 'login',
+                  details: 'فتح النظام (جلسة محفوظة)'
+                })
+
                 setSelectedBranch(foundBranch)
                 const subsData = await loadBranchSubscribersAndBilling(foundBranch.id)
                 setSubscriberAppData(subsData)
@@ -317,7 +343,9 @@ export default function DirectorateRootApp() {
                   userTitle: colSess.name,
                   canEdit: false,
                   assignedAreaIds: colSess.assignedAreaIds,
-                  assignedSubscriberIds: colSess.assignedSubscriberIds
+                  assignedSubscriberIds: colSess.assignedSubscriberIds,
+                  collectorId: colId,
+                  collectorName: colSess.name
                 })
                 setActiveView('subscriber_app')
                 setIsLoading(false)
@@ -499,6 +527,8 @@ export default function DirectorateRootApp() {
         assignedSubscriberIds={subscriberAppProps?.assignedSubscriberIds}
         writerId={subscriberAppProps?.writerId}
         writerName={subscriberAppProps?.writerName}
+        collectorId={subscriberAppProps?.collectorId}
+        collectorName={subscriberAppProps?.collectorName}
         customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}
         bypassAuth={true}
         onBack={

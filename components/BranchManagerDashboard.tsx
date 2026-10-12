@@ -57,11 +57,13 @@ import {
   Calendar,
   DollarSign,
   Filter,
-  Eye
+  Eye,
+  CreditCard
 } from 'lucide-react'
 import { checkWriterWorkHours, getIraqCurrentTime, formatTimeArabic, getIraqDateAndTimeString } from '@/lib/iraqTime'
 import { loadWriterActivities, computeWriterComprehensiveStats, WriterComprehensiveStats, PeriodStats } from '@/lib/writerActivityStore'
-import { WriterActivityEvent } from '@/lib/directorateTypes'
+import { loadCollectorActivities, computeCollectorComprehensiveStats, CollectorComprehensiveStats, CollectorPeriodStats } from '@/lib/collectorActivityStore'
+import { WriterActivityEvent, CollectorActivityEvent } from '@/lib/directorateTypes'
 
 interface BranchManagerDashboardProps {
   branch: DirectorateBranch
@@ -258,6 +260,83 @@ export default function BranchManagerDashboard({
 
     return list
   }, [writerActivityEvents, statsSelectedWriter, statsTimeTab, statsActionFilter, statsSearchTerm])
+
+  // حالات سجل نشاط وإحصائيات المحصل
+  const [showCollectorStatsModal, setShowCollectorStatsModal] = useState<boolean>(false)
+  const [statsSelectedCollector, setStatsSelectedCollector] = useState<BranchCollector | null>(null)
+  const [collectorActivityEvents, setCollectorActivityEvents] = useState<CollectorActivityEvent[]>([])
+  const [isLoadingCollectorStats, setIsLoadingCollectorStats] = useState<boolean>(false)
+  const [collectorStatsTimeTab, setCollectorStatsTimeTab] = useState<'today' | 'month' | 'year' | 'all'>('today')
+  const [collectorStatsSearchTerm, setCollectorStatsSearchTerm] = useState<string>('')
+  const [collectorStatsActionFilter, setCollectorStatsActionFilter] = useState<'all' | 'login' | 'view_subscriber' | 'add_payment' | 'edit_subscriber'>('all')
+
+  // دالة فتح نافذة سجل نشاط وإحصائيات المحصل
+  const handleOpenCollectorStats = async (collector: BranchCollector) => {
+    setStatsSelectedCollector(collector)
+    setShowCollectorStatsModal(true)
+    setIsLoadingCollectorStats(true)
+    setCollectorStatsTimeTab('today')
+    setCollectorStatsSearchTerm('')
+    setCollectorStatsActionFilter('all')
+    try {
+      const events = await loadCollectorActivities(branch.id, collector.id)
+      setCollectorActivityEvents(events)
+    } catch (err) {
+      console.error('Failed to load collector activities:', err)
+    } finally {
+      setIsLoadingCollectorStats(false)
+    }
+  }
+
+  // دالة تحديث سجل نشاط المحصل لحظياً
+  const handleRefreshCollectorStats = async () => {
+    if (!statsSelectedCollector) return
+    setIsLoadingCollectorStats(true)
+    try {
+      const events = await loadCollectorActivities(branch.id, statsSelectedCollector.id)
+      setCollectorActivityEvents(events)
+    } catch (err) {
+      console.error('Failed to refresh collector activities:', err)
+    } finally {
+      setIsLoadingCollectorStats(false)
+    }
+  }
+
+  // حساب إحصائيات المحصل الشاملة
+  const collectorStats = useMemo(() => {
+    if (!statsSelectedCollector) return null
+    return computeCollectorComprehensiveStats(collectorActivityEvents, statsSelectedCollector.id)
+  }, [collectorActivityEvents, statsSelectedCollector])
+
+  // الأحداث المصفاة لجدول المحصل
+  const filteredCollectorEventsForTable = useMemo(() => {
+    if (!statsSelectedCollector) return []
+    const iraqInfo = getIraqDateAndTimeString()
+    let list = collectorActivityEvents.filter(e => e.collectorId === statsSelectedCollector.id)
+
+    if (collectorStatsTimeTab === 'today') {
+      list = list.filter(e => e.date === iraqInfo.date)
+    } else if (collectorStatsTimeTab === 'month') {
+      list = list.filter(e => e.year === iraqInfo.year && e.month === iraqInfo.month)
+    } else if (collectorStatsTimeTab === 'year') {
+      list = list.filter(e => e.year === iraqInfo.year)
+    }
+
+    if (collectorStatsActionFilter !== 'all') {
+      list = list.filter(e => e.actionType === collectorStatsActionFilter)
+    }
+
+    if (collectorStatsSearchTerm.trim()) {
+      const q = collectorStatsSearchTerm.trim().toLowerCase()
+      list = list.filter(e =>
+        (e.subscriberName && e.subscriberName.toLowerCase().includes(q)) ||
+        (e.subscriberId && String(e.subscriberId).includes(q)) ||
+        (e.details && e.details.toLowerCase().includes(q))
+      )
+    }
+
+    return list
+  }, [collectorActivityEvents, statsSelectedCollector, collectorStatsTimeTab, collectorStatsActionFilter, collectorStatsSearchTerm])
 
   // حالة عرض تفاصيل حساب المشترك وبلوك ديونه للمسؤول
   const [selectedDetailSubscriber, setSelectedDetailSubscriber] = useState<Subscriber | null>(null)
@@ -2714,6 +2793,7 @@ export default function BranchManagerDashboard({
                             </button>
 
                             {/* زر التعديل - أيقونة */}
+                            {/* زر التعديل - أيقونة */}
                             <button
                               type="button"
                               onClick={() => {
@@ -2730,6 +2810,16 @@ export default function BranchManagerDashboard({
                               <Edit3 className="w-4 h-4" />
                             </button>
 
+                            {/* زر سجل النشاط والإحصائيات - أيقونة بارزة */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCollectorStats(collector)}
+                              className="p-2 bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-blue-300 shadow-2xs"
+                              title="عرض سجل نشاط وإحصائيات المحصل (اليومي، الشهري، السنوي)"
+                            >
+                              <Activity className="w-4 h-4" />
+                            </button>
+
                             {/* زر الحذف - أيقونة */}
                             <button
                               type="button"
@@ -2741,6 +2831,16 @@ export default function BranchManagerDashboard({
                             </button>
                           </div>
                         </div>
+
+                        {/* زر فتح سجل نشاط وإحصائيات المحصل بنقرة واحدة */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCollectorStats(collector)}
+                          className="w-full py-2 px-3 bg-blue-50 hover:bg-blue-700 text-blue-800 hover:text-white rounded-xl text-xs font-black transition border border-blue-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer group"
+                        >
+                          <BarChart3 className="w-4 h-4 text-blue-600 group-hover:text-white" />
+                          <span>سجل النشاط والعمليات (اليوم / الشهر / السنة)</span>
+                        </button>
                       </div>
                     )
                   })}
@@ -4590,6 +4690,539 @@ export default function BranchManagerDashboard({
               <button
                 type="button"
                 onClick={() => setShowWriterStatsModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة سجل نشاط وإحصائيات المحصل الشاملة (اليومي، الشهري، السنوي) */}
+      {showCollectorStatsModal && statsSelectedCollector && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+          dir="rtl"
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
+            {/* 1. رأس النافذة */}
+            <div
+              style={{ backgroundColor: '#0f294a', color: '#ffffff' }}
+              className="p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md"
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.25)' }}
+                  className="w-12 h-12 rounded-2xl border flex items-center justify-center text-white shadow-inner"
+                >
+                  <BarChart3 className="w-6 h-6 text-blue-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-white">{statsSelectedCollector.name}</h3>
+                    <span
+                      style={{ backgroundColor: '#1d4ed8', color: '#ffffff', borderColor: '#60a5fa' }}
+                      className="px-2.5 py-0.5 rounded-md text-[11px] font-black border"
+                    >
+                      محصل معتمد
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-200 mt-1 flex items-center gap-2 font-bold">
+                    <span>الهاتف: {statsSelectedCollector.phone}</span>
+                    <span>•</span>
+                    <span>توقيت العراق الرسمي (Asia/Baghdad)</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRefreshCollectorStats}
+                  disabled={isLoadingCollectorStats}
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.25)' }}
+                  className="p-2 hover:bg-white/25 text-white rounded-xl transition border flex items-center gap-1.5 text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  title="تحديث البيانات لحظياً من السيرفر"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingCollectorStats ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline font-black">تحديث</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCollectorStatsModal(false)}
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
+                  className="p-2 hover:bg-rose-600 text-white rounded-xl transition cursor-pointer"
+                  title="إغلاق النافذة"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 2. شريط التبويبات الزمنية (اليوم، هذا الشهر، هذه السنة، السجل الشامل) */}
+            <div
+              style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}
+              className="p-3 flex flex-wrap items-center justify-between gap-2 shrink-0"
+            >
+              <div className="flex items-center gap-1.5 bg-slate-200/90 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setCollectorStatsTimeTab('today')}
+                  style={{
+                    backgroundColor: collectorStatsTimeTab === 'today' ? '#1d4ed8' : 'transparent',
+                    color: collectorStatsTimeTab === 'today' ? '#ffffff' : '#334155'
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shadow-2xs"
+                >
+                  اليوم
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCollectorStatsTimeTab('month')}
+                  style={{
+                    backgroundColor: collectorStatsTimeTab === 'month' ? '#1d4ed8' : 'transparent',
+                    color: collectorStatsTimeTab === 'month' ? '#ffffff' : '#334155'
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shadow-2xs"
+                >
+                  هذا الشهر
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCollectorStatsTimeTab('year')}
+                  style={{
+                    backgroundColor: collectorStatsTimeTab === 'year' ? '#1d4ed8' : 'transparent',
+                    color: collectorStatsTimeTab === 'year' ? '#ffffff' : '#334155'
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shadow-2xs"
+                >
+                  هذه السنة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCollectorStatsTimeTab('all')}
+                  style={{
+                    backgroundColor: collectorStatsTimeTab === 'all' ? '#1d4ed8' : 'transparent',
+                    color: collectorStatsTimeTab === 'all' ? '#ffffff' : '#334155'
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer shadow-2xs"
+                >
+                  السجل الشامل
+                </button>
+              </div>
+
+              <div className="text-xs font-black text-slate-700 bg-white px-3 py-1 rounded-lg border border-slate-200">
+                الفترة المحددة: {
+                  collectorStatsTimeTab === 'today' ? 'نشاط اليوم' :
+                  collectorStatsTimeTab === 'month' ? 'نشاط الشهر الحالي' :
+                  collectorStatsTimeTab === 'year' ? 'نشاط سنة 2026' : 'كافة الفترات'
+                }
+              </div>
+            </div>
+
+            {/* 3. جسم النافذة القابل للتمرير */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/50">
+              {/* شبكة البطاقات الإحصائية الأربع - تصميم بألوان واضحة وعالية التباين */}
+              {(() => {
+                const currentPeriodStats = collectorStats
+                  ? collectorStatsTimeTab === 'today'
+                    ? collectorStats.today
+                    : collectorStatsTimeTab === 'month'
+                    ? collectorStats.thisMonth
+                    : collectorStatsTimeTab === 'year'
+                    ? collectorStats.thisYear
+                    : collectorStats.allTime
+                  : {
+                      loginCount: 0,
+                      viewedSubscribersCount: 0,
+                      uniqueViewedSubscribers: [],
+                      paymentSubscribersCount: 0,
+                      totalPaymentAmount: 0,
+                      paymentTransactionsCount: 0,
+                      uniquePaymentSubscribers: [],
+                      editedSubscribersCount: 0,
+                      uniqueEditedSubscribers: [],
+                      totalOperations: 0
+                    }
+
+                const lastLoginDisplay = collectorStats?.lastLogin
+                  ? `${collectorStats.lastLogin.date} (${collectorStats.lastLogin.time})`
+                  : undefined
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* بطاقة 1: فتح النظام ووقت آخر ظهور */}
+                    <div
+                      style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}
+                      className="p-4 rounded-2xl border shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span style={{ color: '#1e3a8a' }} className="text-xs font-black">
+                            فتح النظام
+                          </span>
+                          <span
+                            style={{ backgroundColor: '#dbeafe', color: '#1d4ed8' }}
+                            className="p-1.5 rounded-lg"
+                          >
+                            <Clock className="w-4 h-4" />
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span style={{ color: '#0f172a' }} className="text-2xl font-black">
+                            {currentPeriodStats.loginCount}
+                          </span>
+                          <span style={{ color: '#475569' }} className="text-xs font-bold">مرة</span>
+                        </div>
+                      </div>
+                      <div
+                        style={{ borderTop: '1px solid #dbeafe', color: '#334155' }}
+                        className="mt-3 pt-2 text-[11px] font-bold"
+                      >
+                        {lastLoginDisplay ? (
+                          <div>
+                            آخر ظهور: <span style={{ color: '#1d4ed8', fontWeight: 900 }}>{lastLoginDisplay}</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#64748b' }}>لا يوجد تسجيل دخول مسجل</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* بطاقة 2: المشتركون الذين دخل عليهم المحصل */}
+                    <div
+                      style={{ backgroundColor: '#f5f3ff', borderColor: '#ddd6fe' }}
+                      className="p-4 rounded-2xl border shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span style={{ color: '#4c1d95' }} className="text-xs font-black">
+                            المشتركون الذين دخل عليهم
+                          </span>
+                          <span
+                            style={{ backgroundColor: '#ede9fe', color: '#6d28d9' }}
+                            className="p-1.5 rounded-lg"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span style={{ color: '#0f172a' }} className="text-2xl font-black">
+                            {currentPeriodStats.viewedSubscribersCount}
+                          </span>
+                          <span style={{ color: '#475569' }} className="text-xs font-bold">مشترك</span>
+                        </div>
+                      </div>
+                      <div
+                        style={{ borderTop: '1px solid #ede9fe' }}
+                        className="mt-3 pt-2 flex items-center justify-between"
+                      >
+                        <span style={{ color: '#6d28d9' }} className="text-[11px] font-bold">
+                          معاينات الحسابات
+                        </span>
+                        {currentPeriodStats.uniqueViewedSubscribers.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSubscribersListModal({
+                                title: `قائمة المشتركين الذين دخل عليهم المحصل (${statsSelectedCollector.name})`,
+                                subscribers: currentPeriodStats.uniqueViewedSubscribers
+                              })
+                            }}
+                            style={{ backgroundColor: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' }}
+                            className="text-[10px] font-black px-2 py-0.5 rounded-md border hover:bg-purple-200 transition cursor-pointer"
+                          >
+                            عرض الأسماء ({currentPeriodStats.uniqueViewedSubscribers.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* بطاقة 3: المبالغ والمدفوعات المحصلة */}
+                    <div
+                      style={{ backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }}
+                      className="p-4 rounded-2xl border shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span style={{ color: '#064e3b' }} className="text-xs font-black">
+                            المدفوعات المحصلة
+                          </span>
+                          <span
+                            style={{ backgroundColor: '#d1fae5', color: '#047857' }}
+                            className="p-1.5 rounded-lg"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span style={{ color: '#065f46' }} className="text-xl font-black">
+                            {(currentPeriodStats.totalPaymentAmount || 0).toLocaleString('ar-IQ')}
+                          </span>
+                          <span style={{ color: '#047857' }} className="text-xs font-black">د.ع</span>
+                        </div>
+                      </div>
+                      <div
+                        style={{ borderTop: '1px solid #d1fae5' }}
+                        className="mt-3 pt-2 flex items-center justify-between"
+                      >
+                        <span style={{ color: '#047857' }} className="text-[11px] font-bold">
+                          {currentPeriodStats.paymentSubscribersCount} مشترك سددوا
+                        </span>
+                        {currentPeriodStats.uniquePaymentSubscribers.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSubscribersListModal({
+                                title: `المشتركون الذين تم استلام دفعات منهم بواسطة (${statsSelectedCollector.name})`,
+                                subscribers: currentPeriodStats.uniquePaymentSubscribers
+                              })
+                            }}
+                            style={{ backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#6ee7b7' }}
+                            className="text-[10px] font-black px-2 py-0.5 rounded-md border hover:bg-emerald-200 transition cursor-pointer"
+                          >
+                            عرض المسددين ({currentPeriodStats.uniquePaymentSubscribers.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* بطاقة 4: الأسماء المعدلة (تعديل بيانات المشتركين) */}
+                    <div
+                      style={{ backgroundColor: '#fffbeb', borderColor: '#fde68a' }}
+                      className="p-4 rounded-2xl border shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span style={{ color: '#78350f' }} className="text-xs font-black">
+                            تعديل المشتركين
+                          </span>
+                          <span
+                            style={{ backgroundColor: '#fef3c7', color: '#b45309' }}
+                            className="p-1.5 rounded-lg"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span style={{ color: '#0f172a' }} className="text-2xl font-black">
+                            {currentPeriodStats.editedSubscribersCount}
+                          </span>
+                          <span style={{ color: '#475569' }} className="text-xs font-bold">مشترك</span>
+                        </div>
+                      </div>
+                      <div
+                        style={{ borderTop: '1px solid #fef3c7' }}
+                        className="mt-3 pt-2 flex items-center justify-between"
+                      >
+                        <span style={{ color: '#92400e' }} className="text-[11px] font-bold">
+                          تحديث بيانات
+                        </span>
+                        {currentPeriodStats.uniqueEditedSubscribers.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSubscribersListModal({
+                                title: `المشتركون الذين تم تعديل بياناتهم بواسطة المحصل (${statsSelectedCollector.name})`,
+                                subscribers: currentPeriodStats.uniqueEditedSubscribers
+                              })
+                            }}
+                            style={{ backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
+                            className="text-[10px] font-black px-2 py-0.5 rounded-md border hover:bg-amber-200 transition cursor-pointer"
+                          >
+                            عرض الأسماء ({currentPeriodStats.uniqueEditedSubscribers.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* 4. قسم سجل العمليات التفصيلي مع خيارات البحث والفلترة */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-blue-600" />
+                    <h4 className="text-sm font-black text-slate-900">سجل العمليات والتحركات المفصل</h4>
+                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {filteredCollectorEventsForTable.length} حركة
+                    </span>
+                  </div>
+
+                  {/* فلترة نوع الحركة */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setCollectorStatsActionFilter('all')}
+                      style={{
+                        backgroundColor: collectorStatsActionFilter === 'all' ? '#0f294a' : '#f1f5f9',
+                        color: collectorStatsActionFilter === 'all' ? '#ffffff' : '#334155'
+                      }}
+                      className="px-2.5 py-1 rounded-lg font-black transition cursor-pointer"
+                    >
+                      الكل
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollectorStatsActionFilter('login')}
+                      style={{
+                        backgroundColor: collectorStatsActionFilter === 'login' ? '#1d4ed8' : '#eff6ff',
+                        color: collectorStatsActionFilter === 'login' ? '#ffffff' : '#1e3a8a'
+                      }}
+                      className="px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
+                    >
+                      فتح الحساب
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollectorStatsActionFilter('view_subscriber')}
+                      style={{
+                        backgroundColor: collectorStatsActionFilter === 'view_subscriber' ? '#6d28d9' : '#f5f3ff',
+                        color: collectorStatsActionFilter === 'view_subscriber' ? '#ffffff' : '#5b21b6'
+                      }}
+                      className="px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
+                    >
+                      معاينة مشترك
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollectorStatsActionFilter('add_payment')}
+                      style={{
+                        backgroundColor: collectorStatsActionFilter === 'add_payment' ? '#047857' : '#ecfdf5',
+                        color: collectorStatsActionFilter === 'add_payment' ? '#ffffff' : '#065f46'
+                      }}
+                      className="px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
+                    >
+                      استلام دفعة
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollectorStatsActionFilter('edit_subscriber')}
+                      style={{
+                        backgroundColor: collectorStatsActionFilter === 'edit_subscriber' ? '#b45309' : '#fffbeb',
+                        color: collectorStatsActionFilter === 'edit_subscriber' ? '#ffffff' : '#92400e'
+                      }}
+                      className="px-2.5 py-1 rounded-lg font-bold transition cursor-pointer"
+                    >
+                      تعديل
+                    </button>
+                  </div>
+                </div>
+
+                {/* حقل البحث السريع */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={collectorStatsSearchTerm}
+                    onChange={(e) => setCollectorStatsSearchTerm(e.target.value)}
+                    placeholder="ابحث في العمليات بالاسم، نوع الحركة، التفاصيل أو التوقيت..."
+                    style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
+                    className="w-full pl-3 pr-9 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* قائمة الحركات */}
+                {filteredCollectorEventsForTable.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400 space-y-2">
+                    <Activity className="w-8 h-8 mx-auto opacity-30 text-blue-500" />
+                    <p className="text-xs font-bold">لا توجد حركات مسجلة لهذا المحصل ضمن هذه الفترة أو معايير البحث.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[38vh] overflow-y-auto pr-1">
+                    {filteredCollectorEventsForTable.map((ev) => {
+                      return (
+                        <div
+                          key={ev.id}
+                          className="p-3 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 transition flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {ev.actionType === 'login' && (
+                              <span
+                                style={{ backgroundColor: '#dbeafe', color: '#1d4ed8' }}
+                                className="px-2 py-1 rounded-lg font-black text-[10px] shrink-0"
+                              >
+                                فتح النظام
+                              </span>
+                            )}
+                            {ev.actionType === 'view_subscriber' && (
+                              <span
+                                style={{ backgroundColor: '#ede9fe', color: '#6d28d9' }}
+                                className="px-2 py-1 rounded-lg font-black text-[10px] shrink-0"
+                              >
+                                معاينة حساب
+                              </span>
+                            )}
+                            {ev.actionType === 'add_payment' && (
+                              <span
+                                style={{ backgroundColor: '#d1fae5', color: '#065f46' }}
+                                className="px-2 py-1 rounded-lg font-black text-[10px] shrink-0"
+                              >
+                                استلام دفعة
+                              </span>
+                            )}
+                            {ev.actionType === 'edit_subscriber' && (
+                              <span
+                                style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
+                                className="px-2 py-1 rounded-lg font-black text-[10px] shrink-0"
+                              >
+                                تعديل مشترك
+                              </span>
+                            )}
+
+                            <div className="truncate">
+                              {ev.subscriberName && (
+                                <span className="font-black text-slate-900 ml-1.5">
+                                  {ev.subscriberName}
+                                </span>
+                              )}
+                              <span className="text-slate-600 font-bold text-[11px]">
+                                {ev.details}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {ev.amount ? (
+                              <span
+                                style={{ backgroundColor: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}
+                                className="px-2 py-0.5 rounded-md font-black text-[11px] border"
+                              >
+                                +{(ev.amount || 0).toLocaleString('ar-IQ')} د.ع
+                              </span>
+                            ) : null}
+
+                            <div className="text-left text-[10px] font-mono text-slate-500 font-bold dir-ltr">
+                              <div>{ev.date}</div>
+                              <div className="text-slate-800 font-black">{ev.time}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* زر الإغلاق السفلي */}
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCollectorStatsModal(false)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
               >
                 إغلاق

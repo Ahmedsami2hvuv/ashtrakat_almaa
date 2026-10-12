@@ -8,6 +8,7 @@ import DebtCellInput from './DebtCellInput'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateStore'
 import { logWriterActivity } from '../lib/writerActivityStore'
+import { logCollectorActivity } from '../lib/collectorActivityStore'
 import type { Consignment, ConsignmentItem } from '../lib/directorateTypes'
 import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell } from 'lucide-react'
 
@@ -674,6 +675,8 @@ export interface MainAppProps {
   customHeaderTitle?: string
   writerId?: string
   writerName?: string
+  collectorId?: string
+  collectorName?: string
   onBack?: () => void
   bypassAuth?: boolean
   branchId?: string
@@ -701,6 +704,8 @@ export default function MainApp({
   customHeaderTitle,
   writerId,
   writerName,
+  collectorId: activeCollectorId,
+  collectorName: activeCollectorName,
   onBack,
   bypassAuth = false,
   branchId,
@@ -756,6 +761,27 @@ export default function MainApp({
       })
     }
   }, [userRole, branchId, writerId, writerName])
+
+  // دالة تسجيل أحداث ونشاط المحصل (فتح نظام، معاينة مشترك، استلام مدفوعات، تعديل)
+  const recordCollectorAction = useCallback((actionType: 'login' | 'view_subscriber' | 'add_payment' | 'edit_subscriber', params: {
+    subscriberId?: number
+    subscriberName?: string
+    details?: string
+    amount?: number
+  }) => {
+    if (userRole === 'collector' && branchId && activeCollectorId) {
+      logCollectorActivity({
+        branchId,
+        collectorId: activeCollectorId,
+        collectorName: activeCollectorName || 'المحصل',
+        actionType,
+        subscriberId: params.subscriberId,
+        subscriberName: params.subscriberName,
+        details: params.details,
+        amount: params.amount
+      })
+    }
+  }, [userRole, branchId, activeCollectorId, activeCollectorName])
 
   const toggleRecordItem = (itemId: string) => {
     setRecordedItemIds(prev => {
@@ -837,6 +863,20 @@ export default function MainApp({
   const [branchDrawerAreaId, setBranchDrawerAreaId] = useState<string | null>(null)
   const [selectedSubId, setSelectedSubId] = useState<number | null>(null)
   const [selectedYear, setSelectedYear] = useState<number>(2026) // السنة الحالية 2026 افتراضياً
+
+  // تسجيل حركة المحصل عند الدخول على حساب أي مشترك ومعاينته بالتوقيت العراقي
+  useEffect(() => {
+    if (selectedSubId && userRole === 'collector' && branchId && activeCollectorId) {
+      const sub = subscribers.find((s) => s.id === selectedSubId)
+      if (sub) {
+        recordCollectorAction('view_subscriber', {
+          subscriberId: sub.id,
+          subscriberName: sub.name,
+          details: `معاينة ودخول على حساب المشترك: ${sub.name}`
+        })
+      }
+    }
+  }, [selectedSubId, userRole, branchId, activeCollectorId, subscribers, recordCollectorAction])
 
   // القائمة السفلية وقسم يحتاج مراجعة
   const [bottomNavTab, setBottomNavTab] = useState<'subscribers' | 'areas' | 'review' | 'stats'>('subscribers')
@@ -949,6 +989,11 @@ export default function MainApp({
   const [inlineBranchName, setInlineBranchName] = useState<string>('')
   const [addSuccessMsg, setAddSuccessMsg] = useState<string>('')
   const [duplicateSubId, setDuplicateSubId] = useState<number | null>(null)
+
+  // نافذة اختيار وتعديل حالة المشترك (خاصة للمحصل الميداني)
+  const [showStatusPickerModal, setShowStatusPickerModal] = useState<boolean>(false)
+  const [statusPickerSubId, setStatusPickerSubId] = useState<number | null>(null)
+  const [statusPickerSelected, setStatusPickerSelected] = useState<string[]>([])
 
   // إدارة المناطق والتسعير
   const [newAreaName, setNewAreaName] = useState<string>('')
@@ -1795,6 +1840,26 @@ export default function MainApp({
         })
       }
     }
+
+    // تسجيل نشاط المحصل عند استلام دفعة من مشترك
+    if (userRole === 'collector' && branchId && activeCollectorId) {
+      const sub = subscribers.find((s) => s.id === subId)
+      if (field === 'paid' || field === 'rem') {
+        recordCollectorAction('add_payment', {
+          subscriberId: subId,
+          subscriberName: sub?.name,
+          amount: num,
+          details: `تحصيل واستلام دفعة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+        })
+      } else {
+        recordCollectorAction('edit_subscriber', {
+          subscriberId: subId,
+          subscriberName: sub?.name,
+          amount: num,
+          details: `تعديل في حساب المشترك (سنة ${year} - فترة ${periodIdx + 1})`
+        })
+      }
+    }
   }
 
   // مراجع لتأخير تعديل مبالغ الديون وجعل الكتابة فائقة السرعة بدون أي تجميد
@@ -2109,8 +2174,9 @@ export default function MainApp({
     setEditingCell(null)
   }
 
-  // فتح نافذة إضافة مشترك وتجهيز الخيارات تلقائياً
+  // فتح نافذة إضافة مشترك وتجهيز الخيارات تلقائياً (محظور على المحصل والكاتب)
   const openAddModal = () => {
+    if (userRole === 'writer' || userRole === 'collector') return
     setFormError('')
     const defaultArea = areas[0]?.id || ''
     const defaultBranch = areas[0]?.branches[0]?.id || ''
@@ -2346,6 +2412,30 @@ export default function MainApp({
     setShowEditModal(false)
   }
 
+  // فتح نافذة اختيار وتعديل حالة المشترك (خاصة للمحصل)
+  const openStatusPicker = (sub: Subscriber) => {
+    setStatusPickerSubId(sub.id)
+    setStatusPickerSelected(Array.isArray(sub.statuses) ? [...sub.statuses] : [])
+    setShowStatusPickerModal(true)
+  }
+
+  // حفظ حالة المشترك الميدانية ومزامنتها وتسجيل نشاط المحصل
+  const handleSaveSubscriberStatuses = () => {
+    if (!statusPickerSubId) return
+    const targetSub = subscribers.find((s) => s.id === statusPickerSubId)
+    setSubscribers((prev) =>
+      prev.map((s) => (s.id === statusPickerSubId ? { ...s, statuses: statusPickerSelected } : s))
+    )
+    if (userRole === 'collector' && branchId && activeCollectorId) {
+      recordCollectorAction('edit_subscriber', {
+        subscriberId: statusPickerSubId,
+        subscriberName: targetSub?.name,
+        details: `تحديث الحالة الميدانية إلى: ${statusPickerSelected.join('، ') || 'بدون حالة'}`
+      })
+    }
+    setShowStatusPickerModal(false)
+  }
+
   // أخذ الموقع الحالي وحفظه في حساب المشترك
   const handleUploadLocation = (subId: number) => {
     if (!navigator.geolocation) {
@@ -2544,6 +2634,7 @@ export default function MainApp({
   }
 
   const handleTouchEnd = (e: React.TouchEvent, sub: Subscriber) => {
+    if (userRole === 'writer' || userRole === 'collector') return
     if (swipeSubId.current !== sub.id) return
     const diffX = e.changedTouches[0].clientX - swipeStartX.current
     const diffY = Math.abs(e.changedTouches[0].clientY - swipeStartY.current)
@@ -2560,6 +2651,7 @@ export default function MainApp({
   }
 
   const handleMouseUp = (e: React.MouseEvent, sub: Subscriber) => {
+    if (userRole === 'writer' || userRole === 'collector') return
     if (swipeSubId.current !== sub.id) return
     const diffX = e.clientX - swipeStartX.current
     const diffY = Math.abs(e.clientY - swipeStartY.current)
@@ -2969,8 +3061,8 @@ export default function MainApp({
               )}
             </button>
 
-            {/* زر الإعدادات - لا يظهر للكاتب */}
-            {userRole !== 'writer' && (
+            {/* زر الإعدادات - لا يظهر للكاتب ولا للمحصل */}
+            {userRole !== 'writer' && userRole !== 'collector' && (
               <button
                 type="button"
                 aria-label="الاعدادات"
@@ -4667,22 +4759,76 @@ export default function MainApp({
                       </div>
                     </div>
 
-                    {/* شارات الحالات الخاصة للمشترك */}
-                    {statusesList.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 bg-slate-50/80 p-2 rounded-xl border border-slate-200/60">
-                        <span className="text-[11px] font-bold text-slate-600 ml-1">حالات المشترك:</span>
-                        {statusesList.map((st) => (
-                          <span
-                            key={st}
-                            className={`px-2 py-0.5 text-[11px] rounded-lg font-bold shadow-2xs border ${
-                              STATUS_CONFIG[st]?.bg || 'bg-zinc-100'
-                            } ${STATUS_CONFIG[st]?.text || 'text-zinc-700'} ${
-                              STATUS_CONFIG[st]?.border || 'border-zinc-200'
-                            }`}
+                    {/* شارات وميزة اختيار الحالة للمشترك */}
+                    {userRole === 'collector' ? (
+                      <div className="bg-sky-50 border border-sky-200 rounded-2xl p-3 shadow-2xs">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-sky-600"></span>
+                            <span className="text-[12px] font-black text-sky-950">حالة المشترك الميدانية:</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openStatusPicker(activeSubscriber)}
+                            className="px-3 py-1.5 bg-sky-700 hover:bg-sky-800 active:scale-95 text-white rounded-xl text-[11.5px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer"
                           >
-                            {st}
-                          </span>
-                        ))}
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            <span>اختيار / تعديل الحالة</span>
+                          </button>
+                        </div>
+
+                        {statusesList.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {statusesList.map((st) => (
+                              <span
+                                key={st}
+                                className={`px-2.5 py-1 text-[11px] rounded-lg font-bold shadow-2xs border ${
+                                  STATUS_CONFIG[st]?.bg || 'bg-zinc-100'
+                                } ${STATUS_CONFIG[st]?.text || 'text-zinc-700'} ${
+                                  STATUS_CONFIG[st]?.border || 'border-zinc-200'
+                                }`}
+                              >
+                                {st}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-slate-500 font-medium">
+                            لم يتم تحديد حالة ميدانية بعد. انقر على &quot;اختيار / تعديل الحالة&quot; لتسجيلها.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 bg-slate-50/80 p-2 rounded-xl border border-slate-200/60">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-slate-600 ml-1">حالات المشترك:</span>
+                          {statusesList.length > 0 ? (
+                            statusesList.map((st) => (
+                              <span
+                                key={st}
+                                className={`px-2 py-0.5 text-[11px] rounded-lg font-bold shadow-2xs border ${
+                                  STATUS_CONFIG[st]?.bg || 'bg-zinc-100'
+                                } ${STATUS_CONFIG[st]?.text || 'text-zinc-700'} ${
+                                  STATUS_CONFIG[st]?.border || 'border-zinc-200'
+                                }`}
+                              >
+                                {st}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-slate-400">لا توجد حالات مسجلة</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openStatusPicker(activeSubscriber)}
+                          className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-[10.5px] font-bold shadow-2xs"
+                        >
+                          تعديل الحالة
+                        </button>
                       </div>
                     )}
 
@@ -4733,14 +4879,14 @@ export default function MainApp({
                   <button
                     type="button"
                     onClick={() => {
-                      if (userRole === 'writer') return
+                      if (userRole === 'writer' || userRole === 'collector') return
                       setEditSub({ ...activeSubscriber })
                       setShowEditModal(true)
                     }}
                     className={`text-right text-[16px] sm:text-[17px] font-bold text-slate-900 ${
-                      userRole === 'writer' ? 'cursor-default' : 'hover:text-sky-600 cursor-pointer'
+                      userRole === 'writer' || userRole === 'collector' ? 'cursor-default' : 'hover:text-sky-600 cursor-pointer'
                     } transition-colors`}
-                    title={userRole === 'writer' ? undefined : 'انقر لتعديل بيانات المشترك'}
+                    title={userRole === 'writer' || userRole === 'collector' ? undefined : 'انقر لتعديل بيانات المشترك'}
                   >
                     <span className="font-mono font-extrabold">{formatNumber(activeSubscriber.id)}</span> - <span>{activeSubscriber.name}</span>
                   </button>
@@ -4862,6 +5008,7 @@ export default function MainApp({
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
                               initialValue={row.old}
                               placeholder="0"
+                              readOnly={userRole === 'collector'}
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 bg-white text-center ${
                                 isCurrentPeriod
                                   ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-[#ef4444]'
@@ -4877,6 +5024,7 @@ export default function MainApp({
                             <DebtCellInput
                               initialValue={row.total}
                               placeholder="0"
+                              readOnly={userRole === 'collector'}
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center bg-white ${
                                 row.isTotalManual
                                   ? 'border-sky-300 bg-sky-50 text-sky-900'
@@ -4895,6 +5043,7 @@ export default function MainApp({
                               initialValue={row.paid}
                               isZeroEmpty={true}
                               placeholder="0"
+                              readOnly={userRole === 'collector'}
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 bg-white text-center ${
                                 isCurrentPeriod
                                   ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-slate-800'
@@ -4910,6 +5059,7 @@ export default function MainApp({
                             <DebtCellInput
                               initialValue={row.remaining}
                               placeholder="0"
+                              readOnly={userRole === 'collector'}
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center ${
                                 row.remaining === 0
                                   ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
@@ -5730,6 +5880,109 @@ export default function MainApp({
         </div>
       )}
 
+      {/* =========================================
+          نافذة اختيار وتحديث حالة المشترك الميدانية (StatusPickerModal)
+      ========================================= */}
+      {showStatusPickerModal && statusPickerSubId && (() => {
+        const targetSub = subscribers.find((s) => s.id === statusPickerSubId)
+        if (!targetSub) return null
+
+        return (
+          <div className="fixed inset-0 z-[10050] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+            <div className="bg-white w-full max-w-[440px] rounded-2xl border border-sky-100 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
+              {/* رأس النافذة */}
+              <div className="px-4 py-3.5 border-b border-sky-100 flex justify-between items-center bg-sky-50/60">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-600"></span>
+                  <div>
+                    <h3 className="font-bold text-[13.5px] text-slate-900">اختيار حالة المشترك</h3>
+                    <div className="text-[11px] text-slate-500 font-mono font-bold">
+                      #{formatNumber(targetSub.id)} - {targetSub.name}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowStatusPickerModal(false)}
+                  className="w-8 h-8 rounded-xl border border-sky-100 bg-white text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold shadow-2xs"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* جسم النافذة: خيارات الحالات كأزرار شبكية واضحة */}
+              <div className="p-4 overflow-y-auto space-y-3">
+                <div className="text-[11.5px] text-slate-600 font-medium">
+                  حدد الحالة أو الحالات التي تنطبق على هذا المشترك ميدانياً:
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {STATUS_OPTIONS.map((st) => {
+                    const isSelected = statusPickerSelected.includes(st)
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => {
+                          setStatusPickerSelected((prev) =>
+                            isSelected ? prev.filter((x) => x !== st) : [...prev, st]
+                          )
+                        }}
+                        className={`p-2.5 rounded-xl border text-[12px] font-bold text-right flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-sky-50/40 hover:bg-sky-100/60 border-sky-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="truncate">{st}</span>
+                        {isSelected ? (
+                          <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] flex items-center justify-center shrink-0">✓</span>
+                        ) : (
+                          <span className="w-4 h-4 rounded-full border border-slate-300 bg-white shrink-0"></span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {statusPickerSelected.length > 0 && (
+                  <div className="pt-1 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setStatusPickerSelected([])}
+                      className="text-[11px] text-rose-600 hover:underline font-bold"
+                    >
+                      إلغاء تحديد جميع الحالات (تفريغ)
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* أسفل النافذة: زر الحفظ */}
+              <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveSubscriberStatuses}
+                  className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl text-[13px] font-black flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  <span>حفظ حالة المشترك</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStatusPickerModal(false)}
+                  className="px-4 h-11 bg-white border border-slate-200 text-slate-600 rounded-xl text-[12px] font-bold hover:bg-slate-100 transition-colors"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* نافذة التواصل والموقع والصور */}
       {showContactModal && activeSubscriber && (
         <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
@@ -6480,10 +6733,9 @@ export default function MainApp({
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
       {/* ========================================================= */}
+      {/* زر إضافة مشترك وتنزيل إرساليات عائم (لا يظهر للكاتب ولا للمحصل) */}
       {/* ========================================================= */}
-      {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
-      {/* ========================================================= */}
-      {bottomNavTab === 'subscribers' && userRole !== 'writer' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && !showInstallmentsPage && (
+      {bottomNavTab === 'subscribers' && userRole !== 'writer' && userRole !== 'collector' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && !showInstallmentsPage && (
         <div
           style={{ position: 'fixed', bottom: '68px', left: '16px', zIndex: 9998 }}
           className="flex items-center gap-2"
