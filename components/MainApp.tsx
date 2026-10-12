@@ -3406,7 +3406,7 @@ export default function MainApp({
       </header>
 
       {/* المحتوى الرئيسي للتطبيق بحسب التبويب السفلي المختار */}
-      <main className="max-w-[1100px] mx-auto px-3 sm:px-4 py-4 pb-28">
+      <main className={`max-w-[1100px] mx-auto px-3 sm:px-4 py-4 ${userRole === 'writer' ? 'pb-8' : 'pb-28'}`}>
 
         {/* ========================================================= */}
         {/* التبويب 1: المشتركين */}
@@ -6500,8 +6500,9 @@ export default function MainApp({
       )}
 
       {/* ========================================================= */}
-      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (أفقية بارتفاع 58px) */}
+      {/* القائمة السفلية العصرية الثابتة بأسفل الشاشة (أفقية بارتفاع 58px) - لا تظهر للكاتب */}
       {/* ========================================================= */}
+      {userRole !== 'writer' && (
       <nav
         aria-label="شريط التنقل السفلي"
         style={{
@@ -6639,108 +6640,28 @@ export default function MainApp({
             </span>
           </button>
 
-          {/* 3. يحتاج مراجعة - لا يظهر للكاتب */}
-          {userRole !== 'writer' && (
-            <button
-              type="button"
-              onClick={() => setBottomNavTab('review')}
-              style={{
-                flex: 1,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'none',
-                border: 'none',
-                outline: 'none',
-                padding: '2px 0',
-                cursor: 'pointer',
-                color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8',
-                position: 'relative',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ position: 'relative' }}>
-                <div
-                  style={{
-                    width: '38px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '12px',
-                    backgroundColor: bottomNavTab === 'review' ? '#d97706' : 'transparent',
-                    color: bottomNavTab === 'review' ? '#ffffff' : '#94a3b8',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10 9 9 9 8 9" />
-                  </svg>
-                </div>
-                {totalReviewBadgeCount > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '-3px',
-                      right: '-4px',
-                      minWidth: '15px',
-                      height: '15px',
-                      padding: '0 3px',
-                      backgroundColor: '#ef4444',
-                      color: '#ffffff',
-                      fontSize: '9px',
-                      fontWeight: 'bold',
-                      borderRadius: '99px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1.5px solid #ffffff'
-                    }}
-                  >
-                    {totalReviewBadgeCount}
-                  </span>
-                )}
-              </div>
-              <span
-                style={{
-                  fontSize: '10.5px',
-                  marginTop: '2px',
-                  fontWeight: bottomNavTab === 'review' ? 'bold' : '500',
-                  color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8'
-                }}
-              >
-                يحتاج مراجعة
-              </span>
-            </button>
-          )}
-
-          {/* 4. الإحصائيات - لا يظهر للكاتب */}
-          {userRole !== 'writer' && (
-            <button
-              type="button"
-              onClick={() => setBottomNavTab('stats')}
-              style={{
-                flex: 1,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'none',
-                border: 'none',
-                outline: 'none',
-                padding: '2px 0',
-                cursor: 'pointer',
-                color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8',
-                transition: 'all 0.15s ease'
-              }}
-            >
+          {/* 3. يحتاج مراجعة */}
+          <button
+            type="button"
+            onClick={() => setBottomNavTab('review')}
+            style={{
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 0',
+              cursor: 'pointer',
+              color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8',
+              position: 'relative',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ position: 'relative' }}>
               <div
                 style={{
                   width: '38px',
@@ -6749,31 +6670,108 @@ export default function MainApp({
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: '12px',
-                  backgroundColor: bottomNavTab === 'stats' ? '#0f172a' : 'transparent',
-                  color: bottomNavTab === 'stats' ? '#ffffff' : '#94a3b8',
+                  backgroundColor: bottomNavTab === 'review' ? '#d97706' : 'transparent',
+                  color: bottomNavTab === 'review' ? '#ffffff' : '#94a3b8',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
                 </svg>
               </div>
-              <span
-                style={{
-                  fontSize: '10.5px',
-                  marginTop: '2px',
-                  fontWeight: bottomNavTab === 'stats' ? 'bold' : '500',
-                  color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8'
-                }}
-              >
-                الإحصائيات
-              </span>
-            </button>
-          )}
+              {totalReviewBadgeCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-3px',
+                    right: '-4px',
+                    minWidth: '15px',
+                    height: '15px',
+                    padding: '0 3px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    borderRadius: '99px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1.5px solid #ffffff'
+                  }}
+                >
+                  {totalReviewBadgeCount}
+                </span>
+              )}
+            </div>
+            <span
+              style={{
+                fontSize: '10.5px',
+                marginTop: '2px',
+                fontWeight: bottomNavTab === 'review' ? 'bold' : '500',
+                color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8'
+              }}
+            >
+              يحتاج مراجعة
+            </span>
+          </button>
+
+          {/* 4. الإحصائيات */}
+          <button
+            type="button"
+            onClick={() => setBottomNavTab('stats')}
+            style={{
+              flex: 1,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 0',
+              cursor: 'pointer',
+              color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div
+              style={{
+                width: '38px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '12px',
+                backgroundColor: bottomNavTab === 'stats' ? '#0f172a' : 'transparent',
+                color: bottomNavTab === 'stats' ? '#ffffff' : '#94a3b8',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+            </div>
+            <span
+              style={{
+                fontSize: '10.5px',
+                marginTop: '2px',
+                fontWeight: bottomNavTab === 'stats' ? 'bold' : '500',
+                color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8'
+              }}
+            >
+              الإحصائيات
+            </span>
+          </button>
         </div>
       </nav>
+      )}
 
       {/* نافذة الإرساليات الجديدة لتعديل السجل الورقي للكاتب */}
       {showWriterConsignmentsModal && (
