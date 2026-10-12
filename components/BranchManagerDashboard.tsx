@@ -16,6 +16,7 @@ import {
 } from '@/lib/directorateStore'
 import { Area, Subscriber, BillingRecords } from '@/components/MainApp'
 import ConsignmentsA4Page from './ConsignmentsA4Page'
+import BranchConsignmentsStore from './BranchConsignmentsStore'
 import * as XLSX from 'xlsx'
 import {
   Users,
@@ -42,9 +43,13 @@ import {
   Square,
   Check,
   Copy,
+  Layers,
+  Archive,
   X,
   RefreshCw,
-  Zap
+  Zap,
+  Phone,
+  AlertCircle
 } from 'lucide-react'
 
 interface BranchManagerDashboardProps {
@@ -60,7 +65,7 @@ interface BranchManagerDashboardProps {
   }) => void
 }
 
-type TabType = 'subscribers' | 'areas' | 'collectors' | 'writers' | 'settings'
+type TabType = 'subscribers' | 'areas' | 'consignments' | 'collectors' | 'writers' | 'settings'
 
 export default function BranchManagerDashboard({
   branch,
@@ -71,6 +76,7 @@ export default function BranchManagerDashboard({
   // التبويب الافتراضي يبدأ بالمناطق لمنع تحميل ملايين المشتركين تلقائياً عند فتح الحساب
   const [activeTab, setActiveTab] = useState<TabType>('areas')
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
+  const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   // حالات المشتركين المحملين عند الطلب فقط مع كاش ذكي
@@ -143,6 +149,7 @@ export default function BranchManagerDashboard({
   const [collectorCanEdit, setCollectorCanEdit] = useState(false)
   const [selectedCollectorAreas, setSelectedCollectorAreas] = useState<string[]>([])
   const [collectorAreaSearch, setCollectorAreaSearch] = useState('')
+  const [showSelectedOnlyCollector, setShowSelectedOnlyCollector] = useState(false)
 
   // حالات الكتاب
   const [showWriterModal, setShowWriterModal] = useState(false)
@@ -151,8 +158,11 @@ export default function BranchManagerDashboard({
   const [writerPhone, setWriterPhone] = useState('')
   const [selectedWriterAreas, setSelectedWriterAreas] = useState<string[]>([])
   const [writerAreaSearch, setWriterAreaSearch] = useState('')
+  const [showSelectedOnlyWriter, setShowSelectedOnlyWriter] = useState(false)
   const [copiedWriterId, setCopiedWriterId] = useState<string | null>(null)
   const [copiedCollectorId, setCopiedCollectorId] = useState<string | null>(null)
+  const [collectorSearch, setCollectorSearch] = useState('')
+  const [writerSearch, setWriterSearch] = useState('')
 
   // حالة عرض تفاصيل حساب المشترك وبلوك ديونه للمسؤول
   const [selectedDetailSubscriber, setSelectedDetailSubscriber] = useState<Subscriber | null>(null)
@@ -212,6 +222,30 @@ export default function BranchManagerDashboard({
     const start = (subscribersPage - 1) * subscribersPageSize
     return filteredSubscribers.slice(start, start + subscribersPageSize)
   }, [filteredSubscribers, subscribersPage, subscribersPageSize])
+
+  // فلترة المحصلين بالاسم أو الهاتف أو المنطقة
+  const filteredCollectors = useMemo(() => {
+    const list = branch.collectors || []
+    if (!collectorSearch.trim()) return list
+    const q = collectorSearch.trim().toLowerCase()
+    return list.filter(c => 
+      c.name.toLowerCase().includes(q) || 
+      c.phone.includes(q) ||
+      (branch.areas || []).some(a => (c.assignedAreaIds || []).includes(a.id) && a.name.toLowerCase().includes(q))
+    )
+  }, [branch.collectors, branch.areas, collectorSearch])
+
+  // فلترة الكتّاب بالاسم أو الهاتف أو المنطقة
+  const filteredWriters = useMemo(() => {
+    const list = branch.writers || []
+    if (!writerSearch.trim()) return list
+    const q = writerSearch.trim().toLowerCase()
+    return list.filter(w => 
+      w.name.toLowerCase().includes(q) || 
+      w.phone.includes(q) ||
+      (branch.areas || []).some(a => (w.assignedAreaIds || []).includes(a.id) && a.name.toLowerCase().includes(q))
+    )
+  }, [branch.writers, branch.areas, writerSearch])
 
   // دوال التحكم بالتحديد
   const toggleSelectSubscriber = (id: number) => {
@@ -1222,6 +1256,15 @@ export default function BranchManagerDashboard({
     onUpdateBranch({ ...branch, aiApiKeys: updatedKeys })
   }
 
+  const handleDeleteConsignment = (consignmentId: string) => {
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذه الإرسالية من مخزن الإرساليات؟')) return
+    const updatedConsignments = (branch.consignments || []).filter(c => c.id !== consignmentId)
+    onUpdateBranch({
+      ...branch,
+      consignments: updatedConsignments
+    })
+  }
+
   if (isConsignmentA4Open) {
     return (
       <ConsignmentsA4Page
@@ -1230,8 +1273,17 @@ export default function BranchManagerDashboard({
           subscribers: loadedSubscribers.length > 0 ? loadedSubscribers : (branch.subscribers || []),
           billing: Object.keys(loadedBilling).length > 0 ? loadedBilling : (branch.billing || {})
         }}
+        initialConsignment={selectedConsignmentForView}
         onSaveConsignment={handleSaveConsignmentA4}
-        onClose={() => setIsConsignmentA4Open(false)}
+        onClose={() => {
+          setIsConsignmentA4Open(false)
+          setSelectedConsignmentForView(null)
+        }}
+        onOpenArchive={() => {
+          setIsConsignmentA4Open(false)
+          setSelectedConsignmentForView(null)
+          setActiveTab('consignments')
+        }}
       />
     )
   }
@@ -1239,6 +1291,7 @@ export default function BranchManagerDashboard({
   const navItems = [
     { id: 'subscribers', label: 'المشتركون', icon: Users, count: stats.totalSubscribers },
     { id: 'areas', label: 'المناطق', icon: MapPin, count: stats.totalAreas },
+    { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers, count: (branch.consignments || []).length },
     { id: 'collectors', label: 'المحصلون', icon: Wallet, count: stats.totalCollectors },
     { id: 'writers', label: 'الكتّاب', icon: BookOpen, count: stats.totalWriters },
     { id: 'settings', label: 'الإعدادات و AI', icon: Settings }
@@ -1266,18 +1319,37 @@ export default function BranchManagerDashboard({
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              if (!hasLoadedSubscribers) {
-                fetchBranchSubscribers()
-              }
-              setIsConsignmentA4Open(true)
-            }}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>طباعة الإرساليات (A4)</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setSelectedConsignmentForView(null)
+                setActiveTab('consignments')
+              }}
+              style={{
+                backgroundColor: activeTab === 'consignments' ? '#2563eb' : '#f8fafc',
+                color: activeTab === 'consignments' ? '#ffffff' : '#1e293b',
+                borderColor: '#cbd5e1'
+              }}
+              className="px-3 py-1.5 sm:px-3.5 sm:py-2 border rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>مخزن الإرساليات ({branch.consignments?.length || 0})</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (!hasLoadedSubscribers) {
+                  fetchBranchSubscribers()
+                }
+                setSelectedConsignmentForView(null)
+                setIsConsignmentA4Open(true)
+              }}
+              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>إنشاء إرسالية (A4)</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -2000,6 +2072,28 @@ export default function BranchManagerDashboard({
                 </div>
               )}
             </div>
+          )}
+
+          {/* تبويب مخزن الإرساليات الرسمية */}
+          {activeTab === 'consignments' && (
+            <BranchConsignmentsStore
+              branch={branch}
+              onOpenNewConsignment={() => {
+                if (!hasLoadedSubscribers) {
+                  fetchBranchSubscribers()
+                }
+                setSelectedConsignmentForView(null)
+                setIsConsignmentA4Open(true)
+              }}
+              onViewConsignmentA4={(consignment) => {
+                if (!hasLoadedSubscribers) {
+                  fetchBranchSubscribers()
+                }
+                setSelectedConsignmentForView(consignment)
+                setIsConsignmentA4Open(true)
+              }}
+              onDeleteConsignment={handleDeleteConsignment}
+            />
           )}
 
           {/* تبويب المحصلين */}
@@ -2797,32 +2891,37 @@ export default function BranchManagerDashboard({
               border: '1px solid #cbd5e1'
             }}
           >
-            {/* الرأس - مثبت ومصغر */}
-            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc' }}>
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
-                  <Wallet className="w-4 h-4" />
+            {/* الرأس المدمج بدون أي فراغ زائد - مع الحقول وأدوات البحث في حزمة واحدة أنيقة */}
+            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2.5">
+              {/* السطر الأول: العنوان على اليمين وزر الإغلاق على اليسار */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 leading-tight">
+                      {editingCollector ? 'تعديل بيانات ومناطق المحصل' : 'إضافة محصل جديد'}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-bold leading-tight">حدد الصلاحيات والمناطق المخصصة لهذا المحصل</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900">
-                    {editingCollector ? 'تعديل بيانات ومناطق المحصل' : 'إضافة محصل جديد'}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 font-bold">حدد المناطق المخصصة لهذا المحصل</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCollectorModal(false)}
-                className="p-1 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-lg transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            {/* الحقول العلوية وأدوات البحث - مثبتة ومدمجة */}
-            <div style={{ flexShrink: 0, padding: '10px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCollectorModal(false)
+                    setShowSelectedOnlyCollector(false)
+                  }}
+                  className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* السطر الثاني: حقول الاسم والهاتف وصلاحية التعديل مدمجة في سطر واحد */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                <div className="sm:col-span-5">
                   <label className="block text-[11px] font-bold text-slate-700 mb-0.5">اسم المحصل:</label>
                   <input
                     type="text"
@@ -2833,7 +2932,7 @@ export default function BranchManagerDashboard({
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-4">
                   <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رقم الهاتف:</label>
                   <input
                     type="text"
@@ -2843,55 +2942,77 @@ export default function BranchManagerDashboard({
                     className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right font-mono"
                   />
                 </div>
+
+                <div className="sm:col-span-3 flex items-center pb-1.5">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={collectorCanEdit}
+                      onChange={(e) => setCollectorCanEdit(e.target.checked)}
+                      className="w-3.5 h-3.5 text-blue-600 rounded bg-white border-slate-300"
+                    />
+                    <span>سماح بالتعديل</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
-                <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] font-bold text-slate-700">
+              {/* السطر الثالث: شريط البحث مع زر إظهار المناطق المختارة وأزرار التحديد السريع */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
-                    type="checkbox"
-                    checked={collectorCanEdit}
-                    onChange={(e) => setCollectorCanEdit(e.target.checked)}
-                    className="w-3.5 h-3.5 text-blue-600 rounded bg-white border-slate-300"
+                    type="text"
+                    value={collectorAreaSearch}
+                    onChange={(e) => setCollectorAreaSearch(e.target.value)}
+                    placeholder="ابحث عن اسم منطقة..."
+                    className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
-                  <span>السماح للمحصل بالتعديل</span>
-                </label>
+                </div>
 
-                <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                  <span className="text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-mono">
-                    المحدد: {selectedCollectorAreas.length} منطقة
-                  </span>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold shrink-0">
+                  {/* زر إظهار المناطق المختارة فقط */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSelectedOnlyCollector(!showSelectedOnlyCollector)}
+                    className={`px-3 py-1 rounded-lg transition border flex items-center gap-1.5 shadow-2xs ${
+                      showSelectedOnlyCollector
+                        ? 'bg-blue-600 border-blue-700 text-white font-black'
+                        : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800'
+                    }`}
+                  >
+                    <span>{showSelectedOnlyCollector ? '✓ إظهار جميع المناطق' : 'المناطق المختارة فقط'}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      showSelectedOnlyCollector ? 'bg-white text-blue-700' : 'bg-blue-200 text-blue-900'
+                    }`}>
+                      {selectedCollectorAreas.length}
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       const filteredIds = (branch.areas || [])
-                        .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
+                        .filter(a => {
+                          if (showSelectedOnlyCollector && !selectedCollectorAreas.includes(a.id)) return false
+                          if (collectorAreaSearch && !a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase())) return false
+                          return true
+                        })
                         .map(a => a.id)
                       setSelectedCollectorAreas(Array.from(new Set([...selectedCollectorAreas, ...filteredIds])))
                     }}
-                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition"
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
                   >
                     تحديد المعروض
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setSelectedCollectorAreas([])}
-                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded transition"
+                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
                   >
                     إلغاء التحديد
                   </button>
                 </div>
-              </div>
-
-              {/* شريط البحث المباشر */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={collectorAreaSearch}
-                  onChange={(e) => setCollectorAreaSearch(e.target.value)}
-                  placeholder="ابحث عن اسم منطقة..."
-                  className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
               </div>
             </div>
 
@@ -2913,7 +3034,11 @@ export default function BranchManagerDashboard({
                 }}
               >
                 {(branch.areas || [])
-                  .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
+                  .filter(a => {
+                    if (showSelectedOnlyCollector && !selectedCollectorAreas.includes(a.id)) return false
+                    if (collectorAreaSearch && !a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase())) return false
+                    return true
+                  })
                   .map(area => {
                     const isChecked = selectedCollectorAreas.includes(area.id)
                     return (
@@ -2942,11 +3067,31 @@ export default function BranchManagerDashboard({
                     )
                   })}
               </div>
-              {(branch.areas || []).length === 0 && (
-                <div className="text-center py-8 text-slate-400 font-bold text-xs">
-                  لا توجد مناطق مضافة في هذا الفرع بعد
-                </div>
-              )}
+
+              {/* رسائل التنبيه عند عدم وجود نتائج */}
+              {(() => {
+                const filteredCount = (branch.areas || []).filter(a => {
+                  if (showSelectedOnlyCollector && !selectedCollectorAreas.includes(a.id)) return false
+                  if (collectorAreaSearch && !a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase())) return false
+                  return true
+                }).length
+
+                if (filteredCount === 0) {
+                  return (
+                    <div className="text-center py-10 text-slate-400 font-bold text-xs space-y-1">
+                      {showSelectedOnlyCollector ? (
+                        <>
+                          <p className="text-slate-600 font-black">لم تقم بتحديد أي مناطق لهذا المحصل حتى الآن</p>
+                          <p className="text-[11px] text-slate-400">انقر على &quot;إظهار جميع المناطق&quot; لتحديد المناطق المطلوبة</p>
+                        </>
+                      ) : (
+                        <p>لا توجد مناطق مطابقة للبحث</p>
+                      )}
+                    </div>
+                  )
+                }
+                return null
+              })()}
             </div>
 
             {/* أزرار الإجراءات في الأسفل مثبتة دائماً وظاهرة بحجم مدمج */}
@@ -3017,31 +3162,36 @@ export default function BranchManagerDashboard({
               border: '1px solid #cbd5e1'
             }}
           >
-            {/* الرأس - مثبت ومصغر */}
-            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc' }} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
-                  <BookOpen className="w-4 h-4" />
+            {/* الرأس المدمج بدون أي فراغ زائد - مع الحقول وأدوات البحث في حزمة واحدة أنيقة */}
+            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2.5">
+              {/* السطر الأول: العنوان على اليمين وزر الإغلاق على اليسار */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 leading-tight">
+                      {editingWriter ? 'تعديل بيانات ومناطق الكاتب' : 'إضافة كاتب جديد'}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-bold leading-tight">حدد المناطق المخصصة لهذا الكاتب</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900">
-                    {editingWriter ? 'تعديل بيانات ومناطق الكاتب' : 'إضافة كاتب جديد'}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 font-bold">تحديد المناطق المخصصة للكاتب</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowWriterModal(false)}
-                className="p-1 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-lg transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            {/* الحقول العلوية وأدوات البحث - مثبتة ومدمجة */}
-            <div style={{ flexShrink: 0, padding: '10px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWriterModal(false)
+                    setShowSelectedOnlyWriter(false)
+                  }}
+                  className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* السطر الثاني: حقول الاسم والهاتف */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-0.5">اسم الكاتب:</label>
                   <input
@@ -3065,48 +3215,63 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
-              {/* شريط الإجراءات والبحث */}
-              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
-                <span className="text-[11px] font-bold text-slate-700">
-                  حدد المناطق المسندة للكاتب:
-                </span>
+              {/* السطر الثالث: شريط البحث مع زر إظهار المناطق المختارة وأزرار التحديد السريع */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={writerAreaSearch}
+                    onChange={(e) => setWriterAreaSearch(e.target.value)}
+                    placeholder="ابحث عن اسم منطقة..."
+                    className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
 
-                <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                  <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono">
-                    المحدد: {selectedWriterAreas.length} منطقة
-                  </span>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold shrink-0">
+                  {/* زر إظهار المناطق المختارة فقط */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSelectedOnlyWriter(!showSelectedOnlyWriter)}
+                    className={`px-3 py-1 rounded-lg transition border flex items-center gap-1.5 shadow-2xs ${
+                      showSelectedOnlyWriter
+                        ? 'bg-amber-600 border-amber-700 text-white font-black'
+                        : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900'
+                    }`}
+                  >
+                    <span>{showSelectedOnlyWriter ? '✓ إظهار جميع المناطق' : 'المناطق المختارة فقط'}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      showSelectedOnlyWriter ? 'bg-white text-amber-700' : 'bg-amber-200 text-amber-900'
+                    }`}>
+                      {selectedWriterAreas.length}
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       const filteredIds = (branch.areas || [])
-                        .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
+                        .filter(a => {
+                          if (showSelectedOnlyWriter && !selectedWriterAreas.includes(a.id)) return false
+                          if (writerAreaSearch && !a.name.toLowerCase().includes(writerAreaSearch.toLowerCase())) return false
+                          return true
+                        })
                         .map(a => a.id)
                       setSelectedWriterAreas(Array.from(new Set([...selectedWriterAreas, ...filteredIds])))
                     }}
-                    className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded transition"
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
                   >
                     تحديد المعروض
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setSelectedWriterAreas([])}
-                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded transition"
+                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
                   >
                     إلغاء التحديد
                   </button>
                 </div>
-              </div>
-
-              {/* شريط البحث المباشر */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={writerAreaSearch}
-                  onChange={(e) => setWriterAreaSearch(e.target.value)}
-                  placeholder="ابحث عن اسم منطقة..."
-                  className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
-                />
               </div>
             </div>
 
@@ -3128,7 +3293,11 @@ export default function BranchManagerDashboard({
                 }}
               >
                 {(branch.areas || [])
-                  .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
+                  .filter(a => {
+                    if (showSelectedOnlyWriter && !selectedWriterAreas.includes(a.id)) return false
+                    if (writerAreaSearch && !a.name.toLowerCase().includes(writerAreaSearch.toLowerCase())) return false
+                    return true
+                  })
                   .map(area => {
                     const isChecked = selectedWriterAreas.includes(area.id)
                     return (
@@ -3157,11 +3326,31 @@ export default function BranchManagerDashboard({
                     )
                   })}
               </div>
-              {(branch.areas || []).length === 0 && (
-                <div className="text-center py-8 text-slate-400 font-bold text-xs">
-                  لا توجد مناطق مضافة في هذا الفرع بعد
-                </div>
-              )}
+
+              {/* رسائل التنبيه عند عدم وجود نتائج */}
+              {(() => {
+                const filteredCount = (branch.areas || []).filter(a => {
+                  if (showSelectedOnlyWriter && !selectedWriterAreas.includes(a.id)) return false
+                  if (writerAreaSearch && !a.name.toLowerCase().includes(writerAreaSearch.toLowerCase())) return false
+                  return true
+                }).length
+
+                if (filteredCount === 0) {
+                  return (
+                    <div className="text-center py-10 text-slate-400 font-bold text-xs space-y-1">
+                      {showSelectedOnlyWriter ? (
+                        <>
+                          <p className="text-slate-600 font-black">لم تقم بتحديد أي مناطق لهذا الكاتب حتى الآن</p>
+                          <p className="text-[11px] text-slate-400">انقر على &quot;إظهار جميع المناطق&quot; لتحديد المناطق المطلوبة</p>
+                        </>
+                      ) : (
+                        <p>لا توجد مناطق مطابقة للبحث</p>
+                      )}
+                    </div>
+                  )
+                }
+                return null
+              })()}
             </div>
 
             {/* أزرار الإجراءات في الأسفل مثبتة ومصغرة */}
