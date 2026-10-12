@@ -977,6 +977,8 @@ export default function MainApp({
   const [isLoadingCloud, setIsLoadingCloud] = useState<boolean>(true)
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const localSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSavedDataRef = useRef<string>('')
   const isInitialLoadRef = useRef<boolean>(true)
 
   // حالات العمل دون إنترنت وقائمة الانتظار
@@ -1249,17 +1251,25 @@ export default function MainApp({
     }
   }, [dataLoaded, isAuthenticated])
 
-  // الحفظ التلقائي المحلي الفوري + حفظ سحابي هادئ ومقنن للمسؤول فقط (حماية استهلاك فيرسل 100%)
+  // الحفظ التلقائي المحلي وسحابي بدون تجميد للمتصفح (حماية الأداء وسرعة الكتابة 100%)
   useEffect(() => {
     if (!isAuthenticated || !dataLoaded) return
     if (isIncomingSyncRef.current) return
 
-    const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys }
+    // 1. حفظ محلي هادئ في ذاكرة الجهاز بعد توقف الكتابة بـ 600ms (يمنع تجميد الشاشة تماماً أثناء إدخال المبالغ)
+    if (localSaveTimerRef.current) clearTimeout(localSaveTimerRef.current)
+    localSaveTimerRef.current = setTimeout(() => {
+      try {
+        const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys }
+        const str = JSON.stringify(data)
+        if (str !== lastSavedDataRef.current) {
+          localStorage.setItem(STORAGE_KEY, str)
+          lastSavedDataRef.current = str
+        }
+      } catch {}
+    }, 600)
 
-    // 1. حفظ محلي فوري في ذاكرة الجهاز (لا يستهلك أي إنترنت أو سيرفر نهائياً)
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
-
-    // 2. المحصل والكاتب (أو أي حساب للقراءة): خروج فوري لمنع أي استهلاك لسيرفر فيرسل نهائياً
+    // 2. المحصل والكاتب (أو أي حساب للقراءة فقط): خروج فوري لمنع أي استهلاك لسيرفر فيرسل
     if (!canEdit || userRole === 'collector') {
       return
     }
@@ -1270,10 +1280,11 @@ export default function MainApp({
       return
     }
 
-    // 4. حفظ سحابي للمسؤولين المصرح لهم فقط بعد توقف التعديل لمدة ثانيتين
+    // 4. حفظ سحابي للمسؤولين المصرح لهم بعد توقف التعديل لمدة ثانيتين (بدون إعادة تصيير متكررة)
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    setIsSyncing(true)
     saveTimerRef.current = setTimeout(async () => {
+      setIsSyncing(true)
+      const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys }
       if (onSaveBranchData) {
         await onSaveBranchData({
           subscribers,
@@ -1288,6 +1299,18 @@ export default function MainApp({
       setIsSyncing(false)
     }, 2000)
   }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys, dataLoaded, isAuthenticated, onSaveBranchData, canEdit, userRole])
+
+  // حفظ محلي فوري عند إغلاق أو مغادرة الصفحة لضمان عدم ضياع أي بيانات
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      try {
+        const data = { areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      } catch {}
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [areas, pricing, subscribers, billing, collectorName, collectorPhone, rangeFrom, rangeTo, reviewItems, aiApiKeys])
 
   // تسجيل الدخول بشكل آمن عبر السيرفر
   const handleLogin = async (e: React.FormEvent) => {
@@ -1722,6 +1745,57 @@ export default function MainApp({
       return copy
     })
   }
+
+  // مراجع لتأخير تعديل مبالغ الديون وجعل الكتابة فائقة السرعة بدون أي تجميد
+  const paymentEditDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingPaymentEditRef = useRef<{
+    subId: number
+    year: number
+    periodIdx: number
+    field: 'old' | 'total' | 'paid' | 'rem'
+    value: string
+  } | null>(null)
+
+  // تفريغ وحفظ التعديل المعلق فوراً لضمان عدم ضياع أي مبلغ
+  const flushPendingPaymentEdit = useCallback(() => {
+    if (paymentEditDebounceTimerRef.current) {
+      clearTimeout(paymentEditDebounceTimerRef.current)
+      paymentEditDebounceTimerRef.current = null
+    }
+    if (pendingPaymentEditRef.current) {
+      const { subId, year, periodIdx, field, value } = pendingPaymentEditRef.current
+      pendingPaymentEditRef.current = null
+      handlePaymentEdit(subId, year, periodIdx, field, value)
+    }
+  }, [pricing, subscribers])
+
+  // دالة إدخال المبالغ السلسة وفائقة الاستجابة بدون أي بطء
+  const handleDebouncedPaymentChange = useCallback((
+    subId: number,
+    year: number,
+    periodIdx: number,
+    field: 'old' | 'total' | 'paid' | 'rem',
+    cellKey: string,
+    rawVal: string
+  ) => {
+    const formatted = formatInputDisplay(rawVal)
+    // 1. تحديث فوري فائق الخفة للخلية المعروضة بدون تجميد المتصفح
+    setEditingCell({ key: cellKey, value: formatted })
+
+    // 2. إلغاء المؤقت السابق وجدولة الحفظ الفعلي بعد 450ms من توقف الكاتب عن الكتابة
+    if (paymentEditDebounceTimerRef.current) {
+      clearTimeout(paymentEditDebounceTimerRef.current)
+    }
+    pendingPaymentEditRef.current = { subId, year, periodIdx, field, value: formatted }
+
+    paymentEditDebounceTimerRef.current = setTimeout(() => {
+      if (pendingPaymentEditRef.current) {
+        const pending = pendingPaymentEditRef.current
+        pendingPaymentEditRef.current = null
+        handlePaymentEdit(pending.subId, pending.year, pending.periodIdx, pending.field, pending.value)
+      }
+    }, 450)
+  }, [pricing, subscribers])
 
   // إدارة مفاتيح الذكاء الاصطناعي
   const handleAddAiKey = () => {
@@ -4498,28 +4572,6 @@ export default function MainApp({
                 )}
               </div>
 
-              {/* اسم ورقم المشترك فوق أزرار التنقل مباشرة */}
-              <div className="subscriber-content px-4 pt-2.5 pb-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditSub({ ...activeSubscriber })
-                      setShowEditModal(true)
-                    }}
-                    className="text-right text-[16px] sm:text-[17px] font-bold text-slate-900 hover:text-sky-600 transition-colors cursor-pointer"
-                    title="انقر لتعديل بيانات المشترك"
-                  >
-                    <span className="font-mono font-extrabold">{formatNumber(activeSubscriber.id)}</span> - <span>{activeSubscriber.name}</span>
-                  </button>
-                  <span className="text-[12px] text-slate-500 font-medium">
-                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
-                    {' - '}
-                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
-                  </span>
-                </div>
-              </div>
-
               {/* بطاقة التفاصيل الشاملة للمشترك: الإضبارة، الدين السابق، الملاحظات، الحالات */}
               {(() => {
                 const dossierVal = activeSubscriber.dossier || 
@@ -4584,7 +4636,7 @@ export default function MainApp({
               })()}
 
               {/* زر مراسلة المشترك عبر واتساب - كبير وواضح وبارز في واجهة الحساب */}
-              {Boolean(activeSubscriber.phone && activeSubscriber.phone.trim()) && (
+              {userRole !== 'writer' && Boolean(activeSubscriber.phone && activeSubscriber.phone.trim()) && (
                 <div className="subscriber-content px-2 pt-1.5 pb-0.5">
                   <div className="flex gap-2 items-center">
                     {activeShareData?.url ? (
@@ -4612,6 +4664,31 @@ export default function MainApp({
                   </div>
                 </div>
               )}
+
+              {/* اسم ورقم المشترك - فوق أزرار التالي والسابق مباشرة */}
+              <div className="subscriber-content px-4 pt-2.5 pb-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (userRole === 'writer') return
+                      setEditSub({ ...activeSubscriber })
+                      setShowEditModal(true)
+                    }}
+                    className={`text-right text-[16px] sm:text-[17px] font-bold text-slate-900 ${
+                      userRole === 'writer' ? 'cursor-default' : 'hover:text-sky-600 cursor-pointer'
+                    } transition-colors`}
+                    title={userRole === 'writer' ? undefined : 'انقر لتعديل بيانات المشترك'}
+                  >
+                    <span className="font-mono font-extrabold">{formatNumber(activeSubscriber.id)}</span> - <span>{activeSubscriber.name}</span>
+                  </button>
+                  <span className="text-[12px] text-slate-500 font-medium">
+                    ({areas.find((a) => a.id === activeSubscriber.areaId)?.name}
+                    {' - '}
+                    {areas.find((a) => a.id === activeSubscriber.areaId)?.branches.find((b) => b.id === activeSubscriber.branchId)?.name})
+                  </span>
+                </div>
+              </div>
 
               {/* أزرار التالي والسابق للتنقل بين المشتركين (تعمل دائماً حتى عند البحث) */}
               {(() => {
