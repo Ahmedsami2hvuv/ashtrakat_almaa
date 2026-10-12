@@ -49,7 +49,8 @@ import {
   RefreshCw,
   Zap,
   Phone,
-  AlertCircle
+  AlertCircle,
+  Hash
 } from 'lucide-react'
 
 interface BranchManagerDashboardProps {
@@ -188,6 +189,12 @@ export default function BranchManagerDashboard({
   const [subscribersPage, setSubscribersPage] = useState(1)
   const [subscribersPageSize, setSubscribersPageSize] = useState<number>(30)
 
+  // حالات التحديد بنطاق أرقام (مثلاً: من 1 إلى 1000)
+  const [rangeFrom, setRangeFrom] = useState<string>('1')
+  const [rangeTo, setRangeTo] = useState<string>('1000')
+  const [rangeMode, setRangeMode] = useState<'index' | 'id'>('index')
+  const [rangeKeepPrevious, setRangeKeepPrevious] = useState<boolean>(false)
+
   // حالات نوافذ التخصيص المنبثقة
   const [showAssignAreasModal, setShowAssignAreasModal] = useState(false)
   const [bulkSelectedAreaIds, setBulkSelectedAreaIds] = useState<string[]>([])
@@ -274,6 +281,111 @@ export default function BranchManagerDashboard({
 
   const clearSelectedSubscribers = () => {
     setSelectedSubIds(new Set())
+  }
+
+  // تحديد المشتركين عبر إدخال نطاق أرقام (مثلاً من 1 إلى 1000)
+  const handleSelectByRange = (modeOverride?: 'index' | 'id') => {
+    const fromNum = parseInt(rangeFrom.trim(), 10)
+    const toNum = parseInt(rangeTo.trim(), 10)
+
+    if (isNaN(fromNum) || isNaN(toNum) || fromNum <= 0 || toNum <= 0) {
+      alert('يرجى إدخال أرقام صحيحة أكبر من الصفر في حقلي النطاق (من وإلى).')
+      return
+    }
+
+    const start = Math.min(fromNum, toNum)
+    const end = Math.max(fromNum, toNum)
+    const currentMode = modeOverride || rangeMode
+
+    const newlySelectedIds = new Set<number>()
+
+    if (currentMode === 'index') {
+      // 1. التحديد حسب تسلسل المشتركين في القائمة (مثلاً من المشترك 1 إلى 1000)
+      const sliceStart = Math.max(0, start - 1)
+      const sliceEnd = Math.min(filteredSubscribers.length, end)
+      const targetSubs = filteredSubscribers.slice(sliceStart, sliceEnd)
+      targetSubs.forEach(s => newlySelectedIds.add(s.id))
+    } else {
+      // 2. التحديد حسب رقم المشترك (ID) الفعلي
+      filteredSubscribers.forEach(s => {
+        const subIdNum = Number(s.id)
+        if (!isNaN(subIdNum) && subIdNum >= start && subIdNum <= end) {
+          newlySelectedIds.add(s.id)
+        }
+      })
+    }
+
+    if (newlySelectedIds.size === 0) {
+      alert('لم يتم العثور على أي مشتركين يقعون ضمن هذا النطاق المحدد.')
+      return
+    }
+
+    setSelectedSubIds(prev => {
+      if (rangeKeepPrevious) {
+        const merged = new Set(prev)
+        newlySelectedIds.forEach(id => merged.add(id))
+        return merged
+      }
+      return newlySelectedIds
+    })
+
+    setBulkFeedbackMessage(`تم بنجاح تحديد (${newlySelectedIds.size}) مشترك ضمن النطاق من ${start} إلى ${end}!`)
+    setTimeout(() => setBulkFeedbackMessage(null), 4000)
+  }
+
+  // تحديد سريع لأرقام جاهزة (500، 1000، 2000...)
+  const handleQuickRange = (fromStr: string, toStr: string) => {
+    const fromNum = parseInt(fromStr, 10)
+    const toNum = parseInt(toStr, 10)
+    const sliceStart = Math.max(0, fromNum - 1)
+    const sliceEnd = Math.min(filteredSubscribers.length, toNum)
+    const newlySelectedIds = new Set<number>()
+    filteredSubscribers.slice(sliceStart, sliceEnd).forEach(s => newlySelectedIds.add(s.id))
+    
+    setSelectedSubIds(prev => {
+      if (rangeKeepPrevious) {
+        const merged = new Set(prev)
+        newlySelectedIds.forEach(id => merged.add(id))
+        return merged
+      }
+      return newlySelectedIds
+    })
+
+    setBulkFeedbackMessage(`تم تحديد (${newlySelectedIds.size}) مشترك (من ${fromStr} إلى ${toStr}) بنجاح!`)
+    setTimeout(() => setBulkFeedbackMessage(null), 4000)
+  }
+
+  // الانتقال للدفعة التالية تلقائياً بنفس الحجم (مثلاً من 1001 إلى 2000)
+  const handleNextBatch = () => {
+    const fromNum = parseInt(rangeFrom.trim(), 10) || 1
+    const toNum = parseInt(rangeTo.trim(), 10) || 1000
+    const step = Math.max(1, toNum - fromNum + 1)
+    const nextFrom = toNum + 1
+    const nextTo = toNum + step
+    setRangeFrom(String(nextFrom))
+    setRangeTo(String(nextTo))
+
+    const sliceStart = Math.max(0, nextFrom - 1)
+    const sliceEnd = Math.min(filteredSubscribers.length, nextTo)
+    const newlySelectedIds = new Set<number>()
+    filteredSubscribers.slice(sliceStart, sliceEnd).forEach(s => newlySelectedIds.add(s.id))
+
+    if (newlySelectedIds.size === 0) {
+      alert(`وصلت إلى نهاية المشتركين (إجمالي المشتركين الحاليين: ${filteredSubscribers.length}).`)
+      return
+    }
+
+    setSelectedSubIds(prev => {
+      if (rangeKeepPrevious) {
+        const merged = new Set(prev)
+        newlySelectedIds.forEach(id => merged.add(id))
+        return merged
+      }
+      return newlySelectedIds
+    })
+
+    setBulkFeedbackMessage(`تم تحديد الدفعة التالية: (${newlySelectedIds.size}) مشترك (من ${nextFrom} إلى ${nextTo}) بنجاح!`)
+    setTimeout(() => setBulkFeedbackMessage(null), 4000)
   }
 
   // 1. تنفيذ التخصيص للمناطق
@@ -1485,116 +1597,158 @@ export default function BranchManagerDashboard({
                     </div>
                   </div>
 
-                  {/* بلوك الأزرار التفاعلي للمشتركين المحددين (يظهر فوراً هنا أمام المسؤول) */}
-                  {selectedSubIds.size > 0 && (
-                    <div
-                      style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#ffffff',
-                        border: '2px solid #3b82f6',
-                        borderRadius: '16px',
-                        boxShadow: '0 4px 16px rgba(59, 130, 246, 0.18)',
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Zap className="w-5 h-5 text-amber-500" />
+                  {/* أداة التحديد بنطاق الأرقام (مثلاً: من 1 إلى 1000) */}
+                  <div className="bg-white p-3 sm:p-4 rounded-xl border-2 border-blue-300 shadow-sm space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                          <Hash className="w-5 h-5 font-black" />
+                        </div>
                         <div>
-                          <div style={{ fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>
-                            خيارات التعامل مع المشتركين المحددين ({selectedSubIds.size} مشترك):
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
-                            انقر على أي خيار أدناه لتخصيصهم فوراً:
-                          </div>
+                          <span className="font-black text-slate-900 text-xs sm:text-sm">تحديد المشتركين بالنطاق (من رقم إلى رقم)</span>
+                          <p className="text-[11px] text-slate-500 font-bold">حدد مجموعة اشتراكات كاملة بنقرة واحدة (مثال: من 1 إلى 1000)</p>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
-                        {/* 1. تخصيص لمناطق */}
+                      {/* تبديل طريقة احتساب النطاق */}
+                      <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
                         <button
                           type="button"
-                          onClick={() => {
-                            setBulkSelectedAreaIds([])
-                            setBulkAreaSearch('')
-                            setShowAssignAreasModal(true)
-                          }}
-                          style={{
-                            padding: '9px 18px',
-                            backgroundColor: '#059669',
-                            color: '#ffffff',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 800,
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(5, 150, 105, 0.35)'
-                          }}
+                          onClick={() => setRangeMode('index')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            rangeMode === 'index'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                          title="يحدد حسب ترتيب المشتركين في القائمة (مثلاً المشترك الأول إلى الألف)"
                         >
-                          <MapPin style={{ width: '16px', height: '16px' }} />
-                          <span>تخصيص لمناطق</span>
+                          حسب تسلسل القائمة (1 إلى 1000)
                         </button>
-
-                        {/* 2. تخصيص لكتّاب */}
                         <button
                           type="button"
-                          onClick={() => {
-                            setBulkSelectedWriterIds([])
-                            setShowAssignWritersModal(true)
-                          }}
-                          style={{
-                            padding: '9px 18px',
-                            backgroundColor: '#d97706',
-                            color: '#ffffff',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 800,
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(217, 119, 6, 0.35)'
-                          }}
+                          onClick={() => setRangeMode('id')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            rangeMode === 'id'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                          title="يحدد حسب رقم اشتراك المشترك الفعلي (ID)"
                         >
-                          <BookOpen style={{ width: '16px', height: '16px' }} />
-                          <span>تخصيص لكتّاب</span>
-                        </button>
-
-                        {/* 3. تخصيص لمحصلين */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBulkSelectedCollectorIds([])
-                            setShowAssignCollectorsModal(true)
-                          }}
-                          style={{
-                            padding: '9px 18px',
-                            backgroundColor: '#2563eb',
-                            color: '#ffffff',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 800,
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.35)'
-                          }}
-                        >
-                          <Wallet style={{ width: '16px', height: '16px' }} />
-                          <span>تخصيص لمحصلين</span>
+                          حسب رقم المشترك (ID)
                         </button>
                       </div>
                     </div>
-                  )}
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      {/* حقل من رقم */}
+                      <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                        <span className="text-slate-700 font-black text-xs">مِـن رقم:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={rangeFrom}
+                          onChange={(e) => setRangeFrom(e.target.value)}
+                          placeholder="1"
+                          className="w-20 font-black text-slate-900 text-center outline-none bg-transparent text-sm"
+                        />
+                      </div>
+
+                      {/* حقل إلى رقم */}
+                      <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                        <span className="text-slate-700 font-black text-xs">إلـى رقم:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={rangeTo}
+                          onChange={(e) => setRangeTo(e.target.value)}
+                          placeholder="1000"
+                          className="w-24 font-black text-slate-900 text-center outline-none bg-transparent text-sm"
+                        />
+                      </div>
+
+                      {/* زر تحديد هذا النطاق */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectByRange()}
+                        style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+                        className="px-5 py-2 hover:bg-blue-700 font-black text-xs sm:text-sm rounded-xl transition shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
+                      >
+                        <CheckSquare className="w-4 h-4 text-white" />
+                        <span>تحديد النطاق ({rangeFrom} ⬅ {rangeTo})</span>
+                      </button>
+
+                      {/* خيار الإبقاء على التحديد السابق */}
+                      <label className="flex items-center gap-2 text-xs text-slate-700 font-bold cursor-pointer select-none bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+                        <input
+                          type="checkbox"
+                          checked={rangeKeepPrevious}
+                          onChange={(e) => setRangeKeepPrevious(e.target.checked)}
+                          className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                        />
+                        <span>إضافة للتحديد السابق (+)</span>
+                      </label>
+                    </div>
+
+                    {/* اختصارات جاهزة للأرقام الشائعة */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
+                      <span className="text-slate-400 font-bold text-xs">تحديد سريع:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRangeFrom('1')
+                          setRangeTo('500')
+                          handleQuickRange('1', '500')
+                        }}
+                        className="px-3 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 rounded-lg font-bold text-xs border border-slate-200 transition cursor-pointer active:scale-95"
+                      >
+                        أول 500
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRangeFrom('1')
+                          setRangeTo('1000')
+                          handleQuickRange('1', '1000')
+                        }}
+                        className="px-3 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 rounded-lg font-bold text-xs border border-slate-200 transition cursor-pointer active:scale-95"
+                      >
+                        أول 1,000
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRangeFrom('1')
+                          setRangeTo('2000')
+                          handleQuickRange('1', '2000')
+                        }}
+                        className="px-3 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 rounded-lg font-bold text-xs border border-slate-200 transition cursor-pointer active:scale-95"
+                      >
+                        أول 2,000
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRangeFrom('1')
+                          setRangeTo('5000')
+                          handleQuickRange('1', '5000')
+                        }}
+                        className="px-3 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 rounded-lg font-bold text-xs border border-slate-200 transition cursor-pointer active:scale-95"
+                      >
+                        أول 5,000
+                      </button>
+
+                      {/* زر الدفعة التالية */}
+                      <button
+                        type="button"
+                        onClick={handleNextBatch}
+                        style={{ backgroundColor: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}
+                        className="px-3.5 py-1 hover:bg-emerald-100 border rounded-lg font-black text-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        title="تحديد الدفعة التالية تلقائياً بنفس المقدار"
+                      >
+                        <span>الدفعة التالية ⏭</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
