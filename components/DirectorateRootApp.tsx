@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { loadDirectorateFromCloud, saveDirectorateToCloud, loadBranchSubscribersAndBilling, saveBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
+import { Clock, Lock, RefreshCw, AlertTriangle } from 'lucide-react'
+import { checkWriterWorkHours, formatTimeArabic } from '@/lib/iraqTime'
 
 const DirectorDashboard = dynamic(() => import('./DirectorDashboard'), {
   ssr: false,
@@ -23,6 +25,7 @@ type ActiveView =
   | 'director_dashboard'
   | 'branch_manager'
   | 'subscriber_app'
+  | 'writer_out_of_hours'
 
 export default function DirectorateRootApp() {
   const [directorateData, setDirectorateData] = useState<DirectorateData | null>(() => {
@@ -69,6 +72,15 @@ export default function DirectorateRootApp() {
     canEdit: boolean
     assignedAreaIds?: string[]
     assignedSubscriberIds?: number[]
+  } | null>(null)
+
+  // بيانات حظر الكاتب عند محاولة الدخول خارج ساعات العمل المحددة بالتوقيت العراقي
+  const [writerLockoutData, setWriterLockoutData] = useState<{
+    writerName: string
+    branchName: string
+    start: string
+    end: string
+    currentIraqTime: string
   } | null>(null)
 
   // دالة فتح تطبيق المشتركين مع جلب بيانات هذا الفرع حصراً عند الطلب
@@ -238,6 +250,21 @@ export default function DirectorateRootApp() {
             }
 
             if (matchedBranch && matchedWriter && (!branchId || matchedBranch.id === branchId)) {
+              // فحص ساعات عمل الكاتب بالتوقيت العراقي الرسمي (Asia/Baghdad)
+              const workCheck = checkWriterWorkHours(matchedWriter)
+              if (!workCheck.allowed) {
+                setWriterLockoutData({
+                  writerName: matchedWriter.name,
+                  branchName: matchedBranch.name,
+                  start: matchedWriter.workHourStart || '08:00',
+                  end: matchedWriter.workHourEnd || '14:00',
+                  currentIraqTime: workCheck.currentIraqTime
+                })
+                setActiveView('writer_out_of_hours')
+                setIsLoading(false)
+                return
+              }
+
               setSelectedBranch(matchedBranch)
               const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
               setSubscriberAppData(subsData)
@@ -469,6 +496,85 @@ export default function DirectorateRootApp() {
             : undefined
         }
       />
+    )
+  }
+
+  // 3.5 شاشة حظر الكاتب إذا حاول الدخول خارج ساعات العمل المحددة بالتوقيت العراقي
+  if (activeView === 'writer_out_of_hours' && writerLockoutData) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-white select-none" dir="rtl">
+        <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6 relative overflow-hidden">
+          {/* زخرفة خلفية خفيفة */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* أيقونة القفل وساعات العمل */}
+          <div className="relative mx-auto w-20 h-20">
+            <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
+              <Clock className="w-10 h-10 animate-pulse" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-500 text-slate-950 rounded-lg flex items-center justify-center shadow-md">
+              <Lock className="w-4 h-4 font-black" />
+            </div>
+          </div>
+
+          {/* العناوين والرسالة الصريحة */}
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+              <span>خارج أوقات العمل الرسمية</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
+              عذراً، أنت الآن خارج وقت العمل
+            </h1>
+            <p className="text-amber-200/90 text-sm font-bold">
+              لا يمكن عرض النظام لك في هذا الوقت
+            </p>
+          </div>
+
+          {/* تفاصيل ساعات العمل والحساب */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 text-right space-y-3">
+            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-700/60">
+              <span className="text-slate-400 font-bold">اسم الكاتب:</span>
+              <span className="text-white font-black">{writerLockoutData.writerName}</span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-700/60">
+              <span className="text-slate-400 font-bold">الفرع التابع له:</span>
+              <span className="text-blue-300 font-black">{writerLockoutData.branchName}</span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-700/60">
+              <span className="text-slate-400 font-bold">أوقات العمل المسموحة:</span>
+              <span className="text-emerald-300 font-black">
+                من {formatTimeArabic(writerLockoutData.start)} إلى {formatTimeArabic(writerLockoutData.end)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-0.5">
+              <span className="text-slate-400 font-bold">التوقيت الحالي في العراق:</span>
+              <span className="text-amber-300 font-mono font-black dir-ltr">
+                {writerLockoutData.currentIraqTime} (Asia/Baghdad)
+              </span>
+            </div>
+          </div>
+
+          {/* ملاحظة توضيحية */}
+          <p className="text-slate-400 text-xs leading-relaxed">
+            تم ضبط ساعات عمل حسابك من قِبل مسؤول الفرع بالتوقيت المحلي للعراق. يرجى الدخول ضمن فترة الدوام المقررة، أو التواصل مع مسؤول الفرع في حال تطلب الأمر تعديل ساعات العمل.
+          </p>
+
+          {/* زر تحديث الصفحة */}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm rounded-2xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>تحديث الصفحة والتحقق الآن</span>
+          </button>
+        </div>
+      </div>
     )
   }
 
