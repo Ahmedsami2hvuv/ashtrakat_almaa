@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { Printer, Save, ArrowRight, Plus, Layers } from 'lucide-react'
+import { Printer, Save, ArrowRight, Plus, Layers, Sparkles } from 'lucide-react'
 import { DirectorateBranch, Consignment, ConsignmentItem } from '@/lib/directorateTypes'
 import { loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import { Subscriber, BillingRecords } from '@/components/MainApp'
+import ConsignmentAiScannerModal from './ConsignmentAiScannerModal'
+import { ScannedConsignmentResult } from '@/lib/aiConsignmentScanner'
 
 interface ConsignmentsA4PageProps {
   branch: DirectorateBranch
@@ -151,6 +153,7 @@ export default function ConsignmentsA4Page({
 
   const [savedSuccessMessage, setSavedSuccessMessage] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false)
 
   // المشتركون المحملون محلياً مع جلب فوري من السيرفر عند الحاجة
   const [subscribersList, setSubscribersList] = useState<Subscriber[]>(() => branch.subscribers || [])
@@ -484,7 +487,8 @@ export default function ConsignmentsA4Page({
 
     // ترحيل الدفعات وتحديث ديون المشتركين ومناطقهم المسجلة
     const updatedBilling = { ...(branch.billing || {}) }
-    const updatedSubscribers = branch.subscribers.map(sub => {
+    const sourceSubs = subscribersList.length > 0 ? subscribersList : (branch.subscribers || [])
+    const updatedSubscribers = sourceSubs.map(sub => {
       const paymentsForSub = consignmentItems.filter(item => item.subscriberId === sub.id)
       if (paymentsForSub.length === 0) return sub
 
@@ -532,6 +536,94 @@ export default function ConsignmentsA4Page({
     setTimeout(() => {
       setSavedSuccessMessage(null)
     }, 4500)
+  }
+
+  // تطبيق البيانات المستخرجة من الذكاء الاصطناعي على جدول واستمارة A4
+  const handleApplyScannedResult = (scannedData: ScannedConsignmentResult) => {
+    if (scannedData.serialNumber) {
+      setSerialNumber(scannedData.serialNumber)
+    }
+    if (scannedData.paperRefNumber) {
+      setPaperRefNumber(scannedData.paperRefNumber)
+    }
+    if (scannedData.collectorName) {
+      setSelectedCollectorName(scannedData.collectorName)
+    }
+    if (scannedData.date) {
+      setConsignmentDate(scannedData.date)
+    }
+
+    if (scannedData.rows && scannedData.rows.length > 0) {
+      const newRows: RowData[] = scannedData.rows.map((sr) => {
+        const isVoid = sr.isVoid
+        const subIdStr = sr.subscriberId ? String(sr.subscriberId) : ''
+        let subName = sr.subscriberName || ''
+        let areaName = sr.areaName || ''
+
+        // إذا كان هناك رقم مشترك، نحاول مطابقة اسمه ومنطقته من سجلات الفرع
+        if (sr.subscriberId) {
+          const numId = parseSubscriberId(subIdStr)
+          const found = findSubscriberById(numId)
+          if (found) {
+            if (!subName || subName.includes('غير معروف')) subName = found.name || subName
+            if (!areaName && found.areaId && areasMap.has(found.areaId)) {
+              areaName = areasMap.get(found.areaId)!
+            }
+          }
+        }
+
+        if (isVoid && !subName) {
+          subName = 'بطال'
+        }
+
+        return {
+          subscriberId: isVoid ? '' : subIdStr,
+          subscriberName: subName,
+          areaName: areaName,
+          amount: isVoid ? '' : (sr.amount ? String(sr.amount) : ''),
+          waterAmount: isVoid ? '' : (sr.waterAmount ? String(sr.waterAmount) : ''),
+          municipalityAmount: isVoid ? '' : (sr.municipalityAmount ? String(sr.municipalityAmount) : ''),
+          receiptNumber: sr.receiptNumber || '',
+          paymentDate: consignmentDate,
+          paymentTime: ''
+        }
+      })
+
+      // إكمال الجدول إلى 23 سطراً دائماً
+      while (newRows.length < 23) {
+        newRows.push({
+          subscriberId: '',
+          subscriberName: '',
+          areaName: '',
+          amount: '',
+          waterAmount: '',
+          municipalityAmount: '',
+          receiptNumber: '',
+          paymentDate: consignmentDate,
+          paymentTime: ''
+        })
+      }
+
+      setRows(newRows)
+    }
+
+    setSavedSuccessMessage(`✨ تم بنجاح استخراج وتطبيق بيانات الإرسالية رقم (${scannedData.serialNumber || serialNumber}) من الصورة على استمارة A4!`)
+    setTimeout(() => {
+      setSavedSuccessMessage(null)
+    }, 6000)
+  }
+
+  // الترحيل المباشر القادم من شاشة الذكاء الاصطناعي
+  const handleDirectPostFromAi = (
+    consignment: Consignment,
+    updatedSubscribers: Subscriber[],
+    updatedBilling: BillingRecords
+  ) => {
+    onSaveConsignment(consignment, updatedSubscribers, updatedBilling)
+    setSavedSuccessMessage(`🎉 تم بنجاح ترحيل واعتماد الإرسالية رقم (${consignment.serialNumber}) المحللة بالذكاء الاصطناعي وتنزيل الديون لـ (${consignment.items.length}) مشترك!`)
+    setTimeout(() => {
+      setSavedSuccessMessage(null)
+    }, 6000)
   }
 
   const handlePrint = () => {
@@ -583,6 +675,16 @@ export default function ConsignmentsA4Page({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setIsAiModalOpen(true)}
+              style={{ backgroundColor: '#7c3aed', color: '#ffffff' }}
+              className="px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:bg-purple-700 transition flex items-center gap-2 cursor-pointer active:scale-95"
+              title="قراءة الإرسالية من صورة أو استمارة ورقية بواسطة الذكاء الاصطناعي واستخراج البيانات تلقائياً"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>إرسالية من الصور (AI)</span>
+            </button>
+
             <button
               onClick={handlePrint}
               style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
@@ -907,6 +1009,20 @@ export default function ConsignmentsA4Page({
         </div>
 
       </div>
+
+      {/* نافذة المسح الضوئي والقراءة بالذكاء الاصطناعي */}
+      {isAiModalOpen && (
+        <ConsignmentAiScannerModal
+          branch={branch}
+          subscribers={subscribersList.length > 0 ? subscribersList : (branch.subscribers || [])}
+          billing={branch.billing || {}}
+          apiKeys={branch.aiApiKeys || []}
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          onApplyConsignment={handleDirectPostFromAi}
+          onTransferToA4={handleApplyScannedResult}
+        />
+      )}
     </div>
   )
 }
