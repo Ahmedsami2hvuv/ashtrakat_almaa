@@ -2767,7 +2767,7 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
-      {/* نافذة إضافة / تعديل محصل - تصميم مصغر مدمج ومحكوم مع 4 مناطق في السطر دائماً */}
+      {/* نافذة إضافة / تعديل محصل - تصميم متناسق ومريح مع 4 مناطق في السطر دائماً */}
       {showCollectorModal && (
         <div 
           style={{
@@ -2779,21 +2779,21 @@ export default function BranchManagerDashboard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '12px'
+            padding: '16px'
           }}
         >
           <div 
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: '20px',
+              borderRadius: '24px',
               width: '100%',
-              maxWidth: '750px',
-              height: '75vh',
-              maxHeight: '75vh',
+              maxWidth: '980px',
+              height: '84vh',
+              maxHeight: '84vh',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.35)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
               border: '1px solid #cbd5e1'
             }}
           >
@@ -2987,7 +2987,7 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
-      {/* نافذة إضافة / تعديل كاتب - تصميم مصغر مدمج ومحكوم مع 4 مناطق في السطر دائماً */}
+      {/* نافذة إضافة / تعديل كاتب - تصميم متناسق ومريح مع 4 مناطق في السطر دائماً */}
       {showWriterModal && (
         <div 
           style={{
@@ -2999,21 +2999,21 @@ export default function BranchManagerDashboard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '12px'
+            padding: '16px'
           }}
         >
           <div 
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: '20px',
+              borderRadius: '24px',
               width: '100%',
-              maxWidth: '750px',
-              height: '75vh',
-              maxHeight: '75vh',
+              maxWidth: '980px',
+              height: '84vh',
+              maxHeight: '84vh',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.35)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
               border: '1px solid #cbd5e1'
             }}
           >
