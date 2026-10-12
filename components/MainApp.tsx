@@ -669,8 +669,6 @@ export interface MainAppProps {
   canEdit?: boolean
   assignedAreaIds?: string[]
   assignedSubscriberIds?: number[]
-  initialRangeFrom?: number
-  initialRangeTo?: number
   customHeaderTitle?: string
   onBack?: () => void
   bypassAuth?: boolean
@@ -706,8 +704,6 @@ export default function MainApp({
   initialPricing,
   initialAiApiKeys,
   initialConsignments = [],
-  initialRangeFrom,
-  initialRangeTo,
   onSaveBranchData
 }: MainAppProps = {}) {
   // حالة تسجيل الدخول (إذا كان دخول مباشر عبر الرابط يتم تجاوزه فوراً)
@@ -788,8 +784,8 @@ export default function MainApp({
   const [billing, setBilling] = useState<BillingRecords>(() => initialBilling || {})
   const [collectorName, setCollectorName] = useState<string>('احمد المحصل')
   const [collectorPhone, setCollectorPhone] = useState<string>('07801234567')
-  const [rangeFrom, setRangeFrom] = useState<number>(() => initialRangeFrom ?? 1)
-  const [rangeTo, setRangeTo] = useState<number>(() => initialRangeTo ?? 999999)
+  const [rangeFrom, setRangeFrom] = useState<number>(1)
+  const [rangeTo, setRangeTo] = useState<number>(999999)
 
 
   // البحث والفلترة
@@ -855,18 +851,11 @@ export default function MainApp({
       isRecorded: boolean
     }> = []
 
-    const hasRange = initialRangeFrom !== undefined && initialRangeTo !== undefined
     const allowedSubIdSet = new Set<number>()
     const hasSpecificSubs = assignedSubscriberIds && assignedSubscriberIds.length > 0
     const hasSpecificAreas = assignedAreaIds && assignedAreaIds.length > 0
 
-    if (hasRange) {
-      subscribers.forEach(sub => {
-        if (sub.id >= initialRangeFrom! && sub.id <= initialRangeTo!) {
-          allowedSubIdSet.add(sub.id)
-        }
-      })
-    } else if (hasSpecificSubs) {
+    if (hasSpecificSubs) {
       assignedSubscriberIds.forEach(id => allowedSubIdSet.add(id))
     } else if (hasSpecificAreas) {
       subscribers.forEach(sub => {
@@ -880,8 +869,7 @@ export default function MainApp({
 
     (consignmentsList || []).forEach(c => {
       (c.items || []).forEach((it, idx) => {
-        const isMatchedByRange = hasRange && it.subscriberId >= initialRangeFrom! && it.subscriberId <= initialRangeTo!
-        if (allowedSubIdSet.has(it.subscriberId) || isMatchedByRange) {
+        if (allowedSubIdSet.has(it.subscriberId)) {
           const itemKey = `${c.id}_${it.subscriberId}_${it.receiptNumber || idx}`
           list.push({
             uniqueKey: itemKey,
@@ -1351,17 +1339,11 @@ export default function MainApp({
 
   // المشتركون ضمن نطاق الفرع والمناطق المخصصة
   const subscribersInRange = useMemo(() => {
-    const hasStrictRange = initialRangeFrom !== undefined && initialRangeTo !== undefined
-    let list = subscribers.filter((s) => {
-      if (hasStrictRange) {
-        return s.id >= rangeFrom && s.id <= rangeTo
-      }
-      return (
-        (s.id >= rangeFrom && s.id <= rangeTo) || 
-        isRecentlyAddedSubscriber(s) || 
-        (Boolean(s.name) && s.name.trim() !== '' && s.name !== 'رقم شاغر')
-      )
-    })
+    let list = subscribers.filter((s) => 
+      (s.id >= rangeFrom && s.id <= rangeTo) || 
+      isRecentlyAddedSubscriber(s) || 
+      (Boolean(s.name) && s.name.trim() !== '' && s.name !== 'رقم شاغر')
+    )
 
     // إذا كان للمستخدم مناطق أو مشتركون مخصصون حصراً
     const hasAssignedAreas = assignedAreaIds && assignedAreaIds.length > 0

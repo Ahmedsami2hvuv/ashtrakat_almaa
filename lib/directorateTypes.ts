@@ -26,8 +26,6 @@ export interface BranchWriter {
   token: string // رابط الدخول المباشر
   assignedAreaIds: string[]
   assignedSubscriberIds?: number[]
-  rangeFrom?: number
-  rangeTo?: number
   createdAt: string
 }
 
