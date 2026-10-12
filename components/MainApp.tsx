@@ -980,6 +980,7 @@ export default function MainApp({
   const localSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSavedDataRef = useRef<string>('')
   const isInitialLoadRef = useRef<boolean>(true)
+  const flushPendingPaymentEditRef = useRef<() => void>(() => {})
 
   // حالات العمل دون إنترنت وقائمة الانتظار
   const [isOnline, setIsOnline] = useState<boolean>(() => {
@@ -1083,6 +1084,7 @@ export default function MainApp({
 
   // إغلاق نافذة حساب المشترك وتحديث تاريخ المتصفح
   const handleCloseSubscriberModal = useCallback(() => {
+    flushPendingPaymentEditRef.current()
     setSelectedSubId(null)
     setEditingCell(null)
     setShowContactModal(false)
@@ -1768,6 +1770,7 @@ export default function MainApp({
       handlePaymentEdit(subId, year, periodIdx, field, value)
     }
   }, [pricing, subscribers])
+  flushPendingPaymentEditRef.current = flushPendingPaymentEdit
 
   // دالة إدخال المبالغ السلسة وفائقة الاستجابة بدون أي بطء
   const handleDebouncedPaymentChange = useCallback((
@@ -4530,7 +4533,10 @@ export default function MainApp({
                   return (
                     <button
                       key={y}
-                      onClick={() => setSelectedYear(y)}
+                      onClick={() => {
+                        flushPendingPaymentEdit()
+                        setSelectedYear(y)
+                      }}
                       className={`h-8 px-4 rounded-full border text-[12px] shrink-0 font-medium transition-all ${
                         is2026
                           ? isSelected
@@ -4707,6 +4713,7 @@ export default function MainApp({
                     <button
                       onClick={() => {
                         if (prevSub) {
+                          flushPendingPaymentEdit()
                           shouldFocusOldDebtRef.current = true
                           setSelectedSubId(prevSub.id)
                           setSelectedYear(2026)
@@ -4733,6 +4740,7 @@ export default function MainApp({
                     <button
                       onClick={() => {
                         if (nextSub) {
+                          flushPendingPaymentEdit()
                           shouldFocusOldDebtRef.current = true
                           setSelectedSubId(nextSub.id)
                           setSelectedYear(2026)
@@ -4815,21 +4823,23 @@ export default function MainApp({
                             <input
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
                               value={oldDisplay}
-                              onChange={(e) => {
-                                const formatted = formatInputDisplay(e.target.value)
-                                setEditingCell({ key: oldKey, value: formatted })
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', formatted)
-                              }}
+                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'old', oldKey, e.target.value)}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const formatted = formatInputDisplay(text)
-                                  setEditingCell({ key: oldKey, value: formatted })
-                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', formatted)
+                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'old', oldKey, text)
                                 }
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                              }}
                               onBlur={(e) => {
+                                if (paymentEditDebounceTimerRef.current) {
+                                  clearTimeout(paymentEditDebounceTimerRef.current)
+                                  paymentEditDebounceTimerRef.current = null
+                                }
+                                pendingPaymentEditRef.current = null
                                 handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', e.target.value)
                                 setEditingCell(null)
                               }}
@@ -4853,21 +4863,23 @@ export default function MainApp({
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               value={totalDisplay}
-                              onChange={(e) => {
-                                const formatted = formatInputDisplay(e.target.value)
-                                setEditingCell({ key: totalKey, value: formatted })
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', formatted)
-                              }}
+                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'total', totalKey, e.target.value)}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const formatted = formatInputDisplay(text)
-                                  setEditingCell({ key: totalKey, value: formatted })
-                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', formatted)
+                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'total', totalKey, text)
                                 }
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                              }}
                               onBlur={(e) => {
+                                if (paymentEditDebounceTimerRef.current) {
+                                  clearTimeout(paymentEditDebounceTimerRef.current)
+                                  paymentEditDebounceTimerRef.current = null
+                                }
+                                pendingPaymentEditRef.current = null
                                 handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', e.target.value)
                                 setEditingCell(null)
                               }}
@@ -4893,21 +4905,23 @@ export default function MainApp({
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               value={paidDisplay}
-                              onChange={(e) => {
-                                const formatted = formatInputDisplay(e.target.value)
-                                setEditingCell({ key: paidKey, value: formatted })
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', formatted)
-                              }}
+                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'paid', paidKey, e.target.value)}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const formatted = formatInputDisplay(text)
-                                  setEditingCell({ key: paidKey, value: formatted })
-                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', formatted)
+                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'paid', paidKey, text)
                                 }
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                              }}
                               onBlur={(e) => {
+                                if (paymentEditDebounceTimerRef.current) {
+                                  clearTimeout(paymentEditDebounceTimerRef.current)
+                                  paymentEditDebounceTimerRef.current = null
+                                }
+                                pendingPaymentEditRef.current = null
                                 handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', e.target.value)
                                 setEditingCell(null)
                               }}
@@ -4934,21 +4948,23 @@ export default function MainApp({
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <input
                               value={remDisplay}
-                              onChange={(e) => {
-                                const formatted = formatInputDisplay(e.target.value)
-                                setEditingCell({ key: remKey, value: formatted })
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', formatted)
-                              }}
+                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'rem', remKey, e.target.value)}
                               onPaste={(e) => {
                                 const text = e.clipboardData.getData('text')
                                 if (text) {
                                   e.preventDefault()
-                                  const formatted = formatInputDisplay(text)
-                                  setEditingCell({ key: remKey, value: formatted })
-                                  handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', formatted)
+                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'rem', remKey, text)
                                 }
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                              }}
                               onBlur={(e) => {
+                                if (paymentEditDebounceTimerRef.current) {
+                                  clearTimeout(paymentEditDebounceTimerRef.current)
+                                  paymentEditDebounceTimerRef.current = null
+                                }
+                                pendingPaymentEditRef.current = null
                                 handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', e.target.value)
                                 setEditingCell(null)
                               }}

@@ -26,6 +26,9 @@ export interface BranchWriter {
   token: string // رابط الدخول المباشر
   assignedAreaIds: string[]
   assignedSubscriberIds?: number[]
+  workHoursEnabled?: boolean // هل تم تفعيل تقييد ساعات العمل
+  workHourStart?: string // وقت بدء العمل (مثال: 08:00) بالتوقيت العراقي
+  workHourEnd?: string // وقت انتهاء العمل (مثال: 14:00) بالتوقيت العراقي
   createdAt: string
 }
 
