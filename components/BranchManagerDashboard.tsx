@@ -530,6 +530,142 @@ export default function BranchManagerDashboard({
     }
   }
 
+  // 4. إزالة المشتركين المحددين من الكاتب المختار
+  const handleBulkRemoveFromWriters = async () => {
+    if (bulkSelectedWriterIds.length === 0) {
+      alert('يرجى تحديد كاتب واحد على الأقل لإزالة المشتركين منه')
+      return
+    }
+    if (selectedSubIds.size === 0) {
+      alert('يرجى تحديد مشترك واحد على الأقل')
+      return
+    }
+
+    if (!confirm(`هل أنت متأكد من رغبتك في إزالة المشتركين المحددين (${selectedSubIds.size} مشترك) من الكاتب المختار؟`)) {
+      return
+    }
+
+    setIsBulkSaving(true)
+    try {
+      const idsToRemove = new Set(selectedSubIds)
+      const currentWriters = branch.writers || []
+      const updatedWriters = currentWriters.map(writer => {
+        if (bulkSelectedWriterIds.includes(writer.id)) {
+          const filteredIds = (writer.assignedSubscriberIds || []).filter(id => !idsToRemove.has(id))
+          return {
+            ...writer,
+            assignedSubscriberIds: filteredIds
+          }
+        }
+        return writer
+      })
+
+      onUpdateBranch({
+        ...branch,
+        writers: updatedWriters
+      })
+
+      setShowAssignWritersModal(false)
+      setBulkSelectedWriterIds([])
+      setSelectedSubIds(new Set())
+      setIsSelectMode(false)
+      setBulkFeedbackMessage(`تم بنجاح إزالة المشتركين المحددين من الكاتب المختار`)
+      setTimeout(() => setBulkFeedbackMessage(null), 4500)
+    } catch (err) {
+      console.error('Error removing subscribers from writers:', err)
+      alert('حدث خطأ أثناء إزالة المشتركين من الكاتب')
+    } finally {
+      setIsBulkSaving(false)
+    }
+  }
+
+  // 5. إزالة المشتركين المحددين من المحصل المختار
+  const handleBulkRemoveFromCollectors = async () => {
+    if (bulkSelectedCollectorIds.length === 0) {
+      alert('يرجى تحديد محصل واحد على الأقل لإزالة المشتركين منه')
+      return
+    }
+    if (selectedSubIds.size === 0) {
+      alert('يرجى تحديد مشترك واحد على الأقل')
+      return
+    }
+
+    if (!confirm(`هل أنت متأكد من رغبتك في إزالة المشتركين المحددين (${selectedSubIds.size} مشترك) من المحصل المختار؟`)) {
+      return
+    }
+
+    setIsBulkSaving(true)
+    try {
+      const idsToRemove = new Set(selectedSubIds)
+      const currentCollectors = branch.collectors || []
+      const updatedCollectors = currentCollectors.map(collector => {
+        if (bulkSelectedCollectorIds.includes(collector.id)) {
+          const filteredIds = (collector.assignedSubscriberIds || []).filter(id => !idsToRemove.has(id))
+          return {
+            ...collector,
+            assignedSubscriberIds: filteredIds
+          }
+        }
+        return collector
+      })
+
+      onUpdateBranch({
+        ...branch,
+        collectors: updatedCollectors
+      })
+
+      setShowAssignCollectorsModal(false)
+      setBulkSelectedCollectorIds([])
+      setSelectedSubIds(new Set())
+      setIsSelectMode(false)
+      setBulkFeedbackMessage(`تم بنجاح إزالة المشتركين المحددين من المحصل المختار`)
+      setTimeout(() => setBulkFeedbackMessage(null), 4500)
+    } catch (err) {
+      console.error('Error removing subscribers from collectors:', err)
+      alert('حدث خطأ أثناء إزالة المشتركين من المحصل')
+    } finally {
+      setIsBulkSaving(false)
+    }
+  }
+
+  // 6. تفريغ جميع المشتركين من كاتب معين بضغطة زر
+  const handleClearWriterSubscribers = (writerId: string, writerName: string) => {
+    if (!confirm(`هل أنت متأكد من رغبتك في إزالة وتفريغ جميع المشتركين المخصصين للكاتب (${writerName})؟`)) {
+      return
+    }
+    const updatedWriters = (branch.writers || []).map(w => {
+      if (w.id === writerId) {
+        return {
+          ...w,
+          assignedSubscriberIds: []
+        }
+      }
+      return w
+    })
+    onUpdateBranch({ ...branch, writers: updatedWriters })
+    setBulkFeedbackMessage(`تم بنجاح إزالة وتفريغ جميع المشتركين من الكاتب (${writerName})`)
+    setTimeout(() => setBulkFeedbackMessage(null), 4500)
+  }
+
+  // 7. تفريغ جميع المشتركين من محصل معين بضغطة زر
+  const handleClearCollectorSubscribers = (collectorId: string, collectorName: string) => {
+    if (!confirm(`هل أنت متأكد من رغبتك في إزالة وتفريغ جميع المشتركين المخصصين للمحصل (${collectorName})؟`)) {
+      return
+    }
+    const updatedCollectors = (branch.collectors || []).map(c => {
+      if (c.id === collectorId) {
+        return {
+          ...c,
+          assignedSubscriberIds: []
+        }
+      }
+      return c
+    })
+    onUpdateBranch({ ...branch, collectors: updatedCollectors })
+    setBulkFeedbackMessage(`تم بنجاح إزالة وتفريغ جميع المشتركين من المحصل (${collectorName})`)
+    setTimeout(() => setBulkFeedbackMessage(null), 4500)
+  }
+
   // ------------------ إدارة المناطق ------------------
   const handleAddArea = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -2406,6 +2542,29 @@ export default function BranchManagerDashboard({
                           )}
                         </div>
 
+                        {/* المشتركون المخصصون مباشرة للمحصل */}
+                        {collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0 && (
+                          <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200/80 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <Users className="w-3.5 h-3.5 text-blue-700" />
+                              <span className="font-black text-blue-950 text-[11px]">المشتركون المخصصون:</span>
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-100 text-blue-800">
+                                {collector.assignedSubscriberIds.length} مشترك
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleClearCollectorSubscribers(collector.id, collector.name)}
+                              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
+                              title="إزالة وتفريغ جميع المشتركين المخصصين لهذا المحصل بنقرة واحدة"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>إفراغ المشتركين</span>
+                            </button>
+                          </div>
+                        )}
+
                         {/* 3. شريط الأيقونات السريعة للأكشنز */}
                         <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
                           <span className="text-[10px] font-bold text-slate-400">إجراءات وروابط:</span>
@@ -2621,6 +2780,29 @@ export default function BranchManagerDashboard({
                             <p className="text-[11px] text-slate-400 font-bold">لم يتم إسناد أي مناطق لهذا الكاتب بعد</p>
                           )}
                         </div>
+
+                        {/* المشتركون المخصصون مباشرة للكاتب */}
+                        {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 && (
+                          <div className="p-2.5 bg-purple-50/70 rounded-xl border border-purple-200/80 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <Users className="w-3.5 h-3.5 text-purple-700" />
+                              <span className="font-black text-purple-950 text-[11px]">المشتركون المخصصون:</span>
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-100 text-purple-800">
+                                {writer.assignedSubscriberIds.length} مشترك
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
+                              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
+                              title="إزالة وتفريغ جميع المشتركين المخصصين لهذا الكاتب بنقرة واحدة"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>إفراغ المشتركين</span>
+                            </button>
+                          </div>
+                        )}
 
                         {/* 3. شريط الأيقونات السريعة للأكشنز */}
                         <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
@@ -4028,23 +4210,37 @@ export default function BranchManagerDashboard({
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowAssignWritersModal(false)}
                 disabled={isBulkSaving}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition cursor-pointer"
               >
                 إلغاء
               </button>
-              <button
-                type="button"
-                onClick={handleBulkAssignWriters}
-                disabled={isBulkSaving || bulkSelectedWriterIds.length === 0}
-                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-amber-900/20"
-              >
-                {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>تطبيق التخصيص للكتّاب ({bulkSelectedWriterIds.length})</span>}
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleBulkRemoveFromWriters}
+                  disabled={isBulkSaving || bulkSelectedWriterIds.length === 0}
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 disabled:opacity-50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                  title="إزالة هؤلاء المشتركين المحددين من الكاتب المختار"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>إزالة المشتركين من الكاتب (-)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBulkAssignWriters}
+                  disabled={isBulkSaving || bulkSelectedWriterIds.length === 0}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-amber-900/20 cursor-pointer"
+                >
+                  {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>إضافة للكاتب (+)</span>}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4177,23 +4373,37 @@ export default function BranchManagerDashboard({
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowAssignCollectorsModal(false)}
                 disabled={isBulkSaving}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition cursor-pointer"
               >
                 إلغاء
               </button>
-              <button
-                type="button"
-                onClick={handleBulkAssignCollectors}
-                disabled={isBulkSaving || bulkSelectedCollectorIds.length === 0}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-900/20"
-              >
-                {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>تطبيق التخصيص للمحصلين ({bulkSelectedCollectorIds.length})</span>}
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleBulkRemoveFromCollectors}
+                  disabled={isBulkSaving || bulkSelectedCollectorIds.length === 0}
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 disabled:opacity-50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                  title="إزالة هؤلاء المشتركين المحددين من المحصل المختار"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>إزالة المشتركين من المحصل (-)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBulkAssignCollectors}
+                  disabled={isBulkSaving || bulkSelectedCollectorIds.length === 0}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-900/20 cursor-pointer"
+                >
+                  {isBulkSaving ? <span>جارِ الحفظ...</span> : <span>إضافة للمحصل (+)</span>}
+                </button>
+              </div>
             </div>
           </div>
         </div>
