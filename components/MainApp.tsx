@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import ReceiptScannerModal from './ReceiptScannerModal'
 import InstallmentsPage from './InstallmentsPage'
+import DebtCellInput from './DebtCellInput'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateStore'
 import { logWriterActivity } from '../lib/writerActivityStore'
@@ -1819,34 +1820,6 @@ export default function MainApp({
     }
   }, [pricing, subscribers])
   flushPendingPaymentEditRef.current = flushPendingPaymentEdit
-
-  // دالة إدخال المبالغ السلسة وفائقة الاستجابة بدون أي بطء
-  const handleDebouncedPaymentChange = useCallback((
-    subId: number,
-    year: number,
-    periodIdx: number,
-    field: 'old' | 'total' | 'paid' | 'rem',
-    cellKey: string,
-    rawVal: string
-  ) => {
-    const formatted = formatInputDisplay(rawVal)
-    // 1. تحديث فوري فائق الخفة للخلية المعروضة بدون تجميد المتصفح
-    setEditingCell({ key: cellKey, value: formatted })
-
-    // 2. إلغاء المؤقت السابق وجدولة الحفظ الفعلي بعد 450ms من توقف الكاتب عن الكتابة
-    if (paymentEditDebounceTimerRef.current) {
-      clearTimeout(paymentEditDebounceTimerRef.current)
-    }
-    pendingPaymentEditRef.current = { subId, year, periodIdx, field, value: formatted }
-
-    paymentEditDebounceTimerRef.current = setTimeout(() => {
-      if (pendingPaymentEditRef.current) {
-        const pending = pendingPaymentEditRef.current
-        pendingPaymentEditRef.current = null
-        handlePaymentEdit(pending.subId, pending.year, pending.periodIdx, pending.field, pending.value)
-      }
-    }, 450)
-  }, [pricing, subscribers])
 
   // إدارة مفاتيح الذكاء الاصطناعي
   const handleAddAiKey = () => {
@@ -4870,24 +4843,6 @@ export default function MainApp({
                     {activeBilling.rows.map((row, idx) => {
                       // الشهر الحالي يبين بحد أحمر فقط، لا تكتب كلمة "الحالي"
                       const isCurrentPeriod = selectedYear === 2026 && idx === currentPeriodIndex
-                      const oldKey = `${activeSubscriber.id}_${selectedYear}_${idx}_old`
-                      const totalKey = `${activeSubscriber.id}_${selectedYear}_${idx}_total`
-                      const paidKey = `${activeSubscriber.id}_${selectedYear}_${idx}_paid`
-                      const remKey = `${activeSubscriber.id}_${selectedYear}_${idx}_rem`
-
-                      const isEditingOld = editingCell?.key === oldKey
-                      const isEditingTotal = editingCell?.key === totalKey
-                      const isEditingPaid = editingCell?.key === paidKey
-                      const isEditingRem = editingCell?.key === remKey
-
-                      const oldDisplay = isEditingOld ? editingCell.value : formatInputDisplay(row.old)
-                      const totalDisplay = isEditingTotal ? editingCell.value : formatInputDisplay(row.total)
-                      const paidDisplay = isEditingPaid
-                        ? editingCell.value
-                        : row.paid === 0
-                        ? ''
-                        : formatInputDisplay(row.paid)
-                      const remDisplay = isEditingRem ? editingCell.value : formatInputDisplay(row.remaining)
 
                       return (
                         <div
@@ -4903,73 +4858,24 @@ export default function MainApp({
                         >
                           {/* 1. الديون السابقة */}
                           <div className="px-0.5 flex items-center justify-center" style={{ minHeight: '38px' }}>
-                            <input
+                            <DebtCellInput
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
-                              value={oldDisplay}
-                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'old', oldKey, e.target.value)}
-                              onPaste={(e) => {
-                                const text = e.clipboardData.getData('text')
-                                if (text) {
-                                  e.preventDefault()
-                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'old', oldKey, text)
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                              }}
-                              onBlur={(e) => {
-                                if (paymentEditDebounceTimerRef.current) {
-                                  clearTimeout(paymentEditDebounceTimerRef.current)
-                                  paymentEditDebounceTimerRef.current = null
-                                }
-                                pendingPaymentEditRef.current = null
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', e.target.value)
-                                setEditingCell(null)
-                              }}
-                              onFocus={(e) => {
-                                setEditingCell({ key: oldKey, value: formatInputDisplay(row.old) })
-                                setTimeout(() => e.target.select(), 0)
-                              }}
+                              initialValue={row.old}
                               placeholder="0"
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 bg-white text-center ${
                                 isCurrentPeriod
                                   ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-[#ef4444]'
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
                               } ${row.isManual ? 'border-sky-200 bg-sky-50' : ''}`}
-                              inputMode="numeric"
-                              type="text"
                               style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
+                              onSave={(val) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'old', val)}
                             />
                           </div>
 
                           {/* 2. المجموع */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
-                            <input
-                              value={totalDisplay}
-                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'total', totalKey, e.target.value)}
-                              onPaste={(e) => {
-                                const text = e.clipboardData.getData('text')
-                                if (text) {
-                                  e.preventDefault()
-                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'total', totalKey, text)
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                              }}
-                              onBlur={(e) => {
-                                if (paymentEditDebounceTimerRef.current) {
-                                  clearTimeout(paymentEditDebounceTimerRef.current)
-                                  paymentEditDebounceTimerRef.current = null
-                                }
-                                pendingPaymentEditRef.current = null
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', e.target.value)
-                                setEditingCell(null)
-                              }}
-                              onFocus={(e) => {
-                                setEditingCell({ key: totalKey, value: formatInputDisplay(row.total) })
-                                setTimeout(() => e.target.select(), 0)
-                              }}
+                            <DebtCellInput
+                              initialValue={row.total}
                               placeholder="0"
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center bg-white ${
                                 row.isTotalManual
@@ -4978,83 +4884,32 @@ export default function MainApp({
                                   ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-slate-800'
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
                               }`}
-                              inputMode="numeric"
-                              type="text"
                               style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
+                              onSave={(val) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'total', val)}
                             />
                           </div>
 
                           {/* 3. المدفوع */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
-                            <input
-                              value={paidDisplay}
-                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'paid', paidKey, e.target.value)}
-                              onPaste={(e) => {
-                                const text = e.clipboardData.getData('text')
-                                if (text) {
-                                  e.preventDefault()
-                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'paid', paidKey, text)
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                              }}
-                              onBlur={(e) => {
-                                if (paymentEditDebounceTimerRef.current) {
-                                  clearTimeout(paymentEditDebounceTimerRef.current)
-                                  paymentEditDebounceTimerRef.current = null
-                                }
-                                pendingPaymentEditRef.current = null
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', e.target.value)
-                                setEditingCell(null)
-                              }}
-                              onFocus={(e) => {
-                                setEditingCell({
-                                  key: paidKey,
-                                  value: row.paid === 0 ? '' : formatInputDisplay(row.paid)
-                                })
-                                setTimeout(() => e.target.select(), 0)
-                              }}
+                            <DebtCellInput
+                              initialValue={row.paid}
+                              isZeroEmpty={true}
                               placeholder="0"
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 bg-white text-center ${
                                 isCurrentPeriod
                                   ? 'border-red-200 focus:border-red-400 focus:ring-red-100 text-slate-800'
                                   : 'border-sky-100 focus:border-slate-900 focus:ring-slate-900/5 text-slate-800'
                               }`}
-                              inputMode="numeric"
-                              type="text"
                               style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
+                              onSave={(val) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'paid', val)}
                             />
                           </div>
 
                           {/* 4. المجموع الكلي */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
-                            <input
-                              value={remDisplay}
-                              onChange={(e) => handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'rem', remKey, e.target.value)}
-                              onPaste={(e) => {
-                                const text = e.clipboardData.getData('text')
-                                if (text) {
-                                  e.preventDefault()
-                                  handleDebouncedPaymentChange(activeSubscriber.id, selectedYear, idx, 'rem', remKey, text)
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                              }}
-                              onBlur={(e) => {
-                                if (paymentEditDebounceTimerRef.current) {
-                                  clearTimeout(paymentEditDebounceTimerRef.current)
-                                  paymentEditDebounceTimerRef.current = null
-                                }
-                                pendingPaymentEditRef.current = null
-                                handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', e.target.value)
-                                setEditingCell(null)
-                              }}
-                              onFocus={(e) => {
-                                setEditingCell({ key: remKey, value: formatInputDisplay(row.remaining) })
-                                setTimeout(() => e.target.select(), 0)
-                              }}
+                            <DebtCellInput
+                              initialValue={row.remaining}
+                              placeholder="0"
                               className={`border rounded-lg font-sans font-bold tabular-nums tracking-tight focus:outline-none focus:ring-1 text-center ${
                                 row.remaining === 0
                                   ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
@@ -5064,9 +4919,8 @@ export default function MainApp({
                                   ? 'bg-white border-red-200 text-[#ef4444]'
                                   : 'bg-slate-900 border-slate-900 text-white'
                               } ${row.isRemainingManual ? 'ring-1 ring-sky-400' : ''}`}
-                              inputMode="numeric"
-                              type="text"
                               style={{ width: '100%', height: '32px', fontSize: '14px', padding: '0 1px', boxSizing: 'border-box' }}
+                              onSave={(val) => handlePaymentEdit(activeSubscriber.id, selectedYear, idx, 'rem', val)}
                             />
                           </div>
                         </div>
