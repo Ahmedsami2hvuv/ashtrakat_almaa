@@ -2769,19 +2769,19 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل محصل - تصميم متناسق ومدمج مع 4 مناطق في السطر */}
       {showCollectorModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-4xl w-full h-[88vh] max-h-[88vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95">
             {/* الرأس - مثبت */}
-            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
                   <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-black text-slate-900">
-                    {editingCollector ? 'تعديل بيانات المحصل' : 'إضافة محصل جديد'}
+                    {editingCollector ? 'تعديل بيانات المحصل ومناطقه' : 'إضافة محصل جديد'}
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-bold">تحديد صلاحيات ومناطق الجباية للمحصل</p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 font-bold">تحديد الصلاحيات والمناطق المخصصة لهذا المحصل</p>
                 </div>
               </div>
               <button
@@ -2793,9 +2793,8 @@ export default function BranchManagerDashboard({
               </button>
             </div>
 
-            {/* المحتوى القابل للتمرير */}
-            <div className="p-3.5 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
-              {/* حقول الاسم ورقم الهاتف في سطر واحد لتوفير المساحة */}
+            {/* الحقول العلوية السريعة - مثبتة أو خفيفة */}
+            <div className="shrink-0 p-3 sm:p-4 pb-2 space-y-2.5 bg-white border-b border-slate-100">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">الاسم الثلاثي:</label>
@@ -2804,7 +2803,7 @@ export default function BranchManagerDashboard({
                     value={collectorName}
                     onChange={(e) => setCollectorName(e.target.value)}
                     placeholder="اسم المحصل..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
@@ -2815,140 +2814,135 @@ export default function BranchManagerDashboard({
                     value={collectorPhone}
                     onChange={(e) => setCollectorPhone(e.target.value)}
                     placeholder="07xxxxxxxxx"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right font-mono"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none dir-ltr text-right font-mono"
                   />
                 </div>
               </div>
 
-              <div className="p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-800">
                   <input
                     type="checkbox"
                     checked={collectorCanEdit}
                     onChange={(e) => setCollectorCanEdit(e.target.checked)}
                     className="w-4 h-4 text-blue-600 rounded bg-white border-slate-300"
                   />
-                  <span className="text-xs font-bold text-slate-800">
-                    السماح بالتعديل على المشتركين والديون
-                  </span>
+                  <span>السماح للمحصل بالتعديل على المشتركين والديون</span>
                 </label>
+
+                <div className="flex items-center gap-2 text-[11px] font-bold">
+                  <span className="text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200 font-mono">
+                    المحدد: {selectedCollectorAreas.length} منطقة
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filteredIds = (branch.areas || [])
+                        .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
+                        .map(a => a.id)
+                      setSelectedCollectorAreas(Array.from(new Set([...selectedCollectorAreas, ...filteredIds])))
+                    }}
+                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
+                  >
+                    تحديد المعروض
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCollectorAreas([])}
+                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
+                  >
+                    إلغاء التحديد
+                  </button>
+                </div>
               </div>
 
-              {/* قسم تخصيص المناطق: مرتب كل 4 مناطق جنب بعض */}
-              <div className="space-y-2 pt-1 border-t border-slate-100">
-                <div className="flex flex-wrap items-center justify-between gap-1.5">
-                  <label className="block text-xs font-black text-slate-800">المناطق المخصصة للجباية:</label>
-                  <span className="text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                    تم تحديد {selectedCollectorAreas.length} منطقة
-                  </span>
-                </div>
-
-                {/* حقل البحث والأزرار السريعة */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={collectorAreaSearch}
-                      onChange={(e) => setCollectorAreaSearch(e.target.value)}
-                      placeholder="ابحث عن اسم منطقة..."
-                      className="w-full pr-8 pl-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 text-[11px] font-bold shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const filteredIds = (branch.areas || [])
-                          .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
-                          .map(a => a.id)
-                        setSelectedCollectorAreas(Array.from(new Set([...selectedCollectorAreas, ...filteredIds])))
-                      }}
-                      className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
-                    >
-                      تحديد المعروض
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCollectorAreas([])}
-                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
-                    >
-                      إلغاء التحديد
-                    </button>
-                  </div>
-                </div>
-
-                {/* شبكة المناطق: كل 4 مناطق جنب بعض */}
-                <div className="max-h-56 sm:max-h-64 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-                    {(branch.areas || [])
-                      .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
-                      .map(area => {
-                        const isChecked = selectedCollectorAreas.includes(area.id)
-                        return (
-                          <label
-                            key={area.id}
-                            className={`flex items-center gap-1.5 p-2 rounded-xl cursor-pointer font-bold transition border text-xs select-none ${
-                              isChecked
-                                ? 'bg-blue-50 border-blue-400 text-blue-950 shadow-2xs font-black'
-                                : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedCollectorAreas([...selectedCollectorAreas, area.id])
-                                } else {
-                                  setSelectedCollectorAreas(selectedCollectorAreas.filter(id => id !== area.id))
-                                }
-                              }}
-                              className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 cursor-pointer shrink-0"
-                            />
-                            <span className="truncate" title={area.name}>{area.name}</span>
-                          </label>
-                        )
-                      })}
-                  </div>
-                  {(branch.areas || []).length === 0 && (
-                    <div className="text-center py-6 text-slate-400 font-bold text-xs">
-                      لا توجد مناطق مضافة في هذا الفرع بعد
-                    </div>
-                  )}
-                </div>
+              {/* شريط البحث المباشر */}
+              <div className="relative pt-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={collectorAreaSearch}
+                  onChange={(e) => setCollectorAreaSearch(e.target.value)}
+                  placeholder="ابحث عن اسم أي منطقة لتحديدها بسرعة..."
+                  className="w-full pr-8 pl-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
               </div>
             </div>
 
-            {/* أزرار الإجراءات في الأسفل مثبتة دائماً ومرئية */}
-            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/90 flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowCollectorModal(false)}
-                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveCollector}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>حفظ المحصل</span>
-              </button>
+            {/* صندوق شبكة المناطق التفاعلية - يتمرر فقط داخل هذا القسم بدون تمدد */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 bg-slate-50/80">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+                {(branch.areas || [])
+                  .filter(a => !collectorAreaSearch || a.name.toLowerCase().includes(collectorAreaSearch.toLowerCase()))
+                  .map(area => {
+                    const isChecked = selectedCollectorAreas.includes(area.id)
+                    return (
+                      <label
+                        key={area.id}
+                        className={`flex items-center gap-1.5 p-2 rounded-xl cursor-pointer transition border text-xs select-none ${
+                          isChecked
+                            ? 'bg-blue-50 border-blue-400 text-blue-950 font-black shadow-2xs'
+                            : 'bg-white hover:bg-slate-100 border-slate-200/90 text-slate-700 font-bold'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCollectorAreas([...selectedCollectorAreas, area.id])
+                            } else {
+                              setSelectedCollectorAreas(selectedCollectorAreas.filter(id => id !== area.id))
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 cursor-pointer shrink-0"
+                        />
+                        <span className="truncate text-[11px]" title={area.name}>{area.name}</span>
+                      </label>
+                    )
+                  })}
+              </div>
+              {(branch.areas || []).length === 0 && (
+                <div className="text-center py-10 text-slate-400 font-bold text-xs">
+                  لا توجد مناطق مضافة في هذا الفرع بعد
+                </div>
+              )}
+            </div>
+
+            {/* أزرار الإجراءات في الأسفل مثبتة دائماً وظاهرة أمام المستخدم */}
+            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-2">
+              <div className="text-xs font-black text-slate-700">
+                المناطق المحددة: <span className="text-blue-700 font-mono font-black text-sm">{selectedCollectorAreas.length}</span> منطقة
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCollectorModal(false)}
+                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCollector}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl transition shadow-md flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>حفظ بيانات المحصل</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* نافذة إضافة / تعديل كاتب - تصميم متناسق ومدمج مع 4 مناطق في السطر */}
+      {/* نافذة إضافة / تعديل كاتب - تصميم متناسق ومدمج مع 4 مناطق في السطر وبارتفاع محكوم */}
       {showWriterModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-4xl w-full h-[88vh] max-h-[88vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95">
             {/* الرأس - مثبت */}
-            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
                   <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2969,8 +2963,8 @@ export default function BranchManagerDashboard({
               </button>
             </div>
 
-            {/* المحتوى القابل للتمرير */}
-            <div className="p-3.5 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
+            {/* الحقول العلوية وأدوات البحث - مثبتة بدون تمدد */}
+            <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 bg-white">
               {/* حقول اسم الكاتب ورقم الهاتف في سطر واحد لتوفير المساحة */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
@@ -2980,7 +2974,7 @@ export default function BranchManagerDashboard({
                     value={writerName}
                     onChange={(e) => setWriterName(e.target.value)}
                     placeholder="اسم الكاتب..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
                   />
                 </div>
 
@@ -2991,115 +2985,118 @@ export default function BranchManagerDashboard({
                     value={writerPhone}
                     onChange={(e) => setWriterPhone(e.target.value)}
                     placeholder="07xxxxxxxxx"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none dir-ltr text-right font-mono"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none dir-ltr text-right font-mono"
                   />
                 </div>
               </div>
 
-              {/* قسم تخصيص المناطق: مرتب كل 4 مناطق جنب بعض */}
-              <div className="space-y-2 pt-1 border-t border-slate-100">
-                <div className="flex flex-wrap items-center justify-between gap-1.5">
-                  <label className="block text-xs font-black text-slate-800">المناطق المخصصة للكاتب:</label>
-                  <span className="text-[11px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                    تم تحديد {selectedWriterAreas.length} منطقة
+              {/* شريط الإجراءات والبحث */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <span className="text-xs font-black text-slate-800">
+                  حدد المناطق المسندة للكاتب:
+                </span>
+
+                <div className="flex items-center gap-2 text-[11px] font-bold">
+                  <span className="text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 font-mono">
+                    المحدد: {selectedWriterAreas.length} منطقة
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filteredIds = (branch.areas || [])
+                        .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
+                        .map(a => a.id)
+                      setSelectedWriterAreas(Array.from(new Set([...selectedWriterAreas, ...filteredIds])))
+                    }}
+                    className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg transition"
+                  >
+                    تحديد المعروض
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWriterAreas([])}
+                    className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
+                  >
+                    إلغاء التحديد
+                  </button>
                 </div>
+              </div>
 
-                {/* حقل البحث والأزرار السريعة */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={writerAreaSearch}
-                      onChange={(e) => setWriterAreaSearch(e.target.value)}
-                      placeholder="ابحث عن اسم منطقة..."
-                      className="w-full pr-8 pl-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 text-[11px] font-bold shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const filteredIds = (branch.areas || [])
-                          .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
-                          .map(a => a.id)
-                        setSelectedWriterAreas(Array.from(new Set([...selectedWriterAreas, ...filteredIds])))
-                      }}
-                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg transition"
-                    >
-                      تحديد المعروض
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedWriterAreas([])}
-                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
-                    >
-                      إلغاء التحديد
-                    </button>
-                  </div>
-                </div>
-
-                {/* شبكة المناطق: كل 4 مناطق جنب بعض */}
-                <div className="max-h-56 sm:max-h-64 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-                    {(branch.areas || [])
-                      .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
-                      .map(area => {
-                        const isChecked = selectedWriterAreas.includes(area.id)
-                        return (
-                          <label
-                            key={area.id}
-                            className={`flex items-center gap-1.5 p-2 rounded-xl cursor-pointer font-bold transition border text-xs select-none ${
-                              isChecked
-                                ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-2xs font-black'
-                                : 'bg-white hover:bg-slate-100 border-slate-200/80 text-slate-700'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedWriterAreas([...selectedWriterAreas, area.id])
-                                } else {
-                                  setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
-                                }
-                              }}
-                              className="w-3.5 h-3.5 rounded text-amber-600 border-slate-300 cursor-pointer shrink-0"
-                            />
-                            <span className="truncate" title={area.name}>{area.name}</span>
-                          </label>
-                        )
-                      })}
-                  </div>
-                  {(branch.areas || []).length === 0 && (
-                    <div className="text-center py-6 text-slate-400 font-bold text-xs">
-                      لا توجد مناطق مضافة في هذا الفرع بعد
-                    </div>
-                  )}
-                </div>
+              {/* شريط البحث المباشر */}
+              <div className="relative pt-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={writerAreaSearch}
+                  onChange={(e) => setWriterAreaSearch(e.target.value)}
+                  placeholder="ابحث عن اسم أي منطقة..."
+                  className="w-full pr-8 pl-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                />
               </div>
             </div>
 
+            {/* صندوق شبكة المناطق: كل 4 مناطق جنب بعض وقابل للتمرير داخلياً فقط */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 bg-slate-50/80">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+                {(branch.areas || [])
+                  .filter(a => !writerAreaSearch || a.name.toLowerCase().includes(writerAreaSearch.toLowerCase()))
+                  .map(area => {
+                    const isChecked = selectedWriterAreas.includes(area.id)
+                    return (
+                      <label
+                        key={area.id}
+                        className={`flex items-center gap-1.5 p-2 rounded-xl cursor-pointer transition border text-xs select-none ${
+                          isChecked
+                            ? 'bg-amber-50 border-amber-400 text-amber-950 font-black shadow-2xs'
+                            : 'bg-white hover:bg-slate-100 border-slate-200/90 text-slate-700 font-bold'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedWriterAreas([...selectedWriterAreas, area.id])
+                            } else {
+                              setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded text-amber-600 border-slate-300 cursor-pointer shrink-0"
+                        />
+                        <span className="truncate text-[11px]" title={area.name}>{area.name}</span>
+                      </label>
+                    )
+                  })}
+              </div>
+              {(branch.areas || []).length === 0 && (
+                <div className="text-center py-10 text-slate-400 font-bold text-xs">
+                  لا توجد مناطق مضافة في هذا الفرع بعد
+                </div>
+              )}
+            </div>
+
             {/* أزرار الإجراءات في الأسفل مثبتة دائماً ومرئية */}
-            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-100 bg-slate-50/90 flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowWriterModal(false)}
-                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveWriter}
-                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>حفظ الكاتب</span>
-              </button>
+            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-2">
+              <div className="text-xs font-black text-slate-700">
+                المناطق المحددة: <span className="text-amber-700 font-mono font-black text-sm">{selectedWriterAreas.length}</span> منطقة
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWriterModal(false)}
+                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveWriter}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl transition shadow-md flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>حفظ بيانات الكاتب</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
