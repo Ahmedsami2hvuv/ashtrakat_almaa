@@ -7,6 +7,7 @@ import { loadDirectorateFromCloud, saveDirectorateToCloud, loadBranchSubscribers
 import { Subscriber, BillingRecords } from '@/components/MainApp'
 import { Clock, Lock, RefreshCw, AlertTriangle } from 'lucide-react'
 import { checkWriterWorkHours, formatTimeArabic } from '@/lib/iraqTime'
+import { logWriterActivity } from '@/lib/writerActivityStore'
 
 const DirectorDashboard = dynamic(() => import('./DirectorDashboard'), {
   ssr: false,
@@ -72,6 +73,8 @@ export default function DirectorateRootApp() {
     canEdit: boolean
     assignedAreaIds?: string[]
     assignedSubscriberIds?: number[]
+    writerId?: string
+    writerName?: string
   } | null>(null)
 
   // بيانات حظر الكاتب عند محاولة الدخول خارج ساعات العمل المحددة بالتوقيت العراقي
@@ -268,12 +271,24 @@ export default function DirectorateRootApp() {
               setSelectedBranch(matchedBranch)
               const subsData = await loadBranchSubscribersAndBilling(matchedBranch.id)
               setSubscriberAppData(subsData)
+
+              // تسجيل نشاط فتح النظام للكاتب بالتوقيت العراقي
+              logWriterActivity({
+                branchId: matchedBranch.id,
+                writerId: matchedWriter.id,
+                writerName: matchedWriter.name,
+                actionType: 'login',
+                details: 'تسجيل دخول وفتح النظام'
+              })
+
               setSubscriberAppProps({
                 role: 'writer',
                 userTitle: `كاتب: ${matchedWriter.name}`,
                 canEdit: true,
                 assignedAreaIds: matchedWriter.assignedAreaIds,
-                assignedSubscriberIds: matchedWriter.assignedSubscriberIds
+                assignedSubscriberIds: matchedWriter.assignedSubscriberIds,
+                writerId: matchedWriter.id,
+                writerName: matchedWriter.name
               })
               setActiveView('subscriber_app')
               setIsLoading(false)
@@ -482,6 +497,8 @@ export default function DirectorateRootApp() {
         canEdit={subscriberAppProps?.canEdit ?? true}
         assignedAreaIds={subscriberAppProps?.assignedAreaIds}
         assignedSubscriberIds={subscriberAppProps?.assignedSubscriberIds}
+        writerId={subscriberAppProps?.writerId}
+        writerName={subscriberAppProps?.writerName}
         customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}
         bypassAuth={true}
         onBack={

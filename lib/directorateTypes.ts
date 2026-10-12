@@ -19,6 +19,23 @@ export interface BranchCollector {
   createdAt: string
 }
 
+export interface WriterActivityEvent {
+  id: string
+  writerId: string
+  writerName: string
+  branchId: string
+  actionType: 'login' | 'edit_subscriber' | 'update_debt' | 'add_payment'
+  subscriberId?: number
+  subscriberName?: string
+  details?: string
+  amount?: number
+  timestamp: string // ISO string
+  date: string // "YYYY-MM-DD"
+  time: string // "02:30 مساءً"
+  year: number
+  month: number
+}
+
 export interface BranchWriter {
   id: string
   name: string // الاسم الثلاثي
@@ -30,6 +47,9 @@ export interface BranchWriter {
   workHourStart?: string // وقت بدء العمل (مثال: 08:00) بالتوقيت العراقي
   workHourEnd?: string // وقت انتهاء العمل (مثال: 14:00) بالتوقيت العراقي
   createdAt: string
+  lastLoginAt?: string // تاريخ وتوقيت آخر فتح للنظام
+  loginCountToday?: number // عدد مرات فتح النظام اليوم
+  activityLogs?: WriterActivityEvent[] // سجل العمليات المباشرة
 }
 
 export interface TreasuryManager {

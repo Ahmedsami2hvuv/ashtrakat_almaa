@@ -51,9 +51,17 @@ import {
   Phone,
   AlertCircle,
   Hash,
-  Clock
+  Clock,
+  Activity,
+  BarChart3,
+  Calendar,
+  DollarSign,
+  Filter,
+  Eye
 } from 'lucide-react'
-import { checkWriterWorkHours, getIraqCurrentTime, formatTimeArabic } from '@/lib/iraqTime'
+import { checkWriterWorkHours, getIraqCurrentTime, formatTimeArabic, getIraqDateAndTimeString } from '@/lib/iraqTime'
+import { loadWriterActivities, computeWriterComprehensiveStats, WriterComprehensiveStats, PeriodStats } from '@/lib/writerActivityStore'
+import { WriterActivityEvent } from '@/lib/directorateTypes'
 
 interface BranchManagerDashboardProps {
   branch: DirectorateBranch
@@ -169,6 +177,87 @@ export default function BranchManagerDashboard({
   const [copiedCollectorId, setCopiedCollectorId] = useState<string | null>(null)
   const [collectorSearch, setCollectorSearch] = useState('')
   const [writerSearch, setWriterSearch] = useState('')
+
+  // حالات سجل نشاط وإحصائيات الكاتب
+  const [showWriterStatsModal, setShowWriterStatsModal] = useState<boolean>(false)
+  const [statsSelectedWriter, setStatsSelectedWriter] = useState<BranchWriter | null>(null)
+  const [writerActivityEvents, setWriterActivityEvents] = useState<WriterActivityEvent[]>([])
+  const [isLoadingWriterStats, setIsLoadingWriterStats] = useState<boolean>(false)
+  const [statsTimeTab, setStatsTimeTab] = useState<'today' | 'month' | 'year' | 'all'>('today')
+  const [statsSearchTerm, setStatsSearchTerm] = useState<string>('')
+  const [statsActionFilter, setStatsActionFilter] = useState<'all' | 'login' | 'edit_subscriber' | 'update_debt' | 'add_payment'>('all')
+  const [showSubscribersListModal, setShowSubscribersListModal] = useState<{
+    title: string
+    subscribers: Array<{ id?: number; name?: string; amount?: number }>
+  } | null>(null)
+
+  // دالة فتح نافذة سجل نشاط وإحصائيات الكاتب
+  const handleOpenWriterStats = async (writer: BranchWriter) => {
+    setStatsSelectedWriter(writer)
+    setShowWriterStatsModal(true)
+    setIsLoadingWriterStats(true)
+    setStatsTimeTab('today')
+    setStatsSearchTerm('')
+    setStatsActionFilter('all')
+    try {
+      const events = await loadWriterActivities(branch.id, writer.id)
+      setWriterActivityEvents(events)
+    } catch (err) {
+      console.error('Failed to load writer activities:', err)
+    } finally {
+      setIsLoadingWriterStats(false)
+    }
+  }
+
+  // دالة تحديث سجل نشاط الكاتب لحظياً
+  const handleRefreshWriterStats = async () => {
+    if (!statsSelectedWriter) return
+    setIsLoadingWriterStats(true)
+    try {
+      const events = await loadWriterActivities(branch.id, statsSelectedWriter.id)
+      setWriterActivityEvents(events)
+    } catch (err) {
+      console.error('Failed to refresh writer activities:', err)
+    } finally {
+      setIsLoadingWriterStats(false)
+    }
+  }
+
+  // حساب إحصائيات الكاتب الشاملة
+  const writerStats = useMemo(() => {
+    if (!statsSelectedWriter) return null
+    return computeWriterComprehensiveStats(writerActivityEvents, statsSelectedWriter.id)
+  }, [writerActivityEvents, statsSelectedWriter])
+
+  // الأحداث المصفاة للجدول التفصيلي
+  const filteredEventsForTable = useMemo(() => {
+    if (!statsSelectedWriter) return []
+    const iraqInfo = getIraqDateAndTimeString()
+    let list = writerActivityEvents.filter(e => e.writerId === statsSelectedWriter.id)
+
+    if (statsTimeTab === 'today') {
+      list = list.filter(e => e.date === iraqInfo.date)
+    } else if (statsTimeTab === 'month') {
+      list = list.filter(e => e.year === iraqInfo.year && e.month === iraqInfo.month)
+    } else if (statsTimeTab === 'year') {
+      list = list.filter(e => e.year === iraqInfo.year)
+    }
+
+    if (statsActionFilter !== 'all') {
+      list = list.filter(e => e.actionType === statsActionFilter)
+    }
+
+    if (statsSearchTerm.trim()) {
+      const q = statsSearchTerm.trim().toLowerCase()
+      list = list.filter(e =>
+        (e.subscriberName && e.subscriberName.toLowerCase().includes(q)) ||
+        (e.subscriberId && String(e.subscriberId).includes(q)) ||
+        (e.details && e.details.toLowerCase().includes(q))
+      )
+    }
+
+    return list
+  }, [writerActivityEvents, statsSelectedWriter, statsTimeTab, statsActionFilter, statsSearchTerm])
 
   // حالة عرض تفاصيل حساب المشترك وبلوك ديونه للمسؤول
   const [selectedDetailSubscriber, setSelectedDetailSubscriber] = useState<Subscriber | null>(null)
@@ -2923,6 +3012,16 @@ export default function BranchManagerDashboard({
                               <Edit3 className="w-4 h-4" />
                             </button>
 
+                            {/* زر سجل النشاط والإحصائيات - أيقونة بارزة */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenWriterStats(writer)}
+                              className="p-2 bg-purple-100 hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl transition border border-purple-300 shadow-2xs"
+                              title="عرض سجل نشاط وإحصائيات الكاتب (اليومي، الشهري، السنوي)"
+                            >
+                              <Activity className="w-4 h-4" />
+                            </button>
+
                             {/* زر الحذف - أيقونة */}
                             <button
                               type="button"
@@ -2934,6 +3033,16 @@ export default function BranchManagerDashboard({
                             </button>
                           </div>
                         </div>
+
+                        {/* زر فتح سجل نشاط وإحصائيات الكاتب بنقرة واحدة */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWriterStats(writer)}
+                          className="w-full py-2 px-3 bg-purple-50 hover:bg-purple-700 text-purple-800 hover:text-white rounded-xl text-xs font-black transition border border-purple-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer group"
+                        >
+                          <BarChart3 className="w-4 h-4 text-purple-600 group-hover:text-white" />
+                          <span>سجل النشاط والعمليات (اليوم / الشهر / السنة)</span>
+                        </button>
                       </div>
                     )
                   })}
@@ -4027,6 +4136,477 @@ export default function BranchManagerDashboard({
                   <span>حفظ الكاتب</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة سجل نشاط وإحصائيات الكاتب الشاملة (اليومي، الشهري، السنوي) */}
+      {showWriterStatsModal && statsSelectedWriter && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+          dir="rtl"
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
+            {/* 1. رأس النافذة */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-inner">
+                  <BarChart3 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black">{statsSelectedWriter.name}</h3>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-white/20 text-white border border-white/25">
+                      كاتب معتمد
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-200 mt-0.5 flex items-center gap-2">
+                    <span>الهاتف: {statsSelectedWriter.phone}</span>
+                    <span>•</span>
+                    <span>توقيت العراق الرسمي (Asia/Baghdad)</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRefreshWriterStats}
+                  disabled={isLoadingWriterStats}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition border border-white/15 flex items-center gap-1.5 text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  title="تحديث البيانات لحظياً من السيرفر"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingWriterStats ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">تحديث</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowWriterStatsModal(false)}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition border border-white/15 cursor-pointer"
+                  title="إغلاق"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 2. شريط التبويبات الزمنية (اليوم، هذا الشهر، هذه السنة، السجل الشامل) */}
+            <div className="px-4 sm:px-6 pt-3 pb-2 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-1 bg-slate-200/80 p-1 rounded-2xl text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setStatsTimeTab('today')}
+                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                    statsTimeTab === 'today'
+                      ? 'bg-purple-600 text-white shadow-sm font-black'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>أعمال اليوم</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatsTimeTab('month')}
+                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                    statsTimeTab === 'month'
+                      ? 'bg-purple-600 text-white shadow-sm font-black'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>هذا الشهر</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatsTimeTab('year')}
+                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                    statsTimeTab === 'year'
+                      ? 'bg-purple-600 text-white shadow-sm font-black'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>هذه السنة</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatsTimeTab('all')}
+                  className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                    statsTimeTab === 'all'
+                      ? 'bg-purple-600 text-white shadow-sm font-black'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>السجل الشامل</span>
+                </button>
+              </div>
+
+              {/* آخر ظهور للكاتب */}
+              {writerStats?.lastLogin && (
+                <div className="text-[11px] text-slate-500 font-bold flex items-center gap-1">
+                  <span>آخر دخول للنظام:</span>
+                  <span className="text-purple-700 font-black">{writerStats.lastLogin.date} ({writerStats.lastLogin.time})</span>
+                </div>
+              )}
+            </div>
+
+            {/* 3. بطاقات الإحصائيات الأربعة الكبيرة */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+              {(() => {
+                const currentPeriod: PeriodStats = writerStats
+                  ? statsTimeTab === 'today'
+                    ? writerStats.today
+                    : statsTimeTab === 'month'
+                    ? writerStats.thisMonth
+                    : statsTimeTab === 'year'
+                    ? writerStats.thisYear
+                    : writerStats.allTime
+                  : {
+                      loginCount: 0,
+                      editedSubscribersCount: 0,
+                      uniqueEditedSubscribers: [],
+                      debtSubscribersCount: 0,
+                      totalDebtAmount: 0,
+                      uniqueDebtSubscribers: [],
+                      paymentSubscribersCount: 0,
+                      totalPaymentAmount: 0,
+                      paymentTransactionsCount: 0,
+                      uniquePaymentSubscribers: [],
+                      totalOperations: 0
+                    }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    {/* بطاقة 1: فتح النظام */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-blue-900">فتح النظام</span>
+                        <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                          <Eye className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black text-blue-950 font-mono">
+                          {currentPeriod.loginCount}
+                        </div>
+                        <p className="text-[11px] text-blue-700 font-bold mt-0.5">
+                          {statsTimeTab === 'today' ? 'مرات فتح النظام اليوم' : 'مرات تسجيل الدخول'}
+                        </p>
+                      </div>
+                      <div className="text-[10px] text-blue-600 font-bold pt-1 border-t border-blue-200/60">
+                        {statsTimeTab === 'today' ? 'حسب التوقيت العراقي' : 'خلال هذه الفترة'}
+                      </div>
+                    </div>
+
+                    {/* بطاقة 2: الأسماء المعدلة */}
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50/60 border border-amber-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-amber-900">الأسماء المعدلة</span>
+                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                          <Edit3 className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black text-amber-950 font-mono">
+                          {currentPeriod.editedSubscribersCount}
+                        </div>
+                        <p className="text-[11px] text-amber-700 font-bold mt-0.5">
+                          مشترك تم تعديل بياناته
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={currentPeriod.editedSubscribersCount === 0}
+                        onClick={() =>
+                          setShowSubscribersListModal({
+                            title: `قائمة المشتركين المعدلين بواسطة الكاتب (${currentPeriod.editedSubscribersCount} مشترك)`,
+                            subscribers: currentPeriod.uniqueEditedSubscribers
+                          })
+                        }
+                        className="text-[10px] text-amber-800 hover:text-amber-950 font-black pt-1 border-t border-amber-200/60 flex items-center justify-between disabled:opacity-40 cursor-pointer"
+                      >
+                        <span>عرض قائمة الأسماء</span>
+                        <span>←</span>
+                      </button>
+                    </div>
+
+                    {/* بطاقة 3: تنزيل وتعديل الديون */}
+                    <div className="bg-gradient-to-br from-rose-50 to-pink-50/60 border border-rose-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-rose-900">تنزيل الديون</span>
+                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                          <DollarSign className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black text-rose-950 font-mono">
+                          {currentPeriod.debtSubscribersCount}
+                        </div>
+                        <p className="text-[11px] text-rose-700 font-bold mt-0.5">
+                          مشترك نُزّلت/عُدّلت له ديون
+                        </p>
+                        {currentPeriod.totalDebtAmount > 0 && (
+                          <p className="text-[10px] text-rose-600 font-black mt-0.5 font-mono">
+                            {currentPeriod.totalDebtAmount.toLocaleString('ar-IQ')} د.ع
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={currentPeriod.debtSubscribersCount === 0}
+                        onClick={() =>
+                          setShowSubscribersListModal({
+                            title: `المشتركون الذين نُزلت لهم ديون (${currentPeriod.debtSubscribersCount} مشترك)`,
+                            subscribers: currentPeriod.uniqueDebtSubscribers
+                          })
+                        }
+                        className="text-[10px] text-rose-800 hover:text-rose-950 font-black pt-1 border-t border-rose-200/60 flex items-center justify-between disabled:opacity-40 cursor-pointer"
+                      >
+                        <span>عرض قائمة المشتركين</span>
+                        <span>←</span>
+                      </button>
+                    </div>
+
+                    {/* بطاقة 4: تنزيل المدفوعات */}
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50/60 border border-emerald-200/90 rounded-2xl p-4 shadow-2xs flex flex-col justify-between space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-emerald-900">تنزيل المدفوعات</span>
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                          <Wallet className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black text-emerald-950 font-mono">
+                          {currentPeriod.paymentSubscribersCount}
+                        </div>
+                        <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
+                          مشترك نُزّلت له مدفوعات
+                        </p>
+                        <p className="text-[10px] text-emerald-700 font-black mt-0.5 font-mono">
+                          {currentPeriod.totalPaymentAmount.toLocaleString('ar-IQ')} د.ع ({currentPeriod.paymentTransactionsCount} دفعة)
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={currentPeriod.paymentSubscribersCount === 0}
+                        onClick={() =>
+                          setShowSubscribersListModal({
+                            title: `المشتركون الذين نُزلت لهم مدفوعات (${currentPeriod.paymentSubscribersCount} مشترك)`,
+                            subscribers: currentPeriod.uniquePaymentSubscribers
+                          })
+                        }
+                        className="text-[10px] text-emerald-800 hover:text-emerald-950 font-black pt-1 border-t border-emerald-200/60 flex items-center justify-between disabled:opacity-40 cursor-pointer"
+                      >
+                        <span>عرض قائمة المشتركين</span>
+                        <span>←</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* 4. قسم السجل الزمني التفصيلي للحركات */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-purple-700" />
+                    <h4 className="text-xs sm:text-sm font-black text-slate-800">
+                      السجل الزمني للعمليات ({filteredEventsForTable.length} عملية)
+                    </h4>
+                  </div>
+
+                  {/* فلاتر نوع الحركة وحقل البحث */}
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <select
+                      value={statsActionFilter}
+                      onChange={(e) => setStatsActionFilter(e.target.value as any)}
+                      className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="all">جميع أنواع العمليات</option>
+                      <option value="login">فتح النظام (دخول)</option>
+                      <option value="edit_subscriber">تعديل بيانات مشترك</option>
+                      <option value="update_debt">تنزيل / تعديل ديون</option>
+                      <option value="add_payment">تنزيل مدفوعات</option>
+                    </select>
+
+                    <div className="relative flex-1 sm:w-48">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="بحث بالمشترك..."
+                        value={statsSearchTerm}
+                        onChange={(e) => setStatsSearchTerm(e.target.value)}
+                        className="w-full pr-8 pl-2 py-1 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* قائمة العمليات */}
+                {isLoadingWriterStats ? (
+                  <div className="py-12 text-center text-slate-500 font-bold text-xs">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-purple-600" />
+                    <span>جارِ تحميل سجل العمليات من السحابة...</span>
+                  </div>
+                ) : filteredEventsForTable.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400 font-bold text-xs bg-white rounded-xl border border-dashed border-slate-200">
+                    لا توجد أي حركات مسجلة لهذا الكاتب في هذه الفترة المحددة
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                    {filteredEventsForTable.map((ev) => {
+                      const isLogin = ev.actionType === 'login'
+                      const isEdit = ev.actionType === 'edit_subscriber'
+                      const isDebt = ev.actionType === 'update_debt'
+                      const isPay = ev.actionType === 'add_payment'
+
+                      return (
+                        <div
+                          key={ev.id}
+                          className="p-2.5 bg-white rounded-xl border border-slate-200 hover:border-purple-300 shadow-2xs transition flex flex-wrap items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            {/* شارة نوع الحركة */}
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 ${
+                                isLogin
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : isEdit
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : isDebt
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}
+                            >
+                              {isLogin
+                                ? 'فتح النظام'
+                                : isEdit
+                                ? 'تعديل مشترك'
+                                : isDebt
+                                ? 'تنزيل ديون'
+                                : 'تنزيل دفعة'}
+                            </span>
+
+                            {/* اسم المشترك والتفاصيل */}
+                            <div>
+                              {ev.subscriberName ? (
+                                <div className="font-black text-slate-900 text-xs">
+                                  {ev.subscriberName} {ev.subscriberId ? `(#${ev.subscriberId})` : ''}
+                                </div>
+                              ) : null}
+                              <div className="text-[11px] text-slate-500 font-bold">
+                                {ev.details || (isLogin ? 'تسجيل دخول وفتح النظام' : '')}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* الوقت والتاريخ والمبلغ */}
+                          <div className="flex items-center gap-3 mr-auto">
+                            {ev.amount ? (
+                              <span className="font-mono font-black text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                                {ev.amount.toLocaleString('ar-IQ')} د.ع
+                              </span>
+                            ) : null}
+
+                            <div className="text-left text-[10px] font-mono text-slate-400 font-bold dir-ltr">
+                              <div>{ev.date}</div>
+                              <div className="text-slate-600 font-black">{ev.time}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* زر الإغلاق السفلي */}
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowWriterStatsModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة عرض قائمة أسماء المشتركين المعنيين */}
+      {showSubscribersListModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+          dir="rtl"
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden text-right">
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+              <h4 className="font-black text-sm">{showSubscribersListModal.title}</h4>
+              <button
+                type="button"
+                onClick={() => setShowSubscribersListModal(null)}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-96 space-y-1.5 flex-1">
+              {showSubscribersListModal.subscribers.map((s, idx) => (
+                <div
+                  key={idx}
+                  className="p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-800 font-mono text-[10px] flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span className="text-slate-900 font-black">{s.name || 'بدون اسم'}</span>
+                    {s.id ? <span className="text-slate-400 font-mono text-[11px]">#{s.id}</span> : null}
+                  </div>
+
+                  {s.amount ? (
+                    <span className="font-mono font-black text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                      {s.amount.toLocaleString('ar-IQ')} د.ع
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowSubscribersListModal(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
+              >
+                إغلاق
+              </button>
             </div>
           </div>
         </div>

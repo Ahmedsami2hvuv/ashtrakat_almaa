@@ -108,3 +108,31 @@ export function checkWriterWorkHours(writer: {
     rawEnd: writer.workHourEnd
   }
 }
+
+/**
+ * الحصول على تفاصيل التاريخ والوقت الحالية بتوقيت العراق (Asia/Baghdad)
+ */
+export function getIraqDateAndTimeString(): {
+  date: string // "YYYY-MM-DD"
+  time: string // "HH:mm"
+  time12h: string // "02:30 مساءً"
+  year: number
+  month: number
+  day: number
+  iso: string
+} {
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Baghdad' }) // "YYYY-MM-DD"
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const { timeString, formatted12h } = getIraqCurrentTime()
+
+  return {
+    date: dateStr,
+    time: timeString,
+    time12h: formatted12h,
+    year: y || now.getFullYear(),
+    month: m || now.getMonth() + 1,
+    day: d || now.getDate(),
+    iso: now.toISOString()
+  }
+}

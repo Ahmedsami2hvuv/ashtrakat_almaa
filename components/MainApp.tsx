@@ -6,6 +6,7 @@ import ReceiptScannerModal from './ReceiptScannerModal'
 import InstallmentsPage from './InstallmentsPage'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateStore'
+import { logWriterActivity } from '../lib/writerActivityStore'
 import type { Consignment, ConsignmentItem } from '../lib/directorateTypes'
 import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell } from 'lucide-react'
 
@@ -670,6 +671,8 @@ export interface MainAppProps {
   assignedAreaIds?: string[]
   assignedSubscriberIds?: number[]
   customHeaderTitle?: string
+  writerId?: string
+  writerName?: string
   onBack?: () => void
   bypassAuth?: boolean
   branchId?: string
@@ -695,6 +698,8 @@ export default function MainApp({
   assignedAreaIds,
   assignedSubscriberIds,
   customHeaderTitle,
+  writerId,
+  writerName,
   onBack,
   bypassAuth = false,
   branchId,
@@ -729,6 +734,27 @@ export default function MainApp({
       }
     } catch {}
   }, [recordedStorageKey])
+
+  // دالة تسجيل أحداث ونشاط الكاتب (تعديل اسم، تنزيل ديون، تنزيل مدفوعات)
+  const recordWriterAction = useCallback((actionType: 'login' | 'edit_subscriber' | 'update_debt' | 'add_payment', params: {
+    subscriberId?: number
+    subscriberName?: string
+    details?: string
+    amount?: number
+  }) => {
+    if (userRole === 'writer' && branchId && writerId) {
+      logWriterActivity({
+        branchId,
+        writerId,
+        writerName: writerName || 'الكاتب',
+        actionType,
+        subscriberId: params.subscriberId,
+        subscriberName: params.subscriberName,
+        details: params.details,
+        amount: params.amount
+      })
+    }
+  }, [userRole, branchId, writerId, writerName])
 
   const toggleRecordItem = (itemId: string) => {
     setRecordedItemIds(prev => {
@@ -1746,6 +1772,28 @@ export default function MainApp({
 
       return copy
     })
+
+    // تسجيل نشاط الكاتب عند تنزيل ديون أو مدفوعات لمشترك
+    if (userRole === 'writer' && branchId && writerId) {
+      const sub = subscribers.find((s) => s.id === subId)
+      if (field === 'paid' || field === 'rem') {
+        recordWriterAction('add_payment', {
+          subscriberId: subId,
+          subscriberName: sub?.name,
+          amount: num,
+          details: `تسجيل دفعة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+        })
+      } else {
+        recordWriterAction('update_debt', {
+          subscriberId: subId,
+          subscriberName: sub?.name,
+          amount: num,
+          details: field === 'old'
+            ? `تعديل الديون السابقة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+            : `تعديل قائمة المجموع بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+        })
+      }
+    }
   }
 
   // مراجع لتأخير تعديل مبالغ الديون وجعل الكتابة فائقة السرعة بدون أي تجميد
@@ -1836,6 +1884,13 @@ export default function MainApp({
   // تعديل اسم المشترك مباشرة في النظام
   const handleUpdateSubscriberName = (subId: number, newName: string) => {
     setSubscribers((prev) => prev.map((s) => (s.id === subId ? { ...s, name: newName.trim() } : s)))
+    if (userRole === 'writer' && branchId && writerId) {
+      recordWriterAction('edit_subscriber', {
+        subscriberId: subId,
+        subscriberName: newName.trim(),
+        details: `تعديل اسم المشترك إلى: ${newName.trim()}`
+      })
+    }
   }
 
   // تنزيل وتطبيق الدفعات المستخرجة من وصولات الذكاء الاصطناعي مع إمكانية تحديث الأسماء
@@ -1854,6 +1909,13 @@ export default function MainApp({
         return prevSubs.map((s) => {
           const update = nameUpdates.find((u) => u.subId === s.id)
           if (update && update.newName) {
+            if (userRole === 'writer' && branchId && writerId) {
+              recordWriterAction('edit_subscriber', {
+                subscriberId: s.id,
+                subscriberName: update.newName,
+                details: `تعديل اسم المشترك أثناء ترحيل الإرسالية إلى: ${update.newName}`
+              })
+            }
             return { ...s, name: update.newName }
           }
           return s
@@ -1903,6 +1965,19 @@ export default function MainApp({
 
       return copy
     })
+
+    // تسجيل دفعات الإرسالية المنزلة لنشاط الكاتب
+    if (userRole === 'writer' && branchId && writerId) {
+      paymentsToApply.forEach(({ subId, amount, year, periodIdx }) => {
+        const sub = subscribers.find((s) => s.id === subId)
+        recordWriterAction('add_payment', {
+          subscriberId: subId,
+          subscriberName: sub?.name,
+          amount,
+          details: `ترحيل دفعة إرسالية بقيمة ${amount.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+        })
+      })
+    }
   }
 
   // حفظ وتنزيل الإرساليات (إنشاء حسابات المشتركين الجدد وتنزيل دفعات الشهرين الحاليين)
@@ -2284,6 +2359,14 @@ export default function MainApp({
           copy[editSub.id!] = subBilling
         }
         return copy
+      })
+    }
+
+    if (userRole === 'writer' && branchId && writerId) {
+      recordWriterAction('edit_subscriber', {
+        subscriberId: editSub.id,
+        subscriberName: finalEditSub.name || originalSub?.name,
+        details: `تعديل وتحديث بيانات المشترك (${finalEditSub.name || originalSub?.name})`
       })
     }
 
