@@ -2836,25 +2836,27 @@ export default function MainApp({
               )}
             </button>
 
-            {/* زر الإعدادات - يبقى 100% بنفس شكله ومقاسه */}
-            <button
-              type="button"
-              aria-label="الاعدادات"
-              onClick={() => {
-                setShowSettingsModal((p) => !p)
-                setSettingsTab('collector')
-                setSearchOpen(false)
-                setFilterDrawerOpen(false)
-              }}
-              className={`depth-button w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
-                showSettingsModal ? 'bg-[#0e7490] text-white border-[#0e7490]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
-              </svg>
-            </button>
+            {/* زر الإعدادات - لا يظهر للكاتب */}
+            {userRole !== 'writer' && (
+              <button
+                type="button"
+                aria-label="الاعدادات"
+                onClick={() => {
+                  setShowSettingsModal((p) => !p)
+                  setSettingsTab('collector')
+                  setSearchOpen(false)
+                  setFilterDrawerOpen(false)
+                }}
+                className={`depth-button w-8 h-8 border rounded-lg flex items-center justify-center transition-colors ${
+                  showSettingsModal ? 'bg-[#0e7490] text-white border-[#0e7490]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
@@ -3411,8 +3413,9 @@ export default function MainApp({
         {/* ========================================================= */}
         {bottomNavTab === 'subscribers' && (
           <div>
-            {/* شريط المناطق الرئيسي للأفرع والتنقل السريع */}
-            <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
+            {/* شريط المناطق الرئيسي للأفرع والتنقل السريع - لا يظهر للكاتب */}
+            {userRole !== 'writer' && (
+              <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
               <div className="px-3 py-3 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-none items-center">
                 {/* زر الكل */}
                 <button
@@ -3521,6 +3524,7 @@ export default function MainApp({
                 </div>
               )}
             </div>
+            )}
 
             {/* إشعار نجاح إضافة مشترك */}
             {addSuccessMsg && (
@@ -6447,7 +6451,7 @@ export default function MainApp({
       {/* ========================================================= */}
       {/* زر إضافة مشترك عائم وسريع (يظهر في تبويب المشتركين) */}
       {/* ========================================================= */}
-      {bottomNavTab === 'subscribers' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && !showInstallmentsPage && (
+      {bottomNavTab === 'subscribers' && userRole !== 'writer' && !activeSubscriber && !showAddModal && !showEditModal && !showReceiptScannerModal && !showInstallmentsPage && (
         <div
           style={{ position: 'fixed', bottom: '68px', left: '16px', zIndex: 9998 }}
           className="flex items-center gap-2"
@@ -6633,28 +6637,108 @@ export default function MainApp({
             </span>
           </button>
 
-          {/* 3. يحتاج مراجعة */}
-          <button
-            type="button"
-            onClick={() => setBottomNavTab('review')}
-            style={{
-              flex: 1,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'none',
-              border: 'none',
-              outline: 'none',
-              padding: '2px 0',
-              cursor: 'pointer',
-              color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8',
-              position: 'relative',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div style={{ position: 'relative' }}>
+          {/* 3. يحتاج مراجعة - لا يظهر للكاتب */}
+          {userRole !== 'writer' && (
+            <button
+              type="button"
+              onClick={() => setBottomNavTab('review')}
+              style={{
+                flex: 1,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'none',
+                border: 'none',
+                outline: 'none',
+                padding: '2px 0',
+                cursor: 'pointer',
+                color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8',
+                position: 'relative',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    backgroundColor: bottomNavTab === 'review' ? '#d97706' : 'transparent',
+                    color: bottomNavTab === 'review' ? '#ffffff' : '#94a3b8',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                </div>
+                {totalReviewBadgeCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-3px',
+                      right: '-4px',
+                      minWidth: '15px',
+                      height: '15px',
+                      padding: '0 3px',
+                      backgroundColor: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '9px',
+                      fontWeight: 'bold',
+                      borderRadius: '99px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1.5px solid #ffffff'
+                    }}
+                  >
+                    {totalReviewBadgeCount}
+                  </span>
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: '10.5px',
+                  marginTop: '2px',
+                  fontWeight: bottomNavTab === 'review' ? 'bold' : '500',
+                  color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8'
+                }}
+              >
+                يحتاج مراجعة
+              </span>
+            </button>
+          )}
+
+          {/* 4. الإحصائيات - لا يظهر للكاتب */}
+          {userRole !== 'writer' && (
+            <button
+              type="button"
+              onClick={() => setBottomNavTab('stats')}
+              style={{
+                flex: 1,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'none',
+                border: 'none',
+                outline: 'none',
+                padding: '2px 0',
+                cursor: 'pointer',
+                color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8',
+                transition: 'all 0.15s ease'
+              }}
+            >
               <div
                 style={{
                   width: '38px',
@@ -6663,105 +6747,29 @@ export default function MainApp({
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: '12px',
-                  backgroundColor: bottomNavTab === 'review' ? '#d97706' : 'transparent',
-                  color: bottomNavTab === 'review' ? '#ffffff' : '#94a3b8',
+                  backgroundColor: bottomNavTab === 'stats' ? '#0f172a' : 'transparent',
+                  color: bottomNavTab === 'stats' ? '#ffffff' : '#94a3b8',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'review' ? 2.2 : 1.8}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
                 </svg>
               </div>
-              {totalReviewBadgeCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-3px',
-                    right: '-4px',
-                    minWidth: '15px',
-                    height: '15px',
-                    padding: '0 3px',
-                    backgroundColor: '#ef4444',
-                    color: '#ffffff',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    borderRadius: '99px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1.5px solid #ffffff'
-                  }}
-                >
-                  {totalReviewBadgeCount}
-                </span>
-              )}
-            </div>
-            <span
-              style={{
-                fontSize: '10.5px',
-                marginTop: '2px',
-                fontWeight: bottomNavTab === 'review' ? 'bold' : '500',
-                color: bottomNavTab === 'review' ? '#d97706' : '#94a3b8'
-              }}
-            >
-              يحتاج مراجعة
-            </span>
-          </button>
-
-          {/* 4. الإحصائيات */}
-          <button
-            type="button"
-            onClick={() => setBottomNavTab('stats')}
-            style={{
-              flex: 1,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'none',
-              border: 'none',
-              outline: 'none',
-              padding: '2px 0',
-              cursor: 'pointer',
-              color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div
-              style={{
-                width: '38px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '12px',
-                backgroundColor: bottomNavTab === 'stats' ? '#0f172a' : 'transparent',
-                color: bottomNavTab === 'stats' ? '#ffffff' : '#94a3b8',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={bottomNavTab === 'stats' ? 2.2 : 1.8}>
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-              </svg>
-            </div>
-            <span
-              style={{
-                fontSize: '10.5px',
-                marginTop: '2px',
-                fontWeight: bottomNavTab === 'stats' ? 'bold' : '500',
-                color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8'
-              }}
-            >
-              الإحصائيات
-            </span>
-          </button>
+              <span
+                style={{
+                  fontSize: '10.5px',
+                  marginTop: '2px',
+                  fontWeight: bottomNavTab === 'stats' ? 'bold' : '500',
+                  color: bottomNavTab === 'stats' ? '#0f172a' : '#94a3b8'
+                }}
+              >
+                الإحصائيات
+              </span>
+            </button>
+          )}
         </div>
       </nav>
 
