@@ -4410,12 +4410,14 @@ export default function MainApp({
                   <div className="inline-flex border border-sky-100 rounded-lg bg-sky-50 px-3 py-1 text-[12px] font-semibold text-slate-700">
                     {activeSubscriber.propertyType} - {activeSubscriber.meterType}
                   </div>
-                  <button
-                    onClick={() => setShowContactModal(true)}
-                    className="inline-flex items-center gap-1.5 border border-sky-200 rounded-lg bg-white hover:bg-sky-50 px-3.5 py-1 text-[12px] font-bold text-sky-700 transition-colors shadow-xs active:scale-95"
-                  >
-                    التواصل والموقع والصور
-                  </button>
+                  {userRole !== 'writer' && (
+                    <button
+                      onClick={() => setShowContactModal(true)}
+                      className="inline-flex items-center gap-1.5 border border-sky-200 rounded-lg bg-white hover:bg-sky-50 px-3.5 py-1 text-[12px] font-bold text-sky-700 transition-colors shadow-xs active:scale-95"
+                    >
+                      التواصل والموقع والصور
+                    </button>
+                  )}
                   {Boolean(activeSubscriber.phone && activeSubscriber.phone.trim()) && activeShareData?.url && (
                     <a
                       href={activeShareData.url}
@@ -5006,8 +5008,8 @@ export default function MainApp({
                   )
                 })()}
 
-                {/* زر رفع أو فتح لكيشن ملحق بالسجل مباشرة لتقليص الفراغ */}
-                {(() => {
+                {/* زر رفع أو فتح لكيشن ملحق بالسجل مباشرة لتقليص الفراغ - لا يظهر للكاتب */}
+                {userRole !== 'writer' && (() => {
                   const hasLocation = Boolean(
                     activeSubscriber.location &&
                     ((activeSubscriber.location.lat && activeSubscriber.location.lng) || activeSubscriber.location.link)
