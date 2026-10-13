@@ -2740,27 +2740,73 @@ export default function BranchManagerDashboard({
                         )}
 
                         {/* المشتركون المخصصون مباشرة للمحصل */}
-                        {collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0 && (
-                          <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200/80 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <Users className="w-3.5 h-3.5 text-blue-700" />
-                              <span className="font-black text-blue-950 text-[11px]">المشتركون المخصصون:</span>
-                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-100 text-blue-800">
-                                {collector.assignedSubscriberIds.length} مشترك
-                              </span>
-                            </div>
+                        {collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0 && (() => {
+                          const sortedIds = Array.from(new Set(collector.assignedSubscriberIds)).sort((a, b) => a - b)
+                          const minId = sortedIds[0]
+                          const maxId = sortedIds[sortedIds.length - 1]
+                          const rangeText = sortedIds.length === 1 
+                            ? `اشتراك #${minId}` 
+                            : `من #${minId} إلى #${maxId}`
 
-                            <button
-                              type="button"
-                              onClick={() => handleClearCollectorSubscribers(collector.id, collector.name)}
-                              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
-                              title="إزالة وتفريغ جميع المشتركين المخصصين لهذا المحصل بنقرة واحدة"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>إفراغ المشتركين</span>
-                            </button>
-                          </div>
-                        )}
+                          return (
+                            <div className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <Users className="w-3.5 h-3.5 text-blue-700" />
+                                  <span className="font-black text-blue-950 text-[11px]">المشتركون المخصصون:</span>
+                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-100 text-blue-800 border border-blue-200">
+                                    {collector.assignedSubscriberIds.length} مشترك
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const collectorSubs = sortedIds.map(id => {
+                                        const found = branch.subscribers?.find(s => s.id === id)
+                                        return {
+                                          id,
+                                          name: found?.name || `مشترك رقم #${id}`
+                                        }
+                                      })
+                                      setShowSubscribersListModal({
+                                        title: `المشتركون المخصصون للمحصل (${collector.name}) - ${rangeText} (العدد: ${collector.assignedSubscriberIds?.length})`,
+                                        subscribers: collectorSubs
+                                      })
+                                    }}
+                                    className="px-2 py-1 bg-white hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black transition border border-blue-300 flex items-center gap-1 cursor-pointer shadow-2xs"
+                                    title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا المحصل"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    <span>عرض القائمة</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleClearCollectorSubscribers(collector.id, collector.name)}
+                                    className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
+                                    title="إزالة وتفريغ جميع المشتركين المخصصين لهذا المحصل بنقرة واحدة"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>إفراغ</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* سطر نطاق الاشتراكات (من وإلى) بخط واضح وشارة مميزة */}
+                              <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-blue-200/90 text-xs font-bold text-slate-700">
+                                <span className="text-[11px] font-black text-blue-900 flex items-center gap-1">
+                                  <Hash className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>نطاق الاشتراكات:</span>
+                                </span>
+                                <span className="font-mono font-black text-blue-800 text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-300 dir-ltr">
+                                  {rangeText}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })()}
 
                         {/* 3. شريط الأيقونات السريعة للأكشنز */}
                         <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
@@ -3001,27 +3047,73 @@ export default function BranchManagerDashboard({
                         )}
 
                         {/* المشتركون المخصصون مباشرة للكاتب */}
-                        {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 && (
-                          <div className="p-2.5 bg-purple-50/70 rounded-xl border border-purple-200/80 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <Users className="w-3.5 h-3.5 text-purple-700" />
-                              <span className="font-black text-purple-950 text-[11px]">المشتركون المخصصون:</span>
-                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-100 text-purple-800">
-                                {writer.assignedSubscriberIds.length} مشترك
-                              </span>
-                            </div>
+                        {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 && (() => {
+                          const sortedIds = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
+                          const minId = sortedIds[0]
+                          const maxId = sortedIds[sortedIds.length - 1]
+                          const rangeText = sortedIds.length === 1 
+                            ? `اشتراك #${minId}` 
+                            : `من #${minId} إلى #${maxId}`
 
-                            <button
-                              type="button"
-                              onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
-                              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
-                              title="إزالة وتفريغ جميع المشتركين المخصصين لهذا الكاتب بنقرة واحدة"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>إفراغ المشتركين</span>
-                            </button>
-                          </div>
-                        )}
+                          return (
+                            <div className="p-2.5 bg-purple-50/80 rounded-xl border border-purple-200 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <Users className="w-3.5 h-3.5 text-purple-700" />
+                                  <span className="font-black text-purple-950 text-[11px]">المشتركون المخصصون:</span>
+                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-100 text-purple-800 border border-purple-200">
+                                    {writer.assignedSubscriberIds.length} مشترك
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const writerSubs = sortedIds.map(id => {
+                                        const found = branch.subscribers?.find(s => s.id === id)
+                                        return {
+                                          id,
+                                          name: found?.name || `مشترك رقم #${id}`
+                                        }
+                                      })
+                                      setShowSubscribersListModal({
+                                        title: `المشتركون المخصصون للكاتب (${writer.name}) - ${rangeText} (العدد: ${writer.assignedSubscriberIds?.length})`,
+                                        subscribers: writerSubs
+                                      })
+                                    }}
+                                    className="px-2 py-1 bg-white hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black transition border border-purple-300 flex items-center gap-1 cursor-pointer shadow-2xs"
+                                    title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا الكاتب"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    <span>عرض القائمة</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
+                                    className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
+                                    title="إزالة وتفريغ جميع المشتركين المخصصين لهذا الكاتب بنقرة واحدة"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>إفراغ</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* سطر نطاق الاشتراكات (من وإلى) بخط واضح وشارة مميزة */}
+                              <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-purple-200/90 text-xs font-bold text-slate-700">
+                                <span className="text-[11px] font-black text-purple-900 flex items-center gap-1">
+                                  <Hash className="w-3.5 h-3.5 text-purple-600" />
+                                  <span>نطاق الاشتراكات:</span>
+                                </span>
+                                <span className="font-mono font-black text-purple-800 text-xs bg-purple-50 px-2 py-0.5 rounded border border-purple-300 dir-ltr">
+                                  {rangeText}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })()}
 
                         {/* حالة ساعات العمل بالتوقيت العراقي */}
                         {(() => {
