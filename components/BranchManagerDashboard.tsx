@@ -1780,7 +1780,7 @@ export default function BranchManagerDashboard({
     )
   }
 
-  const navItems = [
+  const navItems: Array<{ id: TabType; label: string; icon: any; count?: number }> = [
     { id: 'subscribers', label: 'المشتركون', icon: Users, count: stats.totalSubscribers },
     { id: 'areas', label: 'المناطق', icon: MapPin, count: stats.totalAreas },
     { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers, count: (branch.consignments || []).length },
@@ -1790,69 +1790,58 @@ export default function BranchManagerDashboard({
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-50/60 to-slate-100/80 text-slate-800 flex flex-col font-sans" dir="rtl">
-      {/* الترويسة العلوية الفخمة بنمط الزجاج المعالج المتطور */}
-      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/80 text-slate-900 sticky top-0 z-30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]">
-        <div className="max-w-7xl mx-auto px-3.5 py-3 sm:py-3.5 flex items-center justify-between gap-3">
-          {/* بيانات الفرع والمسؤول مع هوية بصرية مائية مميزة */}
+    <div className="min-h-screen bg-slate-50/60 text-slate-800 flex flex-col font-sans" dir="rtl">
+      {/* الترويسة العلوية النظيفة والأنيقة */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+          {/* هوية الفرع واسم المسؤول */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20 shrink-0">
-                <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white"></span>
-              </span>
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm shrink-0">
+              <Building2 className="w-5 h-5" />
             </div>
-
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-sm sm:text-base md:text-lg font-black text-slate-900 tracking-tight truncate">
+                <h1 className="text-sm sm:text-base font-black text-slate-900 truncate">
                   {branch.name}
                 </h1>
-                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  متصل ومحدّث
+                  متصل
                 </span>
               </div>
-              
               <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50/60 text-blue-700 border border-blue-200/70 text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-lg truncate max-w-[140px] sm:max-w-none shadow-xs">
-                  <span className="text-blue-500">👤</span>
-                  <span>{currentManager ? currentManager.name : 'مسؤول الفرع'}</span>
-                </div>
-                <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">•</span>
-                <span className="text-[11px] text-slate-500 font-bold hidden sm:inline">لوحة الإدارة التنفيذية</span>
+                <span className="text-slate-400 text-xs">👤</span>
+                <span className="text-xs font-bold text-slate-600">
+                  {currentManager ? currentManager.name : 'مسؤول الفرع'}
+                </span>
+                <span className="text-slate-300 text-xs hidden sm:inline">•</span>
+                <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">لوحة التحكم</span>
               </div>
             </div>
           </div>
 
-          {/* أزرار العمليات الرئيسية */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* زر مخزن الإرساليات الفخم */}
+          {/* أزرار الإجراءات في الهيدر */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
                 setSelectedConsignmentForView(null)
                 setActiveTab('consignments')
               }}
-              className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 border rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs ${
                 activeTab === 'consignments'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                  : 'bg-white text-slate-700 border-slate-200/90 hover:bg-slate-50 hover:border-slate-300 shadow-xs'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
               }`}
             >
-              <Layers className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline">مخزن الإرساليات</span>
-              <span className="sm:hidden">الإرساليات</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                activeTab === 'consignments' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'
+              <Layers className="w-4 h-4 text-blue-500" />
+              <span>مخزن الإرساليات</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                activeTab === 'consignments' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
               }`}>
                 {branch.consignments?.length || 0}
               </span>
             </button>
 
-            {/* زر إنشاء إرسالية A4 بلون كهرماني مميز */}
             <button
               onClick={() => {
                 if (!hasLoadedSubscribers) {
@@ -1861,7 +1850,7 @@ export default function BranchManagerDashboard({
                 setSelectedConsignmentForView(null)
                 setIsConsignmentA4Open(true)
               }}
-              className="px-3.5 py-1.5 sm:px-4.5 sm:py-2 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30 active:scale-95 cursor-pointer shrink-0"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
             >
               <FileText className="w-4 h-4" />
               <span>إنشاء إرسالية (A4)</span>
@@ -1871,171 +1860,10 @@ export default function BranchManagerDashboard({
       </header>
 
       {/* المحتوى الرئيسي */}
-      <div className="flex-1 max-w-7xl mx-auto w-full p-3.5 sm:p-5 md:p-6 space-y-5 sm:space-y-6">
+      <div className="flex-1 max-w-7xl mx-auto w-full p-3 sm:p-5 space-y-4 sm:space-y-5">
         
-        {/* شريط الإحصائيات التنفيذية التفاعلية الفاخرة */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
-          {/* بطاقة المشتركين */}
-          <div
-            onClick={() => {
-              if (!hasLoadedSubscribers) fetchBranchSubscribers()
-              setActiveTab('subscribers')
-            }}
-            className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer group relative overflow-hidden ${
-              activeTab === 'subscribers'
-                ? 'bg-gradient-to-br from-blue-500/10 via-white to-white border-blue-400/80 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/20'
-                : 'bg-white/80 hover:bg-white border-slate-200/80 hover:border-blue-300 hover:shadow-md'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 group-hover:text-blue-600 transition-colors">إجمالي المشتركين</span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'subscribers'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                  : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
-              }`}>
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
-                {stats.totalSubscribers.toLocaleString('en-US')}
-              </span>
-              <span className="text-[10px] text-slate-400 font-bold">مشترك</span>
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-blue-600">
-              <span>عرض السجل</span>
-              <ChevronLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* بطاقة المناطق */}
-          <div
-            onClick={() => setActiveTab('areas')}
-            className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer group relative overflow-hidden ${
-              activeTab === 'areas'
-                ? 'bg-gradient-to-br from-indigo-500/10 via-white to-white border-indigo-400/80 shadow-md shadow-indigo-500/10 ring-2 ring-indigo-500/20'
-                : 'bg-white/80 hover:bg-white border-slate-200/80 hover:border-indigo-300 hover:shadow-md'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 group-hover:text-indigo-600 transition-colors">الأحياء والمناطق</span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'areas'
-                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
-                  : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
-              }`}>
-                <MapPin className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
-                {stats.totalAreas}
-              </span>
-              <span className="text-[10px] text-slate-400 font-bold">منطقة</span>
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
-              <span>إدارة الأحياء</span>
-              <ChevronLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* بطاقة فريق التحصيل */}
-          <div
-            onClick={() => setActiveTab('collectors')}
-            className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer group relative overflow-hidden ${
-              activeTab === 'collectors'
-                ? 'bg-gradient-to-br from-emerald-500/10 via-white to-white border-emerald-400/80 shadow-md shadow-emerald-500/10 ring-2 ring-emerald-500/20'
-                : 'bg-white/80 hover:bg-white border-slate-200/80 hover:border-emerald-300 hover:shadow-md'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 group-hover:text-emerald-600 transition-colors">فريق التحصيل</span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'collectors'
-                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/30'
-                  : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'
-              }`}>
-                <Wallet className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
-                {stats.totalCollectors}
-              </span>
-              <span className="text-[10px] text-slate-400 font-bold">محصل</span>
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-              <span>متابعة الجباية</span>
-              <ChevronLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* بطاقة كتاب البيانات */}
-          <div
-            onClick={() => setActiveTab('writers')}
-            className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer group relative overflow-hidden ${
-              activeTab === 'writers'
-                ? 'bg-gradient-to-br from-amber-500/10 via-white to-white border-amber-400/80 shadow-md shadow-amber-500/10 ring-2 ring-amber-500/20'
-                : 'bg-white/80 hover:bg-white border-slate-200/80 hover:border-amber-300 hover:shadow-md'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 group-hover:text-amber-600 transition-colors">كُتّاب القراءات</span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'writers'
-                  ? 'bg-amber-600 text-white shadow-sm shadow-amber-500/30'
-                  : 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white'
-              }`}>
-                <BookOpen className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
-                {stats.totalWriters}
-              </span>
-              <span className="text-[10px] text-slate-400 font-bold">كاتب</span>
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-amber-600">
-              <span>نشاط الإدخال</span>
-              <ChevronLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* بطاقة مخزن الإرساليات */}
-          <div
-            onClick={() => setActiveTab('consignments')}
-            className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer group relative overflow-hidden col-span-2 sm:col-span-1 ${
-              activeTab === 'consignments'
-                ? 'bg-gradient-to-br from-cyan-500/10 via-white to-white border-cyan-400/80 shadow-md shadow-cyan-500/10 ring-2 ring-cyan-500/20'
-                : 'bg-white/80 hover:bg-white border-slate-200/80 hover:border-cyan-300 hover:shadow-md'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 group-hover:text-cyan-600 transition-colors">الإرساليات المؤرشفة</span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'consignments'
-                  ? 'bg-cyan-600 text-white shadow-sm shadow-cyan-500/30'
-                  : 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white'
-              }`}>
-                <Layers className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
-                {(branch.consignments || []).length}
-              </span>
-              <span className="text-[10px] text-slate-400 font-bold">إرسالية</span>
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-cyan-600">
-              <span>فتح الأرشيف</span>
-              <ChevronLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-          </div>
-        </div>
-
-        {/* شريط الأقسام (Tabs) الفاخر بتصميم الكبسولة العائمة */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1.5 border border-slate-200/90 shadow-sm overflow-x-auto flex items-center gap-1.5">
+        {/* شريط الأقسام (Tabs) المنظم المدمج مع الأعداد */}
+        <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-xs overflow-x-auto flex items-center gap-1.5">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -2048,19 +1876,19 @@ export default function BranchManagerDashboard({
                   }
                   setActiveTab(item.id as TabType)
                 }}
-                className={`px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 ring-1 ring-blue-600/30'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 active:scale-95'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                 <span>{item.label}</span>
-                {item.count !== undefined && (
-                  <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-black ${
+                {typeof item.count === 'number' && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
                     isActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'
                   }`}>
-                    {item.count}
+                    {item.count.toLocaleString('en-US')}
                   </span>
                 )}
               </button>
