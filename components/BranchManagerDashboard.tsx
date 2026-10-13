@@ -1524,12 +1524,11 @@ export default function BranchManagerDashboard({
       if (!isNaN(fromNum) && !isNaN(toNum) && fromNum > 0 && toNum > 0) {
         const start = Math.min(fromNum, toNum)
         const end = Math.max(fromNum, toNum)
-        assignedSubs = (branch.subscribers || [])
-          .filter(s => {
-            const id = Number(s.id)
-            return !isNaN(id) && id >= start && id <= end
-          })
-          .map(s => s.id)
+        const generated: number[] = []
+        for (let id = start; id <= end; id++) {
+          generated.push(id)
+        }
+        assignedSubs = generated
       }
     }
 
@@ -1627,12 +1626,11 @@ export default function BranchManagerDashboard({
       if (!isNaN(fromNum) && !isNaN(toNum) && fromNum > 0 && toNum > 0) {
         const start = Math.min(fromNum, toNum)
         const end = Math.max(fromNum, toNum)
-        assignedSubs = (branch.subscribers || [])
-          .filter(s => {
-            const id = Number(s.id)
-            return !isNaN(id) && id >= start && id <= end
-          })
-          .map(s => s.id)
+        const generated: number[] = []
+        for (let id = start; id <= end; id++) {
+          generated.push(id)
+        }
+        assignedSubs = generated
       }
     }
 
@@ -2819,8 +2817,9 @@ export default function BranchManagerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      const allSubsPool = (loadedSubscribers && loadedSubscribers.length > 0) ? loadedSubscribers : (branch.subscribers || [])
                                       const collectorSubs = sortedIds.map(id => {
-                                        const found = branch.subscribers?.find(s => s.id === id)
+                                        const found = allSubsPool.find(s => s.id === id)
                                         return {
                                           id,
                                           name: found?.name || `مشترك رقم #${id}`
@@ -3135,8 +3134,9 @@ export default function BranchManagerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      const allSubsPool = (loadedSubscribers && loadedSubscribers.length > 0) ? loadedSubscribers : (branch.subscribers || [])
                                       const writerSubs = sortedIds.map(id => {
-                                        const found = branch.subscribers?.find(s => s.id === id)
+                                        const found = allSubsPool.find(s => s.id === id)
                                         return {
                                           id,
                                           name: found?.name || `مشترك رقم #${id}`
@@ -3941,10 +3941,7 @@ export default function BranchManagerDashboard({
                 const cFromNum = parseInt(collectorRangeFrom.trim(), 10)
                 const cToNum = parseInt(collectorRangeTo.trim(), 10)
                 const isValidRange = !isNaN(cFromNum) && !isNaN(cToNum) && cFromNum > 0 && cToNum > 0
-                const matchedCount = isValidRange ? (branch.subscribers || []).filter(s => {
-                  const id = Number(s.id)
-                  return !isNaN(id) && id >= Math.min(cFromNum, cToNum) && id <= Math.max(cFromNum, cToNum)
-                }).length : 0
+                const matchedCount = isValidRange ? (Math.abs(cToNum - cFromNum) + 1) : 0
 
                 return (
                   <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-2.5 space-y-2">
@@ -4278,10 +4275,7 @@ export default function BranchManagerDashboard({
                 const wFromNum = parseInt(writerRangeFrom.trim(), 10)
                 const wToNum = parseInt(writerRangeTo.trim(), 10)
                 const isValidRange = !isNaN(wFromNum) && !isNaN(wToNum) && wFromNum > 0 && wToNum > 0
-                const matchedCount = isValidRange ? (branch.subscribers || []).filter(s => {
-                  const id = Number(s.id)
-                  return !isNaN(id) && id >= Math.min(wFromNum, wToNum) && id <= Math.max(wFromNum, wToNum)
-                }).length : 0
+                const matchedCount = isValidRange ? (Math.abs(wToNum - wFromNum) + 1) : 0
 
                 return (
                   <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-3.5 space-y-2.5">
