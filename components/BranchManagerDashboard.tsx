@@ -365,7 +365,7 @@ export default function BranchManagerDashboard({
   // حالات التحديد بنطاق أرقام (مثلاً: من 1 إلى 1000)
   const [rangeFrom, setRangeFrom] = useState<string>('1')
   const [rangeTo, setRangeTo] = useState<string>('1000')
-  const [rangeMode, setRangeMode] = useState<'index' | 'id'>('index')
+  const [rangeMode, setRangeMode] = useState<'index' | 'id'>('id')
   const [rangeKeepPrevious, setRangeKeepPrevious] = useState<boolean>(false)
 
   // حالات نوافذ التخصيص المنبثقة
@@ -493,6 +493,10 @@ export default function BranchManagerDashboard({
       return
     }
 
+    const selectedIdsArray = Array.from(newlySelectedIds)
+    const minId = Math.min(...selectedIdsArray)
+    const maxId = Math.max(...selectedIdsArray)
+
     setSelectedSubIds(prev => {
       if (rangeKeepPrevious) {
         const merged = new Set(prev)
@@ -502,8 +506,12 @@ export default function BranchManagerDashboard({
       return newlySelectedIds
     })
 
-    setBulkFeedbackMessage(`تم بنجاح تحديد (${newlySelectedIds.size}) مشترك ضمن النطاق من ${start} إلى ${end}!`)
-    setTimeout(() => setBulkFeedbackMessage(null), 4000)
+    if (currentMode === 'id') {
+      setBulkFeedbackMessage(`تم بنجاح تحديد (${newlySelectedIds.size}) مشترك بأرقام اشتراكات تقع بين (${start}) و (${end})! (من رقم #${minId} إلى #${maxId})`)
+    } else {
+      setBulkFeedbackMessage(`تم تحديد (${newlySelectedIds.size}) مشترك حسب تسلسل القائمة من ${start} إلى ${end} (أرقام اشتراكاتهم الحقيقية: #${minId} إلى #${maxId})`)
+    }
+    setTimeout(() => setBulkFeedbackMessage(null), 5000)
   }
 
   // تحديد سريع لأرقام جاهزة (500، 1000، 2000...)
@@ -1932,27 +1940,28 @@ export default function BranchManagerDashboard({
                       <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
                         <button
                           type="button"
+                          onClick={() => setRangeMode('id')}
+                          className={`px-3 py-1 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                            rangeMode === 'id'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                          title="يحدد المشتركين الذين تقع أرقام اشتراكاتهم الفعلية بين الرقمين"
+                        >
+                          <Check className={`w-3.5 h-3.5 ${rangeMode === 'id' ? 'inline' : 'hidden'}`} />
+                          <span>حسب رقم الاشتراك (ID)</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setRangeMode('index')}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                             rangeMode === 'index'
                               ? 'bg-blue-600 text-white shadow-xs'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
-                          title="يحدد حسب ترتيب المشتركين في القائمة (مثلاً المشترك الأول إلى الألف)"
+                          title="يحدد حسب تسلسل وترتيب المشتركين في القائمة"
                         >
-                          حسب تسلسل القائمة (1 إلى 1000)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRangeMode('id')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                            rangeMode === 'id'
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                          title="يحدد حسب رقم اشتراك المشترك الفعلي (ID)"
-                        >
-                          حسب رقم المشترك (ID)
+                          <span>حسب تسلسل القائمة (1، 2، 3...)</span>
                         </button>
                       </div>
                     </div>
@@ -1960,7 +1969,9 @@ export default function BranchManagerDashboard({
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       {/* حقل من رقم */}
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-                        <span className="text-slate-700 font-black text-xs">مِـن رقم:</span>
+                        <span className="text-slate-700 font-black text-xs">
+                          {rangeMode === 'id' ? 'مِـن اشتراك رقم:' : 'مِـن التسلسل:'}
+                        </span>
                         <input
                           type="number"
                           min="1"
@@ -1973,7 +1984,9 @@ export default function BranchManagerDashboard({
 
                       {/* حقل إلى رقم */}
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-                        <span className="text-slate-700 font-black text-xs">إلـى رقم:</span>
+                        <span className="text-slate-700 font-black text-xs">
+                          {rangeMode === 'id' ? 'إلـى اشتراك رقم:' : 'إلـى التسلسل:'}
+                        </span>
                         <input
                           type="number"
                           min="1"
@@ -1992,7 +2005,11 @@ export default function BranchManagerDashboard({
                         className="px-5 py-2 hover:bg-blue-700 font-black text-xs sm:text-sm rounded-xl transition shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
                       >
                         <CheckSquare className="w-4 h-4 text-white" />
-                        <span>تحديد النطاق ({rangeFrom} ⬅ {rangeTo})</span>
+                        <span>
+                          {rangeMode === 'id'
+                            ? `تحديد المشتركين من اشتراك ${rangeFrom} ⬅ ${rangeTo}`
+                            : `تحديد حسب التسلسل (${rangeFrom} ⬅ ${rangeTo})`}
+                        </span>
                       </button>
 
                       {/* خيار الإبقاء على التحديد السابق */}
