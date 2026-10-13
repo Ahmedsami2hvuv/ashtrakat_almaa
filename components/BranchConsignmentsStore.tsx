@@ -86,29 +86,29 @@ export default function BranchConsignmentsStore({
       {/* ========================================================
           بطاقات إحصائيات مخزن الإرساليات
           ======================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
         {/* إجمالي الإرساليات */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Layers className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+            <Layers className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-bold">إجمالي الإرساليات</p>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
-              {stats.totalCount} <span className="text-xs text-slate-400 font-normal">إرسالية</span>
+            <p className="text-[11px] sm:text-xs text-slate-500 font-bold">إجمالي الإرساليات</p>
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+              {stats.totalCount} <span className="text-xs text-slate-400 font-bold">إرسالية</span>
             </h3>
             <p className="text-[10px] text-slate-500 font-bold mt-0.5">{stats.totalReceipts} وصل مدفوع</p>
           </div>
         </div>
 
         {/* إجمالي المبالغ */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Wallet className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-500 font-bold">إجمالي مبالغ الإرساليات</p>
-            <h3 className="text-lg sm:text-xl font-black text-emerald-700 mt-0.5 truncate">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-bold">إجمالي مبالغ الإرساليات</p>
+            <h3 className="text-base sm:text-lg font-black text-emerald-700 mt-0.5 truncate">
               {stats.totalAmount.toLocaleString('ar-IQ')}{' '}
               <span className="text-xs text-emerald-600 font-bold">د.ع</span>
             </h3>
@@ -117,13 +117,13 @@ export default function BranchConsignmentsStore({
         </div>
 
         {/* حصة الماء */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
-            <Building2 className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 border border-cyan-100">
+            <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-500 font-bold">حصة الماء المحصلة</p>
-            <h3 className="text-lg sm:text-xl font-black text-cyan-700 mt-0.5 truncate">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-bold">حصة الماء المحصلة</p>
+            <h3 className="text-base sm:text-lg font-black text-cyan-700 mt-0.5 truncate">
               {stats.totalWater.toLocaleString('ar-IQ')}{' '}
               <span className="text-xs text-cyan-600 font-bold">د.ع</span>
             </h3>
@@ -132,13 +132,13 @@ export default function BranchConsignmentsStore({
         </div>
 
         {/* حصة البلدية */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <Hash className="w-6 h-6" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+            <Hash className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-500 font-bold">حصة البلدية المحصلة</p>
-            <h3 className="text-lg sm:text-xl font-black text-amber-700 mt-0.5 truncate">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-bold">حصة البلدية المحصلة</p>
+            <h3 className="text-base sm:text-lg font-black text-amber-700 mt-0.5 truncate">
               {stats.totalMunicipality.toLocaleString('ar-IQ')}{' '}
               <span className="text-xs text-amber-600 font-bold">د.ع</span>
             </h3>

@@ -92,6 +92,27 @@ export default function BranchManagerDashboard({
   const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // توقيت العراق الرسمي الحي (توقيت بغداد)
+  const [iraqTime, setIraqTime] = useState('')
+  useEffect(() => {
+    const updateIraqTime = () => {
+      try {
+        const formatted = new Intl.DateTimeFormat('ar-IQ', {
+          timeZone: 'Asia/Baghdad',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }).format(new Date())
+        setIraqTime(formatted)
+      } catch {
+        setIraqTime(new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' }))
+      }
+    }
+    updateIraqTime()
+    const timer = setInterval(updateIraqTime, 30000)
+    return () => clearInterval(timer)
+  }, [])
+
   // حالات المشتركين المحملين عند الطلب فقط مع كاش ذكي
   const [loadedSubscribers, setLoadedSubscribers] = useState<Subscriber[]>(() => branch.subscribers || [])
   const [loadedBilling, setLoadedBilling] = useState<BillingRecords>(() => branch.billing || {})
@@ -1789,41 +1810,58 @@ export default function BranchManagerDashboard({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans" dir="rtl">
-      {/* الترويسة العلوية الفاتحة والمنسقة تماماً للموبايل والكمبيوتر */}
-      <header className="bg-white border-b border-slate-200 text-slate-900 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3.5 py-2.5 sm:py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm shrink-0">
-              <Building2 className="w-5 h-5" />
+      {/* الترويسة العلوية الفخمة والملمومة */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 text-slate-900 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+          {/* الجانب الأيمن: أيقونة الفرع الفاخرة واسم الفرع وشارة المسؤول وتوقيت بغداد */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/15 shrink-0 ring-1 ring-black/5">
+              <Building2 className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xs sm:text-base font-black text-slate-900 truncate">
-                {branch.name}
-              </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-[130px] sm:max-w-none">
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-black text-slate-900 truncate tracking-tight">
+                  {branch.name}
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  فرع نشط
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="bg-slate-100 text-slate-800 border border-slate-200 text-[11px] font-extrabold px-2 py-0.5 rounded-lg truncate max-w-[140px] sm:max-w-none">
                   {currentManager ? currentManager.name : 'مسؤول الفرع'}
                 </span>
-                <span className="hidden sm:inline text-[11px] text-slate-400 font-bold">• لوحة التحكم</span>
+                {iraqTime && (
+                  <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/70" title="توقيت بغداد الرسمي">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    <span>{iraqTime}</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
+          {/* الجانب الأيسر: زر مخزن الإرساليات وزر إنشاء إرسالية A4 */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
                 setSelectedConsignmentForView(null)
                 setActiveTab('consignments')
               }}
-              style={{
-                backgroundColor: activeTab === 'consignments' ? '#2563eb' : '#f8fafc',
-                color: activeTab === 'consignments' ? '#ffffff' : '#1e293b',
-                borderColor: '#cbd5e1'
-              }}
-              className="px-3 py-1.5 sm:px-3.5 sm:py-2 border rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                activeTab === 'consignments'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90 shadow-2xs hover:border-slate-300'
+              }`}
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>مخزن الإرساليات ({branch.consignments?.length || 0})</span>
+              <Layers className={`w-3.5 h-3.5 ${activeTab === 'consignments' ? 'text-white' : 'text-blue-600'}`} />
+              <span>مخزن الإرساليات</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                activeTab === 'consignments' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+              }`}>
+                {branch.consignments?.length || 0}
+              </span>
             </button>
 
             <button
@@ -1834,9 +1872,9 @@ export default function BranchManagerDashboard({
                 setSelectedConsignmentForView(null)
                 setIsConsignmentA4Open(true)
               }}
-              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
+              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-sm shadow-amber-500/20 shrink-0 cursor-pointer active:scale-95"
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className="w-3.5 h-3.5 text-white" />
               <span>إنشاء إرسالية (A4)</span>
             </button>
           </div>
@@ -1845,11 +1883,9 @@ export default function BranchManagerDashboard({
 
       {/* المحتوى الرئيسي */}
       <div className="flex-1 max-w-7xl mx-auto w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-        
 
-
-        {/* شريط الأقسام (Tabs) انسيابي وخفيف للموبايل */}
-        <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm overflow-x-auto flex items-center gap-1">
+        {/* شريط الأقسام المطور (Executive Segmented Control) */}
+        <div className="bg-slate-200/60 p-1 sm:p-1.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-1 overflow-x-auto">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -1857,17 +1893,17 @@ export default function BranchManagerDashboard({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as TabType)}
-                className={`px-3 sm:px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-white text-blue-700 shadow-xs border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    isActive ? 'bg-blue-50 text-blue-700 border border-blue-200/60' : 'bg-slate-200/80 text-slate-600'
                   }`}>
                     {item.count}
                   </span>
@@ -2717,8 +2753,10 @@ export default function BranchManagerDashboard({
                     return (
                       <div 
                         key={collector.id} 
-                        className="bg-slate-50/70 hover:bg-white rounded-2xl p-4 border border-slate-200/90 hover:border-blue-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3"
+                        className="bg-white hover:bg-slate-50/50 rounded-2xl p-4 border border-slate-200/90 hover:border-blue-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3 relative overflow-hidden"
                       >
+                        {/* خط التدرج اللوني العلوي الرفيع لهوية المحصل */}
+                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600"></div>
                         {/* 1. رأس البطاقة: الاسم، الهاتف، وحالة الصلاحية */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-1">
@@ -3056,8 +3094,10 @@ export default function BranchManagerDashboard({
                     return (
                       <div 
                         key={writer.id} 
-                        className="bg-slate-50/70 hover:bg-white rounded-2xl p-4 border border-slate-200/90 hover:border-purple-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3"
+                        className="bg-white hover:bg-slate-50/50 rounded-2xl p-4 border border-slate-200/90 hover:border-purple-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3 relative overflow-hidden"
                       >
+                        {/* خط التدرج اللوني العلوي الرفيع لهوية الكاتب */}
+                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600"></div>
                         {/* 1. رأس البطاقة: الاسم والهاتف */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-1">
