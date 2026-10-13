@@ -2511,30 +2511,30 @@ export default function BranchManagerDashboard({
           {/* تبويب المناطق - تصميم مدمج وأنيق وتفاعلي */}
           {activeTab === 'areas' && (
             <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-5">
-              {/* ترويسة التبويب والتحكم */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pb-4 border-b border-slate-100">
-                <div>
+              {/* ترويسة التبويب والتحكم الملمومة والأنيقة */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base md:text-lg font-black text-slate-900">المناطق المشمولة بالفرع</h3>
-                    <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-black">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900">المناطق المشمولة بالفرع</h3>
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/60 rounded-full text-[11px] font-black">
                       {(branch.areas || []).length} منطقة
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-[11px] text-slate-500 font-bold">
                     انقر على أي منطقة لعرض مشتركيها وإضافة مشتركين إليها فورياً
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   {/* شريط البحث في المناطق */}
-                  <div className="relative min-w-[200px] sm:min-w-[240px]">
+                  <div className="relative flex-1 sm:w-64">
                     <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       value={areaSearchQuery}
                       onChange={(e) => setAreaSearchQuery(e.target.value)}
                       placeholder="بحث سريع في المناطق..."
-                      className="w-full pl-3 pr-9 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      className="w-full pl-8 pr-9 py-1.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-2xs"
                     />
                     {areaSearchQuery && (
                       <button
@@ -2547,44 +2547,44 @@ export default function BranchManagerDashboard({
                     )}
                   </div>
 
-                  {/* زر التوجيه لخيارات الاستيراد في الإعدادات */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('settings')}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-500" />
-                    <span className="hidden sm:inline">الإعدادات والاستيراد</span>
-                  </button>
-
                   {/* نموذج إضافة سريعة لمنطقة واحدة */}
-                  <form onSubmit={handleAddArea} className="flex items-center gap-1.5">
+                  <form onSubmit={handleAddArea} className="flex items-center gap-1">
                     <input
                       type="text"
                       value={newAreaName}
                       onChange={(e) => setNewAreaName(e.target.value)}
                       placeholder="اسم منطقة جديدة..."
-                      className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[150px]"
+                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 w-36 shadow-2xs"
                     />
                     <button
                       type="submit"
-                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-2xs cursor-pointer"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                       <span>إضافة</span>
                     </button>
                   </form>
+
+                  {/* زر التوجيه لخيارات الاستيراد في الإعدادات */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="hidden sm:inline">خيارات الاستيراد</span>
+                  </button>
                 </div>
               </div>
 
-              {/* شبكة المناطق المدمجة والأنيقة */}
+              {/* شبكة المناطق المدمجة والأنيقة ككبسولات ملمومة وفخمة */}
               {filteredAreas.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                   <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm">لم يتم العثور على أي منطقة مطابقة لـ &quot;{areaSearchQuery}&quot;</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                   {filteredAreas.map((area) => {
                     const subsCount = areaSubscribersCountMap.get(area.id) || 0
                     const hasSubs = subsCount > 0
@@ -2599,49 +2599,46 @@ export default function BranchManagerDashboard({
                           setAreaSubscribersSearch('')
                           setAllSubscribersSearch('')
                         }}
-                        className={`group relative p-2.5 sm:p-3 rounded-2xl border text-right transition-all duration-150 cursor-pointer flex flex-col justify-between select-none ${
+                        className={`group relative p-2.5 rounded-xl border text-right transition-all duration-150 cursor-pointer flex items-center justify-between gap-2 select-none ${
                           hasSubs
-                            ? 'bg-white hover:bg-blue-50/50 border-slate-200/90 hover:border-blue-300 shadow-2xs hover:shadow-md'
-                            : 'bg-slate-50/80 hover:bg-slate-100 border-slate-200/60 hover:border-slate-300 text-slate-500'
+                            ? 'bg-white hover:bg-blue-50/70 border-slate-200 hover:border-blue-400 shadow-2xs hover:shadow-xs'
+                            : 'bg-slate-50/90 hover:bg-slate-100 border-slate-200/80 hover:border-slate-300 text-slate-600'
                         }`}
                       >
-                        {/* أعلى البطاقة: الاسم وأيقونة الحذف المصغرة */}
-                        <div className="flex items-start justify-between gap-1 mb-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <MapPin className={`w-3.5 h-3.5 shrink-0 ${hasSubs ? 'text-blue-600' : 'text-slate-400'}`} />
                           <h4
-                            className="font-black text-slate-900 text-xs sm:text-sm line-clamp-1 group-hover:text-blue-700 transition"
+                            className="font-black text-slate-900 text-xs truncate group-hover:text-blue-700 transition"
                             title={area.name}
                           >
                             {area.name}
                           </h4>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 ${
+                              hasSubs
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                                : 'bg-slate-200/70 text-slate-600'
+                            }`}
+                            title={`${subsCount} مشترك`}
+                          >
+                            <Users className="w-2.5 h-2.5" />
+                            <span>{subsCount}</span>
+                          </span>
+
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleDeleteArea(area.id, area.name)
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition shrink-0 -mt-1 -ml-1"
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition shrink-0"
                             title="حذف المنطقة"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
-                        </div>
-
-                        {/* أسفل البطاقة: شارة المشتركين ومؤشر النقر */}
-                        <div className="flex items-center justify-between mt-auto pt-1">
-                          <span
-                            className={`text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                              hasSubs
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
-                                : 'bg-slate-200/60 text-slate-500'
-                            }`}
-                          >
-                            <Users className="w-3 h-3" />
-                            <span>{subsCount} مشترك</span>
-                          </span>
-
-                          <span className="text-[10px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition hidden sm:inline">
-                            عرض التفاصيل ←
-                          </span>
                         </div>
                       </div>
                     )
