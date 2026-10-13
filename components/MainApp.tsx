@@ -1262,14 +1262,6 @@ export default function MainApp({
     init()
   }, [isAuthenticated, branchId, initialSubscribers, initialAreas, initialBilling, initialPricing, initialAiApiKeys])
 
-  // مراقبة تحديثات الفواتير والمدفوعات لتحديث الحالات تلقائياً
-  useEffect(() => {
-    if (!isAuthenticated || !dataLoaded || subscribers.length === 0) return
-    const { updatedSubscribers, hasChanges } = applyAutoStatuses(subscribers, billing, pricing)
-    if (hasChanges) {
-      setSubscribers(updatedSubscribers)
-    }
-  }, [billing, dataLoaded, isAuthenticated])
 
   // المزامنة اللحظية الحية الفورية (Realtime Broadcast + Database Changes)
   const isIncomingSyncRef = useRef<boolean>(false)
