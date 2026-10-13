@@ -1792,74 +1792,58 @@ export default function MainApp({
 
       copy[subId][year] = yearRecords
 
-      // تحديث حالة المشترك (يدفع باستمرار) فوراً ولحظياً بناءً على الحساب الجديد
-      setSubscribers((prevSubs) => {
-        let anyChange = false
-        const nextSubs = prevSubs.map((s) => {
-          if (s.id !== subId) return s
-          const updatedSub = field === 'old' && periodIdx === 0 && year === 2026
-            ? { ...s, remainingPrev: num }
-            : s
-          const newStatuses = computeSubscriberStatuses(updatedSub, copy, prevSubs, pricing)
-          const oldStatuses = Array.isArray(s.statuses) ? s.statuses : []
-          const isDiff =
-            oldStatuses.length !== newStatuses.length ||
-            oldStatuses.some((st, i) => st !== newStatuses[i]) ||
-            (field === 'old' && periodIdx === 0 && year === 2026 && s.remainingPrev !== num)
-
-          if (isDiff) {
-            anyChange = true
-            return { ...updatedSub, statuses: newStatuses }
-          }
-          return s
-        })
-        return anyChange ? nextSubs : prevSubs
-      })
-
       return copy
     })
 
-    // تسجيل نشاط الكاتب عند تنزيل ديون أو مدفوعات لمشترك
-    if (userRole === 'writer' && branchId && writerId) {
-      const sub = subscribers.find((s) => s.id === subId)
-      if (field === 'paid' || field === 'rem') {
-        recordWriterAction('add_payment', {
-          subscriberId: subId,
-          subscriberName: sub?.name,
-          amount: num,
-          details: `تسجيل دفعة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
-        })
-      } else {
-        recordWriterAction('update_debt', {
-          subscriberId: subId,
-          subscriberName: sub?.name,
-          amount: num,
-          details: field === 'old'
-            ? `تعديل الديون السابقة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
-            : `تعديل قائمة المجموع بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
-        })
-      }
+    // تحديث خفيف لحالة المشترك خارج setBilling لمنع تعارض الريندر
+    if (field === 'old' && periodIdx === 0 && year === 2026) {
+      setSubscribers((prevSubs) => {
+        return prevSubs.map((s) => (s.id === subId ? { ...s, remainingPrev: num } : s))
+      })
     }
 
-    // تسجيل نشاط المحصل عند استلام دفعة من مشترك
-    if (userRole === 'collector' && branchId && activeCollectorId) {
-      const sub = subscribers.find((s) => s.id === subId)
-      if (field === 'paid' || field === 'rem') {
-        recordCollectorAction('add_payment', {
-          subscriberId: subId,
-          subscriberName: sub?.name,
-          amount: num,
-          details: `تحصيل واستلام دفعة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
-        })
-      } else {
-        recordCollectorAction('edit_subscriber', {
-          subscriberId: subId,
-          subscriberName: sub?.name,
-          amount: num,
-          details: `تعديل في حساب المشترك (سنة ${year} - فترة ${periodIdx + 1})`
-        })
+    // تسجيل نشاط الكاتب أو المحصل في الخلفية الهادئة دون إبطاء الواجهة
+    setTimeout(() => {
+      if (userRole === 'writer' && branchId && writerId) {
+        const sub = subscribers.find((s) => s.id === subId)
+        if (field === 'paid' || field === 'rem') {
+          recordWriterAction('add_payment', {
+            subscriberId: subId,
+            subscriberName: sub?.name,
+            amount: num,
+            details: `تسجيل دفعة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+          })
+        } else {
+          recordWriterAction('update_debt', {
+            subscriberId: subId,
+            subscriberName: sub?.name,
+            amount: num,
+            details: field === 'old'
+              ? `تعديل الديون السابقة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+              : `تعديل قائمة المجموع بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+          })
+        }
       }
-    }
+
+      if (userRole === 'collector' && branchId && activeCollectorId) {
+        const sub = subscribers.find((s) => s.id === subId)
+        if (field === 'paid' || field === 'rem') {
+          recordCollectorAction('add_payment', {
+            subscriberId: subId,
+            subscriberName: sub?.name,
+            amount: num,
+            details: `تحصيل واستلام دفعة بقيمة ${num.toLocaleString('ar-IQ')} د.ع (سنة ${year} - فترة ${periodIdx + 1})`
+          })
+        } else {
+          recordCollectorAction('edit_subscriber', {
+            subscriberId: subId,
+            subscriberName: sub?.name,
+            amount: num,
+            details: `تعديل في حساب المشترك (سنة ${year} - فترة ${periodIdx + 1})`
+          })
+        }
+      }
+    }, 0)
   }
 
   // مراجع لتأخير تعديل مبالغ الديون وجعل الكتابة فائقة السرعة بدون أي تجميد

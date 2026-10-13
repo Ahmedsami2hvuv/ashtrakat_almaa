@@ -79,11 +79,11 @@ const DebtCellInput = memo(function DebtCellInput({
     const formatted = formatInputDisplay(newVal)
     setLocalVal(formatted)
 
-    // تأخير الحفظ الفعلي بهدوء بعد توقف المستخدم
+    // تحديث سريع جداً وفوري بعد توقف المستخدم بدون تأخير
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       commitSave(formatted)
-    }, 500)
+    }, 120)
   }
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
