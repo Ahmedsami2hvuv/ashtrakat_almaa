@@ -4245,27 +4245,27 @@ export default function BranchManagerDashboard({
 
             {/* جسم النافذة القابل للتمرير إن لزم الأمر */}
             <div className="p-4 space-y-3.5 overflow-y-auto max-h-[calc(90vh-130px)]">
-              {/* حقول الاسم ورقم الهاتف */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* حقول الاسم ورقم الهاتف جنباً إلى جنب في نفس السطر */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">اسم الكاتب:</label>
+                  <label className="block text-xs font-black text-slate-800 mb-1">اسم الكاتب:</label>
                   <input
                     type="text"
                     value={writerName}
                     onChange={(e) => setWriterName(e.target.value)}
                     placeholder="اسم الكاتب الكامل..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
+                  <label className="block text-xs font-black text-slate-800 mb-1">رقم الهاتف:</label>
                   <input
                     type="text"
                     value={writerPhone}
                     onChange={(e) => setWriterPhone(e.target.value)}
                     placeholder="07xxxxxxxxx"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none dir-ltr text-right font-mono transition"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none dir-ltr text-right font-mono transition"
                   />
                 </div>
               </div>
@@ -4399,22 +4399,33 @@ export default function BranchManagerDashboard({
               </div>
             </div>
 
-            {/* أزرار الإجراءات في الأسفل */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2.5">
+            {/* أزرار الإجراءات في الأسفل بارزة وواضحة جداً */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowWriterModal(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs cursor-pointer"
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#334155',
+                  borderColor: '#cbd5e1'
+                }}
+                className="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs cursor-pointer"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleSaveWriter}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                style={{
+                  backgroundColor: '#7c3aed',
+                  color: '#ffffff',
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)'
+                }}
+                className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>حفظ الكاتب</span>
+                <CheckCircle2 className="w-4 h-4 text-white" />
+                <span className="font-black text-white">حفظ الكاتب</span>
               </button>
             </div>
           </div>
