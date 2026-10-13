@@ -43,7 +43,6 @@ import {
   Square,
   Check,
   Copy,
-  Sparkles,
   Layers,
   Archive,
   X,
@@ -350,6 +349,30 @@ export default function BranchManagerDashboard({
 
   // حالات الذكاء الاصطناعي
   const [newApiKey, setNewApiKey] = useState('')
+
+  // توقيت العراق الرسمي الحي المتزامن مع بغداد
+  const [iraqTimeLive, setIraqTimeLive] = useState<string>('')
+  useEffect(() => {
+    const updateTime = () => {
+      try {
+        const now = new Date()
+        setIraqTimeLive(
+          now.toLocaleTimeString('ar-IQ', {
+            timeZone: 'Asia/Baghdad',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          })
+        )
+      } catch (e) {
+        setIraqTimeLive(getIraqCurrentTime().formatted12h)
+      }
+    }
+    updateTime()
+    const timer = setInterval(updateTime, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   // حساب الإحصائيات (سريعة وخفيفة بالاعتماد على subscribersCount أو المشتركين المحملين)
   const stats = useMemo(() => {
@@ -1792,57 +1815,160 @@ export default function BranchManagerDashboard({
 
   return (
     <div className="min-h-screen bg-slate-50/70 text-slate-800 flex flex-col font-sans" dir="rtl">
-      {/* الترويسة العلوية الفخمة والحديثة */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-3">
-          {/* هوية الفرع والمسؤول */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-blue-700 to-blue-500 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20 shrink-0">
-              <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm sm:text-lg font-black text-slate-900 truncate tracking-tight">
+      {/* الترويسة العلوية الفاخرة المستوحاة من ستيتش مع التوقيت الرسمي والمزامنة */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 text-slate-900 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            {/* الشعار واسم الدائرة والفرع */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20 shrink-0">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="hidden sm:block text-[10px] font-bold text-slate-400">
+                  جمهورية العراق • وزارة الإعمار والإسكان والبلديات العامة
+                </div>
+                <h1 className="text-sm sm:text-base md:text-lg font-black text-slate-900 truncate">
                   {branch.name}
                 </h1>
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  متصل
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[11px] font-bold text-slate-500">
-                  {currentManager ? currentManager.name : 'مسؤول الفرع'}
-                </span>
-                <span className="text-slate-300 text-xs">•</span>
-                <span className="text-[11px] text-blue-600 font-bold">لوحة الإدارة والمتابعة</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-[130px] sm:max-w-none">
+                    {currentManager ? currentManager.name : 'مسؤول الفرع'}
+                  </span>
+                  <span className="hidden sm:inline text-[11px] text-slate-400 font-bold">• لوحة التحكم والإسناد الميداني</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* زر الإجراء السريع المميز في الهيدر */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => {
-                if (!hasLoadedSubscribers) {
+            {/* شارة توقيت العراق الرسمي الحية (للشاشات الكبيرة) */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/90 border border-slate-200/80 shadow-2xs">
+              <Clock className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+              <span className="text-xs font-bold text-slate-700">توقيت العراق الرسمي:</span>
+              <span className="font-mono font-black text-xs text-blue-800 dir-ltr">{iraqTimeLive || '12:00:00 ص'}</span>
+              <span className="text-[10px] text-slate-400">(Asia/Baghdad)</span>
+            </div>
+
+            {/* أزرار الإجراءات السريعة في الترويسة */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <button
+                onClick={() => {
                   fetchBranchSubscribers()
-                }
-                setSelectedConsignmentForView(null)
-                setIsConsignmentA4Open(true)
-              }}
-              className="px-3.5 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-sm shadow-amber-500/25 cursor-pointer active:scale-95 shrink-0"
-            >
-              <FileText className="w-4 h-4" />
-              <span>إنشاء إرسالية (A4)</span>
-            </button>
+                }}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] sm:text-xs font-bold transition shadow-2xs cursor-pointer"
+                title="مزامنة سحابية فورية وتحديث السجلات"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                </span>
+                <span className="hidden sm:inline">مزامنة سحابية</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedConsignmentForView(null)
+                  setActiveTab('consignments')
+                }}
+                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 border rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
+                  activeTab === 'consignments'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>مخزن الإرساليات ({branch.consignments?.length || 0})</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!hasLoadedSubscribers) {
+                    fetchBranchSubscribers()
+                  }
+                  setSelectedConsignmentForView(null)
+                  setIsConsignmentA4Open(true)
+                }}
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-amber-500/20 shrink-0 cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>إنشاء إرسالية (A4)</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* المحتوى الرئيسي */}
-      <div className="flex-1 max-w-7xl mx-auto w-full p-3.5 sm:p-6 space-y-5">
-        {/* شريط الأقسام (Tabs) الفاخر بتصميم الكبسولات العصرية */}
-        <div className="bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-1 overflow-x-auto scrollbar-none">
+      <div className="flex-1 max-w-7xl mx-auto w-full p-3 sm:p-5 md:p-6 space-y-4 sm:space-y-6">
+        {/* شريط الأقراص الإحصائية الكبسولية الفاخر المستخرج من ستيتش */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+          {/* 1. إجمالي المشتركين */}
+          <div className="flex items-center gap-2.5 px-3 py-2 sm:py-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[10px] font-bold text-slate-400">إجمالي المشتركين</span>
+              <span className="text-xs sm:text-sm font-black text-slate-900 truncate block">
+                {stats.totalSubscribers.toLocaleString('ar-IQ')} مشترك
+              </span>
+            </div>
+          </div>
+
+          {/* 2. المناطق المائية */}
+          <div className="flex items-center gap-2.5 px-3 py-2 sm:py-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[10px] font-bold text-slate-400">المناطق المائية</span>
+              <span className="text-xs sm:text-sm font-black text-slate-900 truncate block">
+                {stats.totalAreas} منطقة نشطة
+              </span>
+            </div>
+          </div>
+
+          {/* 3. المحصلون الميدانيون */}
+          <div className="flex items-center gap-2.5 px-3 py-2 sm:py-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+              <Wallet className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[10px] font-bold text-slate-400">المحصلون الميدانيون</span>
+              <span className="text-xs sm:text-sm font-black text-slate-900 truncate block">
+                {stats.totalCollectors} محصل
+              </span>
+            </div>
+          </div>
+
+          {/* 4. الكتّاب المعتمدون */}
+          <div className="flex items-center gap-2.5 px-3 py-2 sm:py-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[10px] font-bold text-slate-400">الكتّاب المعتمدون</span>
+              <span className="text-xs sm:text-sm font-black text-slate-900 truncate block">
+                {stats.totalWriters} كاتب
+              </span>
+            </div>
+          </div>
+
+          {/* 5. الديون القائمة */}
+          <div className="col-span-2 sm:col-span-1 flex items-center gap-2.5 px-3 py-2 sm:py-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
+            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-[10px] font-bold text-slate-400">الديون القائمة</span>
+              <span className="text-xs sm:text-sm font-black text-rose-700 truncate block">
+                {stats.totalDebt.toLocaleString('ar-IQ')} د.ع
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* شريط الأقسام والتبويبات (Tabs) الكبسولي الفاخر */}
+        <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-2xs overflow-x-auto flex items-center gap-1.5">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -1850,21 +1976,19 @@ export default function BranchManagerDashboard({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as TabType)}
-                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                className={`px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-white text-blue-700 shadow-sm border border-slate-200/70 font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-black font-mono transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'bg-slate-200/80 text-slate-700'
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
                   }`}>
-                    {item.count.toLocaleString('en-US')}
+                    {item.count}
                   </span>
                 )}
               </button>
@@ -2141,19 +2265,19 @@ export default function BranchManagerDashboard({
                 </div>
               ) : (
                 <>
-                  {/* شريط البحث وخيارات العرض الفاخر */}
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                  {/* شريط البحث وخيارات العرض */}
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
                     <div className="relative flex-1 w-full">
                       <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="ابحث برقم المشترك، الاسم، أو اسم المنطقة..."
-                        className="w-full pr-10 pl-4 py-2.5 bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
+                        placeholder="ابحث برقم المشترك أو اسمه أو منطقته..."
+                        className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                       />
                     </div>
-                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                       <span className="text-[11px] font-bold text-slate-500">عرض بالصفحة:</span>
                       <select
                         value={subscribersPageSize}
@@ -2161,23 +2285,23 @@ export default function BranchManagerDashboard({
                           setSubscribersPageSize(Number(e.target.value))
                           setSubscribersPage(1)
                         }}
-                        className="bg-transparent border-none text-xs font-black text-slate-800 focus:outline-none cursor-pointer"
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value={30}>30 مشترك</option>
-                        <option value={60}>60 مشترك</option>
-                        <option value={100}>100 مشترك</option>
-                        <option value={10000}>عرض الكل</option>
+                        <option value={30}>30</option>
+                        <option value={60}>60</option>
+                        <option value={100}>100</option>
+                        <option value={10000}>الكل</option>
                       </select>
                     </div>
                   </div>
 
-                  {/* جدول المشتركين العصري الفاخر */}
-                  <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
+                  {/* جدول المشتركين مع مربعات التحديد ودعم التحديد المتعدد */}
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
                     <table className="w-full text-right text-xs">
                       <thead>
-                        <tr className="bg-slate-50/90 text-slate-700 font-black border-b border-slate-200">
+                        <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
                           {isSelectMode && (
-                            <th className="p-3.5 w-12 text-center">
+                            <th className="p-3 w-10 text-center">
                               <input
                                 type="checkbox"
                                 checked={paginatedSubscribers.length > 0 && paginatedSubscribers.every(s => selectedSubIds.has(s.id))}
@@ -2197,15 +2321,15 @@ export default function BranchManagerDashboard({
                               />
                             </th>
                           )}
-                          <th className="p-3.5">رقم المشترك</th>
-                          <th className="p-3.5">اسم المشترك</th>
-                          <th className="p-3.5">المنطقة المائية</th>
-                          <th className="p-3.5">رقم الإضبارة / العنوان</th>
-                          <th className="p-3.5">الصنف والعداد</th>
-                          <th className="p-3.5">الدين السابق</th>
+                          <th className="p-3">رقم المشترك</th>
+                          <th className="p-3">اسم المشترك</th>
+                          <th className="p-3">المنطقة</th>
+                          <th className="p-3">رقم الإضبارة / الملاحظات</th>
+                          <th className="p-3">الصنف / العداد</th>
+                          <th className="p-3">الدين السابق</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-slate-100">
                         {paginatedSubscribers.map((sub) => {
                           const isSelected = selectedSubIds.has(sub.id)
                           // عرض كافة المناطق المخصصة للمشترك
@@ -2224,14 +2348,14 @@ export default function BranchManagerDashboard({
                                   setDetailSubscriberYear(2026)
                                 }
                               }}
-                              className={`font-bold transition-colors cursor-pointer select-none ${
+                              className={`font-bold transition cursor-pointer select-none ${
                                 isSelected
                                   ? 'bg-blue-50/90 text-blue-950 ring-1 ring-inset ring-blue-300'
-                                  : 'hover:bg-slate-50/80'
+                                  : 'hover:bg-blue-50/50 hover:text-blue-950'
                               }`}
                             >
                               {isSelectMode && (
-                                <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                                <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
@@ -2240,39 +2364,29 @@ export default function BranchManagerDashboard({
                                   />
                                 </td>
                               )}
-                              <td className="p-3.5">
-                                <span className="font-mono font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/80 shadow-2xs">
-                                  #{sub.id}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-slate-900">
+                              <td className="p-3 font-mono text-blue-700 bg-blue-50/40">#{sub.id}</td>
+                              <td className="p-3 text-slate-900">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-black">{sub.name}</span>
+                                  <span>{sub.name}</span>
                                   {sub.statuses && sub.statuses.length > 0 && sub.statuses.map((st, i) => (
-                                    <span key={i} className="px-2 py-0.5 rounded-md text-[10px] bg-rose-50 text-rose-700 border border-rose-200 font-bold">
+                                    <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-700 font-bold">
                                       {st}
                                     </span>
                                   ))}
                                 </div>
-                                {sub.phone && <div className="text-[10px] text-slate-400 font-mono font-normal mt-0.5 dir-ltr text-right">{sub.phone}</div>}
+                                {sub.phone && <div className="text-[10px] text-slate-400 font-mono font-normal">{sub.phone}</div>}
                               </td>
-                              <td className="p-3.5 text-slate-700">
-                                <span className="inline-flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-slate-200/60">
-                                  <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
+                              <td className="p-3 text-slate-600">
+                                <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px]">
+                                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                                   <span>{assignedAreaNames}</span>
                                 </span>
                               </td>
-                              <td className="p-3.5 text-slate-600 text-[11px] max-w-[200px] truncate" title={sub.detailedAddress}>
+                              <td className="p-3 text-slate-600 text-[11px] max-w-[200px] truncate" title={sub.detailedAddress}>
                                 {sub.detailedAddress || '-'}
                               </td>
-                              <td className="p-3.5 text-slate-600">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
-                                  {sub.propertyType} • {sub.meterType}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-rose-600 font-mono font-black">
-                                {(sub.remainingPrev || 0).toLocaleString('ar-IQ')} <span className="text-[10px] font-sans">د.ع</span>
-                              </td>
+                              <td className="p-3 text-slate-500">{sub.propertyType} - {sub.meterType}</td>
+                              <td className="p-3 text-rose-600 font-mono">{(sub.remainingPrev || 0).toLocaleString('ar-IQ')} د.ع</td>
                             </tr>
                           )
                         })}
@@ -2644,44 +2758,52 @@ export default function BranchManagerDashboard({
 
           {/* تبويب المحصلين */}
           {activeTab === 'collectors' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-5">
-              {/* الرأسية مع شريط الإحصائيات وزر إضافة محصل */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base md:text-lg font-black text-slate-900">كادر المحصلين</h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                      {branch.collectors?.length || 0} محصل
-                    </span>
+            <div className="space-y-5">
+              {/* شريط الإسناد والتحكم الإعلاني الفاخر المستوحى من ستيتش للمحصلين */}
+              <div className="relative overflow-hidden bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-blue-700 text-[11px] font-black uppercase tracking-wider">
+                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                      <span>منظومة الجباية والتحصيل الميداني الذكي</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 tracking-tight">
+                        إدارة كادر المحصلين الميدانيين المعتمدين
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-black">
+                        {branch.collectors?.length || 0} محصل معتمد
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 max-w-2xl">
+                      إدارة صلاحيات التعديل، توزيع سلاسل دفاتر الجباية، وحصر اشتراكات ومناطق كل محصل في الميدان.
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    إدارة وتخصيص صلاحيات المحصلين الميدانيين والمناطق المائية المسندة لكل محصل
-                  </p>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingCollector(null)
-                      setCollectorName('')
-                      setCollectorPhone('')
-                      setCollectorCanEdit(false)
-                      setSelectedCollectorAreas([])
-                      setCollectorRangeFrom('')
-                      setCollectorRangeTo('')
-                      setShowCollectorModal(true)
-                    }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>محصل جديد</span>
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditingCollector(null)
+                        setCollectorName('')
+                        setCollectorPhone('')
+                        setCollectorCanEdit(false)
+                        setSelectedCollectorAreas([])
+                        setCollectorRangeFrom('')
+                        setCollectorRangeTo('')
+                        setShowCollectorModal(true)
+                      }}
+                      className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black transition flex items-center gap-2 shadow-sm shadow-blue-500/20 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ إضافة محصل جديد</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* شريط البحث السريع في المحصلين */}
               {branch.collectors && branch.collectors.length > 0 && (
-                <div className="flex items-center justify-between gap-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-2xs">
                   <div className="relative flex-1 max-w-md">
                     <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -2689,13 +2811,13 @@ export default function BranchManagerDashboard({
                       placeholder="بحث باسم المحصل أو رقم الهاتف أو المنطقة المسندة..."
                       value={collectorSearch}
                       onChange={(e) => setCollectorSearch(e.target.value)}
-                      className="w-full pr-9 pl-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
+                      className="w-full pr-9 pl-3 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white shadow-2xs"
                     />
                   </div>
                   {collectorSearch && (
                     <button
                       onClick={() => setCollectorSearch('')}
-                      className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-1"
+                      className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-1 cursor-pointer"
                     >
                       إلغاء البحث
                     </button>
@@ -2703,18 +2825,18 @@ export default function BranchManagerDashboard({
                 </div>
               )}
 
-              {/* قائمة وجدول المحصلين المرتب والمدمج */}
+              {/* قائمة وجدول كروت المحصلين الفاخرة */}
               {(!branch.collectors || branch.collectors.length === 0) ? (
-                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 shadow-2xs">
                   <Wallet className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                   <p className="text-xs font-bold text-slate-500">لا يوجد محصلون مسجلون حالياً</p>
                 </div>
               ) : filteredCollectors.length === 0 ? (
-                <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="text-center py-8 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                   <p className="text-xs font-bold text-slate-500">لا توجد نتائج مطابقة لبحثك</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredCollectors.map((collector) => {
                     const assignedAreas = (branch.areas || []).filter(a => (collector.assignedAreaIds || []).includes(a.id))
                     const assignedCount = assignedAreas.length
@@ -2722,242 +2844,251 @@ export default function BranchManagerDashboard({
                     return (
                       <div 
                         key={collector.id} 
-                        className="bg-white hover:bg-slate-50/50 rounded-3xl p-5 border border-slate-200/90 hover:border-blue-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-4"
+                        className="group bg-white rounded-2xl border border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden"
                       >
-                        {/* 1. رأس البطاقة: الاسم، الهاتف، وحالة الصلاحية */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-sm shadow-blue-500/20 shrink-0">
-                              <Wallet className="w-6 h-6" />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="font-black text-slate-900 text-base truncate">{collector.name}</h4>
-                              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono mt-0.5 dir-ltr justify-end">
-                                <span>{collector.phone}</span>
-                                <Phone className="w-3 h-3 text-slate-400" />
+                        {/* خط التدرج اللوني العلوي المستوحى من ستيتش */}
+                        <div className="h-1.5 bg-gradient-to-l from-blue-600 via-indigo-600 to-cyan-500"></div>
+
+                        <div className="p-4 sm:p-5 space-y-3.5">
+                          {/* 1. رأس البطاقة: الاسم والهاتف وحالة الصلاحية */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
+                                <Wallet className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="font-black text-slate-900 text-sm sm:text-base truncate">{collector.name}</h4>
+                                <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono dir-ltr mt-0.5">
+                                  <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>{collector.phone}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* زر وحالة الصلاحية */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleCollectorEdit(collector.id, collector.canEdit)}
-                            className={`text-[11px] px-3 py-1 rounded-full font-black transition border flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                              collector.canEdit
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300/80 hover:bg-emerald-100'
-                                : 'bg-amber-50 text-amber-800 border-amber-300/80 hover:bg-amber-100'
-                            }`}
-                            title={collector.canEdit ? 'انقر لإيقاف صلاحية التعديل' : 'انقر للسماح بالتعديل'}
-                          >
-                            {collector.canEdit ? (
-                              <>
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>مسموح بالتحصيل</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="w-3.5 h-3.5 text-amber-600" />
-                                <span>للقراءة فقط</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        {/* 2. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
-                        {assignedCount > 0 && (
-                          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/70 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-black text-slate-700 flex items-center gap-1.5 text-xs">
-                                <MapPin className="w-4 h-4 text-blue-600" />
-                                <span>المناطق المائية المسندة:</span>
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800 border border-blue-200">
-                                {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto pt-0.5">
-                              {assignedAreas.slice(0, 4).map((a) => (
-                                <span
-                                  key={a.id}
-                                  className="text-[11px] font-bold bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs"
-                                >
-                                  {a.name}
-                                </span>
-                              ))}
-                              {assignedAreas.length > 4 && (
-                                <span className="text-[11px] font-black text-blue-700 bg-blue-100/70 px-2 py-1 rounded-lg border border-blue-200">
-                                  +{assignedAreas.length - 4} أخرى
-                                </span>
+                            {/* زر وحالة الصلاحية بتصميم كبسولي أنيق */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCollectorEdit(collector.id, collector.canEdit)}
+                              className={`text-[10px] px-2.5 py-1 rounded-full font-black transition border flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs ${
+                                collector.canEdit
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                              }`}
+                              title={collector.canEdit ? 'انقر لإيقاف صلاحية التعديل' : 'انقر للسماح بالتعديل'}
+                            >
+                              {collector.canEdit ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>مسموح بالتعديل</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="w-3 h-3 text-amber-600" />
+                                  <span>للقراءة فقط</span>
+                                </>
                               )}
-                            </div>
+                            </button>
                           </div>
-                        )}
 
-                        {/* المشتركون المخصصون مباشرة للمحصل */}
-                        {collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0 && (() => {
-                          const sortedIds = Array.from(new Set(collector.assignedSubscriberIds)).sort((a, b) => a - b)
-                          const minId = sortedIds[0]
-                          const maxId = sortedIds[sortedIds.length - 1]
-                          const rangeText = sortedIds.length === 1 
-                            ? `اشتراك #${minId}` 
-                            : `من #${minId} إلى #${maxId}`
+                          {/* 2. المشتركون المخصصون مباشرة للمحصل */}
+                          {collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0 ? (() => {
+                            const sortedIds = Array.from(new Set(collector.assignedSubscriberIds)).sort((a, b) => a - b)
+                            const minId = sortedIds[0]
+                            const maxId = sortedIds[sortedIds.length - 1]
+                            const rangeText = sortedIds.length === 1 
+                              ? `اشتراك #${minId}` 
+                              : `من #${minId} إلى #${maxId}`
 
-                          return (
-                            <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-200/70 space-y-2.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 text-xs">
-                                  <Users className="w-4 h-4 text-blue-700" />
-                                  <span className="font-black text-blue-950 text-xs">المشتركون المخصصون:</span>
-                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-100 text-blue-800 border border-blue-200">
-                                    {collector.assignedSubscriberIds.length} مشترك
+                            return (
+                              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200/80 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <Users className="w-3.5 h-3.5 text-blue-700" />
+                                    <span className="font-black text-blue-950 text-[11px]">المشتركون المخصصون:</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-200/80 text-blue-900 border border-blue-300">
+                                      {collector.assignedSubscriberIds.length} مشترك
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const collectorSubs = sortedIds.map(id => {
+                                          const found = branch.subscribers?.find(s => s.id === id)
+                                          return {
+                                            id,
+                                            name: found?.name || `مشترك رقم #${id}`
+                                          }
+                                        })
+                                        setShowSubscribersListModal({
+                                          title: `المشتركون المخصصون للمحصل (${collector.name}) - ${rangeText} (العدد: ${collector.assignedSubscriberIds?.length})`,
+                                          subscribers: collectorSubs
+                                        })
+                                      }}
+                                      className="px-2 py-1 bg-white hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black transition border border-blue-300 flex items-center gap-1 cursor-pointer shadow-2xs"
+                                      title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا المحصل"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>عرض القائمة</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleClearCollectorSubscribers(collector.id, collector.name)}
+                                      className="px-2 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition border border-rose-200 flex items-center gap-1 cursor-pointer"
+                                      title="إزالة وتفريغ جميع المشتركين المخصصين لهذا المحصل بنقرة واحدة"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      <span>إفراغ</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* سطر نطاق الاشتراكات (من وإلى) بتصميم ستيتش الأنيق */}
+                                <div className="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-blue-200 shadow-2xs text-xs">
+                                  <span className="text-[11px] font-black text-blue-900 flex items-center gap-1">
+                                    <Hash className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>نطاق الاشتراكات:</span>
+                                  </span>
+                                  <span className="font-mono font-black text-blue-800 text-xs bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-300 dir-ltr">
+                                    {rangeText}
                                   </span>
                                 </div>
+                              </div>
+                            )
+                          })() : (
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                              <span className="text-[11px] text-slate-400 font-bold">لم يتم تحديد نطاق اشتراكات مخصص بعد</span>
+                            </div>
+                          )}
 
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const collectorSubs = sortedIds.map(id => {
-                                        const found = branch.subscribers?.find(s => s.id === id)
-                                        return {
-                                          id,
-                                          name: found?.name || `مشترك رقم #${id}`
-                                        }
-                                      })
-                                      setShowSubscribersListModal({
-                                        title: `المشتركون المخصصون للمحصل (${collector.name}) - ${rangeText} (العدد: ${collector.assignedSubscriberIds?.length})`,
-                                        subscribers: collectorSubs
-                                      })
-                                    }}
-                                    className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black transition border border-blue-300 flex items-center gap-1 cursor-pointer shadow-2xs"
-                                    title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا المحصل"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>عرض القائمة</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleClearCollectorSubscribers(collector.id, collector.name)}
-                                    className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[11px] font-black transition flex items-center gap-1 cursor-pointer border border-rose-200"
-                                    title="إزالة وتفريغ جميع المشتركين المخصصين لهذا المحصل بنقرة واحدة"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>إفراغ</span>
-                                  </button>
-                                </div>
+                          {/* 3. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
+                          {assignedCount > 0 && (
+                            <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
+                                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>المناطق المسندة:</span>
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                                  {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
+                                </span>
                               </div>
 
-                              {/* سطر نطاق الاشتراكات (من وإلى) بخط واضح وشارة مميزة */}
-                              <div className="flex items-center justify-between bg-white px-3 py-1.5 rounded-xl border border-blue-200/90 text-xs font-bold text-slate-700">
-                                <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
-                                  <Hash className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>نطاق الاشتراكات:</span>
-                                </span>
-                                <span className="font-mono font-black text-blue-800 text-xs bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-300 dir-ltr">
-                                  {rangeText}
-                                </span>
+                              <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
+                                {assignedAreas.slice(0, 4).map((a) => (
+                                  <span
+                                    key={a.id}
+                                    className="text-[10px] font-bold bg-white text-slate-700 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs"
+                                  >
+                                    {a.name}
+                                  </span>
+                                ))}
+                                {assignedAreas.length > 4 && (
+                                  <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200">
+                                    +{assignedAreas.length - 4} أخرى
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          )
-                        })()}
+                          )}
+                        </div>
 
-                        {/* 3. شريط الأزرار والإجراءات الموحد والمنظم */}
-                        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                          {/* زر الدخول المباشر وزر سجل النشاط */}
-                          <div className="flex items-center gap-2 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const origin = typeof window !== 'undefined' ? window.location.origin : ''
-                                const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
-                                window.open(directLink, '_blank')
-                              }}
-                              className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-xs font-black transition border border-blue-200/80 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer group"
-                              title="فتح حساب المحصل في نافذة جديدة"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              <span>دخول الحساب</span>
-                            </button>
+                        {/* 4. شريط الإجراءات والروابط السفلية الفاخرة */}
+                        <div className="p-3 bg-slate-50 border-t border-slate-200/80 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-400">إجراءات وروابط الحساب:</span>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCollectorStats(collector)}
-                              className="py-2 px-3 bg-slate-100 hover:bg-slate-800 text-slate-700 hover:text-white rounded-xl text-xs font-black transition border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
-                              title="عرض سجل نشاط وإحصائيات المحصل (اليومي، الشهري، السنوي)"
-                            >
-                              <Activity className="w-4 h-4 text-blue-600" />
-                              <span>سجل النشاط</span>
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {/* زر فتح الحساب */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                                  const directLink = `${origin}/?role=collector&token=${collector.token}&branch=${branch.id}`
+                                  window.open(directLink, '_blank')
+                                }}
+                                className="p-2 bg-white hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-slate-200 hover:border-blue-600 shadow-2xs cursor-pointer"
+                                title="فتح حساب المحصل في نافذة جديدة"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* زر نسخ الرابط */}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCollectorLink(collector)}
+                                className={`p-2 rounded-xl transition border shadow-2xs cursor-pointer ${
+                                  copiedCollectorId === collector.id
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-white hover:bg-indigo-600 text-indigo-700 hover:text-white border-slate-200 hover:border-indigo-600'
+                                }`}
+                                title={copiedCollectorId === collector.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
+                              >
+                                {copiedCollectorId === collector.id ? (
+                                  <Check className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+
+                              {/* زر الواتساب */}
+                              <button
+                                type="button"
+                                onClick={() => handleShareCollectorWhatsApp(collector)}
+                                className="p-2 bg-white hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-slate-200 hover:border-emerald-600 shadow-2xs cursor-pointer"
+                                title="مشاركة رابط الدخول عبر واتساب"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* زر التعديل */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingCollector(collector)
+                                  setCollectorName(collector.name)
+                                  setCollectorPhone(collector.phone)
+                                  setCollectorCanEdit(collector.canEdit)
+                                  setSelectedCollectorAreas(collector.assignedAreaIds || [])
+                                  if (collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0) {
+                                    const sorted = Array.from(new Set(collector.assignedSubscriberIds)).sort((a, b) => a - b)
+                                    setCollectorRangeFrom(sorted[0].toString())
+                                    setCollectorRangeTo(sorted[sorted.length - 1].toString())
+                                  } else {
+                                    setCollectorRangeFrom('')
+                                    setCollectorRangeTo('')
+                                  }
+                                  setShowCollectorModal(true)
+                                }}
+                                className="p-2 bg-white hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-slate-200 hover:border-blue-600 shadow-2xs cursor-pointer"
+                                title="تعديل بيانات المحصل ومناطقه واشتراكاته"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* زر الحذف */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCollector(collector.id, collector.name)}
+                                className="p-2 bg-white hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-slate-200 hover:border-rose-600 shadow-2xs cursor-pointer"
+                                title="حذف المحصل"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
-                          {/* أزرار الإجراءات السريعة (نسخ، واتساب، تعديل، حذف) */}
-                          <div className="flex items-center justify-end gap-1.5 shrink-0">
-                            {/* زر نسخ الرابط */}
-                            <button
-                              type="button"
-                              onClick={() => handleCopyCollectorLink(collector)}
-                              className={`p-2 rounded-xl transition border shadow-2xs cursor-pointer ${
-                                copiedCollectorId === collector.id
-                                  ? 'bg-emerald-600 text-white border-emerald-600'
-                                  : 'bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border-indigo-200'
-                              }`}
-                              title={copiedCollectorId === collector.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
-                            >
-                              {copiedCollectorId === collector.id ? (
-                                <Check className="w-4 h-4" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
-
-                            {/* زر الواتساب */}
-                            <button
-                              type="button"
-                              onClick={() => handleShareCollectorWhatsApp(collector)}
-                              className="p-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-emerald-200 shadow-2xs cursor-pointer"
-                              title="مشاركة رابط الدخول عبر واتساب"
-                            >
-                              <Share2 className="w-4 h-4" />
-                            </button>
-
-                            {/* زر التعديل */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCollector(collector)
-                                setCollectorName(collector.name)
-                                setCollectorPhone(collector.phone)
-                                setCollectorCanEdit(collector.canEdit)
-                                setSelectedCollectorAreas(collector.assignedAreaIds || [])
-                                if (collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0) {
-                                  const sorted = Array.from(new Set(collector.assignedSubscriberIds)).sort((a, b) => a - b)
-                                  setCollectorRangeFrom(sorted[0].toString())
-                                  setCollectorRangeTo(sorted[sorted.length - 1].toString())
-                                } else {
-                                  setCollectorRangeFrom('')
-                                  setCollectorRangeTo('')
-                                }
-                                setShowCollectorModal(true)
-                              }}
-                              className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs cursor-pointer"
-                              title="تعديل بيانات المحصل ومناطقه واشتراكاته"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-
-                            {/* زر الحذف */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCollector(collector.id, collector.name)}
-                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-rose-200 shadow-2xs cursor-pointer"
-                              title="حذف المحصل"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {/* زر فتح سجل نشاط وإحصائيات المحصل بنقرة واحدة */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCollectorStats(collector)}
+                            className="w-full py-2 px-3 bg-blue-50 hover:bg-blue-700 text-blue-800 hover:text-white rounded-xl text-xs font-black transition border border-blue-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer group"
+                          >
+                            <BarChart3 className="w-4 h-4 text-blue-600 group-hover:text-white" />
+                            <span>سجل النشاط والعمليات (اليوم / الشهر / السنة)</span>
+                          </button>
                         </div>
                       </div>
                     )
@@ -2969,46 +3100,54 @@ export default function BranchManagerDashboard({
 
           {/* تبويب الكتّاب */}
           {activeTab === 'writers' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-5">
-              {/* الرأسية مع شريط الإحصائيات وزر إضافة كاتب */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base md:text-lg font-black text-slate-900">كادر الكتّاب</h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                      {branch.writers?.length || 0} كاتب
-                    </span>
+            <div className="space-y-5">
+              {/* شريط الإسناد والتحكم الإعلاني الفاخر المستوحى من ستيتش */}
+              <div className="relative overflow-hidden bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-purple-700 text-[11px] font-black uppercase tracking-wider">
+                      <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                      <span>منظومة التحكم بالإسناد الميداني والفوترة الرقمية</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 tracking-tight">
+                        إدارة كادر كتّاب الإدخال المعتمدين
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-black">
+                        {branch.writers?.length || 0} كاتب مرخص
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 max-w-2xl">
+                      إدارة الصلاحيات وتوزيع سلاسل أرقام الاشتراكات وتعيين فترات العمل المتوافقة مع أوقات التزامن السحابي الموحد.
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    إدارة صلاحيات إدخال وتحديث بيانات القراءات والمناطق المائية المسندة لكل كاتب
-                  </p>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingWriter(null)
-                      setWriterName('')
-                      setWriterPhone('')
-                      setSelectedWriterAreas([])
-                      setWriterWorkHoursEnabled(false)
-                      setWriterWorkHourStart('08:00')
-                      setWriterWorkHourEnd('14:00')
-                      setWriterRangeFrom('')
-                      setWriterRangeTo('')
-                      setShowWriterModal(true)
-                    }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>كاتب جديد</span>
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditingWriter(null)
+                        setWriterName('')
+                        setWriterPhone('')
+                        setSelectedWriterAreas([])
+                        setWriterWorkHoursEnabled(false)
+                        setWriterWorkHourStart('08:00')
+                        setWriterWorkHourEnd('14:00')
+                        setWriterRangeFrom('')
+                        setWriterRangeTo('')
+                        setShowWriterModal(true)
+                      }}
+                      className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black transition flex items-center gap-2 shadow-sm shadow-purple-500/20 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ إضافة كاتب جديد</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* شريط البحث السريع في الكتّاب */}
               {branch.writers && branch.writers.length > 0 && (
-                <div className="flex items-center justify-between gap-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-2xs">
                   <div className="relative flex-1 max-w-md">
                     <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -3016,13 +3155,13 @@ export default function BranchManagerDashboard({
                       placeholder="بحث باسم الكاتب أو رقم الهاتف أو المنطقة المسندة..."
                       value={writerSearch}
                       onChange={(e) => setWriterSearch(e.target.value)}
-                      className="w-full pr-9 pl-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
+                      className="w-full pr-9 pl-3 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:bg-white shadow-2xs"
                     />
                   </div>
                   {writerSearch && (
                     <button
                       onClick={() => setWriterSearch('')}
-                      className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-1"
+                      className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-1 cursor-pointer"
                     >
                       إلغاء البحث
                     </button>
@@ -3030,18 +3169,18 @@ export default function BranchManagerDashboard({
                 </div>
               )}
 
-              {/* قائمة وجدول الكتّاب المرتب والمدمج */}
+              {/* قائمة وجدول كروت الكتّاب الفاخرة */}
               {(!branch.writers || branch.writers.length === 0) ? (
-                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 shadow-2xs">
                   <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                   <p className="text-xs font-bold text-slate-500">لا يوجد كتاب مسجلون حالياً</p>
                 </div>
               ) : filteredWriters.length === 0 ? (
-                <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="text-center py-8 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                   <p className="text-xs font-bold text-slate-500">لا توجد نتائج مطابقة لبحثك</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredWriters.map((writer) => {
                     const assignedAreas = (branch.areas || []).filter(a => (writer.assignedAreaIds || []).includes(a.id))
                     const assignedCount = assignedAreas.length
@@ -3049,264 +3188,274 @@ export default function BranchManagerDashboard({
                     return (
                       <div 
                         key={writer.id} 
-                        className="bg-white hover:bg-slate-50/50 rounded-3xl p-5 border border-slate-200/90 hover:border-purple-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-4"
+                        className="group bg-white rounded-2xl border border-slate-200 hover:border-purple-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden"
                       >
-                        {/* 1. رأس البطاقة: الاسم والهاتف */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-sm shadow-purple-500/20 shrink-0">
-                              <BookOpen className="w-6 h-6" />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="font-black text-slate-900 text-base truncate">{writer.name}</h4>
-                              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono mt-0.5 dir-ltr justify-end">
-                                <span>{writer.phone}</span>
-                                <Phone className="w-3 h-3 text-slate-400" />
+                        {/* خط التدرج اللوني العلوي المستوحى من ستيتش */}
+                        <div className="h-1.5 bg-gradient-to-l from-purple-600 via-indigo-600 to-purple-400"></div>
+
+                        <div className="p-4 sm:p-5 space-y-3.5">
+                          {/* 1. رأس البطاقة: الاسم والهاتف والشارة */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 border border-purple-100 flex items-center justify-center font-bold text-base shadow-2xs shrink-0">
+                                <BookOpen className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="font-black text-slate-900 text-sm sm:text-base truncate">{writer.name}</h4>
+                                <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono dir-ltr mt-0.5">
+                                  <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>{writer.phone}</span>
+                                </div>
                               </div>
                             </div>
+
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-black text-[10px] shrink-0 shadow-2xs">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>كاتب معتمد</span>
+                            </span>
                           </div>
 
-                          <span className="text-[11px] px-3 py-1 rounded-full font-black bg-purple-50 text-purple-700 border border-purple-200/80 shrink-0">
-                            كاتب معتمد
-                          </span>
-                        </div>
+                          {/* 2. المشتركون المخصصون مباشرة للكاتب */}
+                          {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 ? (() => {
+                            const sortedIds = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
+                            const minId = sortedIds[0]
+                            const maxId = sortedIds[sortedIds.length - 1]
+                            const rangeText = sortedIds.length === 1 
+                              ? `اشتراك #${minId}` 
+                              : `من #${minId} إلى #${maxId}`
 
-                        {/* 2. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
-                        {assignedCount > 0 && (
-                          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/70 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-black text-slate-700 flex items-center gap-1.5 text-xs">
-                                <MapPin className="w-4 h-4 text-purple-600" />
-                                <span>المناطق المائية المسندة:</span>
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-purple-100 text-purple-800 border border-purple-200">
-                                {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
-                              </span>
-                            </div>
+                            return (
+                              <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/80 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <Users className="w-3.5 h-3.5 text-purple-700" />
+                                    <span className="font-black text-purple-950 text-[11px]">المشتركون المخصصون:</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-200/80 text-purple-900 border border-purple-300">
+                                      {writer.assignedSubscriberIds.length} مشترك
+                                    </span>
+                                  </div>
 
-                            <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto pt-0.5">
-                              {assignedAreas.slice(0, 4).map((a) => (
-                                <span
-                                  key={a.id}
-                                  className="text-[11px] font-bold bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs"
-                                >
-                                  {a.name}
-                                </span>
-                              ))}
-                              {assignedAreas.length > 4 && (
-                                <span className="text-[11px] font-black text-purple-700 bg-purple-100/70 px-2 py-1 rounded-lg border border-purple-200">
-                                  +{assignedAreas.length - 4} أخرى
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const writerSubs = sortedIds.map(id => {
+                                          const found = branch.subscribers?.find(s => s.id === id)
+                                          return {
+                                            id,
+                                            name: found?.name || `مشترك رقم #${id}`
+                                          }
+                                        })
+                                        setShowSubscribersListModal({
+                                          title: `المشتركون المخصصون للكاتب (${writer.name}) - ${rangeText} (العدد: ${writer.assignedSubscriberIds?.length})`,
+                                          subscribers: writerSubs
+                                        })
+                                      }}
+                                      className="px-2 py-1 bg-white hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black transition border border-purple-300 flex items-center gap-1 cursor-pointer shadow-2xs"
+                                      title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا الكاتب"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>عرض القائمة</span>
+                                    </button>
 
-                        {/* المشتركون المخصصون مباشرة للكاتب */}
-                        {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 && (() => {
-                          const sortedIds = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
-                          const minId = sortedIds[0]
-                          const maxId = sortedIds[sortedIds.length - 1]
-                          const rangeText = sortedIds.length === 1 
-                            ? `اشتراك #${minId}` 
-                            : `من #${minId} إلى #${maxId}`
+                                    <button
+                                      type="button"
+                                      onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
+                                      className="px-2 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition border border-rose-200 flex items-center gap-1 cursor-pointer"
+                                      title="إزالة وتفريغ جميع المشتركين المخصصين لهذا الكاتب بنقرة واحدة"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      <span>إفراغ</span>
+                                    </button>
+                                  </div>
+                                </div>
 
-                          return (
-                            <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-200/70 space-y-2.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 text-xs">
-                                  <Users className="w-4 h-4 text-purple-700" />
-                                  <span className="font-black text-purple-950 text-xs">المشتركون المخصصون:</span>
-                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-100 text-purple-800 border border-purple-200">
-                                    {writer.assignedSubscriberIds.length} مشترك
+                                {/* سطر نطاق الاشتراكات (من وإلى) بتصميم ستيتش الأنيق */}
+                                <div className="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-purple-200 shadow-2xs text-xs">
+                                  <span className="text-[11px] font-black text-purple-900 flex items-center gap-1">
+                                    <Hash className="w-3.5 h-3.5 text-purple-600" />
+                                    <span>نطاق الاشتراكات:</span>
+                                  </span>
+                                  <span className="font-mono font-black text-purple-800 text-xs bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-300 dir-ltr">
+                                    {rangeText}
                                   </span>
                                 </div>
-
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const writerSubs = sortedIds.map(id => {
-                                        const found = branch.subscribers?.find(s => s.id === id)
-                                        return {
-                                          id,
-                                          name: found?.name || `مشترك رقم #${id}`
-                                        }
-                                      })
-                                      setShowSubscribersListModal({
-                                        title: `المشتركون المخصصون للكاتب (${writer.name}) - ${rangeText} (العدد: ${writer.assignedSubscriberIds?.length})`,
-                                        subscribers: writerSubs
-                                      })
-                                    }}
-                                    className="px-2.5 py-1 bg-white hover:bg-purple-100 text-purple-700 rounded-lg text-[11px] font-black transition border border-purple-300 flex items-center gap-1 cursor-pointer shadow-2xs"
-                                    title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا الكاتب"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>عرض القائمة</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
-                                    className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[11px] font-black transition flex items-center gap-1 cursor-pointer border border-rose-200"
-                                    title="إزالة وتفريغ جميع المشتركين المخصصين لهذا الكاتب بنقرة واحدة"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>إفراغ</span>
-                                  </button>
-                                </div>
                               </div>
-
-                              {/* سطر نطاق الاشتراكات (من وإلى) بخط واضح وشارة مميزة */}
-                              <div className="flex items-center justify-between bg-white px-3 py-1.5 rounded-xl border border-purple-200/90 text-xs font-bold text-slate-700">
-                                <span className="text-xs font-black text-purple-900 flex items-center gap-1.5">
-                                  <Hash className="w-3.5 h-3.5 text-purple-600" />
-                                  <span>نطاق الاشتراكات:</span>
-                                </span>
-                                <span className="font-mono font-black text-purple-800 text-xs bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-300 dir-ltr">
-                                  {rangeText}
-                                </span>
-                              </div>
+                            )
+                          })() : (
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                              <span className="text-[11px] text-slate-400 font-bold">لم يتم تحديد نطاق اشتراكات مخصص بعد</span>
                             </div>
-                          )
-                        })()}
+                          )}
 
-                        {/* حالة ساعات العمل بالتوقيت العراقي */}
-                        {(() => {
-                          const workCheck = checkWriterWorkHours(writer)
-                          return (
-                            <div className="p-3 rounded-2xl border text-xs space-y-1.5 bg-slate-50/80 border-slate-200/80">
-                              <div className="flex items-center justify-between">
-                                <span className="font-black text-slate-700 flex items-center gap-1.5 text-xs">
-                                  <Clock className="w-4 h-4 text-slate-500" />
-                                  <span>ساعات العمل (توقيت العراق):</span>
+                          {/* 3. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
+                          {assignedCount > 0 && (
+                            <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
+                                  <MapPin className="w-3.5 h-3.5 text-purple-600" />
+                                  <span>المناطق المسندة:</span>
                                 </span>
-                                {writer.workHoursEnabled ? (
-                                  workCheck.allowed ? (
-                                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                                      متاح للعمل الآن
-                                    </span>
-                                  ) : (
-                                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                                      خارج وقت العمل
-                                    </span>
-                                  )
-                                ) : (
-                                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 text-slate-700">
-                                    متاح 24 ساعة
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                                  {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
+                                {assignedAreas.slice(0, 4).map((a) => (
+                                  <span
+                                    key={a.id}
+                                    className="text-[10px] font-bold bg-white text-slate-700 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs"
+                                  >
+                                    {a.name}
+                                  </span>
+                                ))}
+                                {assignedAreas.length > 4 && (
+                                  <span className="text-[10px] font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-200">
+                                    +{assignedAreas.length - 4} أخرى
                                   </span>
                                 )}
                               </div>
-                              {writer.workHoursEnabled && (
-                                <div className="text-xs font-bold text-slate-600 flex items-center justify-between pt-0.5">
-                                  <span>
-                                    من <span className="text-purple-700 font-black">{formatTimeArabic(writer.workHourStart || '08:00')}</span> إلى <span className="text-purple-700 font-black">{formatTimeArabic(writer.workHourEnd || '14:00')}</span>
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-mono">Asia/Baghdad</span>
-                                </div>
-                              )}
                             </div>
-                          )
-                        })()}
+                          )}
 
-                        {/* 3. شريط الأزرار والإجراءات الموحد والمنظم */}
-                        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                          {/* زر الدخول المباشر وزر سجل النشاط */}
-                          <div className="flex items-center gap-2 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const origin = typeof window !== 'undefined' ? window.location.origin : ''
-                                const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
-                                window.open(directLink, '_blank')
-                              }}
-                              className="flex-1 py-2 px-3 bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl text-xs font-black transition border border-purple-200/80 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer group"
-                              title="فتح حساب الكاتب في نافذة جديدة"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              <span>دخول الحساب</span>
-                            </button>
+                          {/* 4. حالة ساعات العمل بالتوقيت العراقي */}
+                          {(() => {
+                            const workCheck = checkWriterWorkHours(writer)
+                            return (
+                              <div className="p-2.5 rounded-xl border text-xs space-y-1 bg-slate-50/70 border-slate-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-slate-700 flex items-center gap-1.5 text-[11px]">
+                                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>ساعات العمل (توقيت العراق):</span>
+                                  </span>
+                                  {writer.workHoursEnabled ? (
+                                    workCheck.allowed ? (
+                                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                        متاح للعمل الآن
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1 shadow-2xs">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                        خارج وقت العمل
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                      متاح 24 ساعة
+                                    </span>
+                                  )}
+                                </div>
+                                {writer.workHoursEnabled && (
+                                  <div className="text-[11px] font-bold text-slate-600 flex items-center justify-between pt-0.5">
+                                    <span>
+                                      من <span className="text-purple-700 font-black">{formatTimeArabic(writer.workHourStart || '08:00')}</span> إلى <span className="text-purple-700 font-black">{formatTimeArabic(writer.workHourEnd || '14:00')}</span>
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">Asia/Baghdad</span>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
+                        </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenWriterStats(writer)}
-                              className="py-2 px-3 bg-slate-100 hover:bg-slate-800 text-slate-700 hover:text-white rounded-xl text-xs font-black transition border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
-                              title="عرض سجل نشاط وإحصائيات الكاتب (اليومي، الشهري، السنوي)"
-                            >
-                              <Activity className="w-4 h-4 text-purple-600" />
-                              <span>سجل النشاط</span>
-                            </button>
+                        {/* 5. شريط الإجراءات والروابط السفلية الفاخرة */}
+                        <div className="p-3 bg-slate-50 border-t border-slate-200/80 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-400">إجراءات وروابط الحساب:</span>
+
+                            <div className="flex items-center gap-1.5">
+                              {/* زر فتح الحساب */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                                  const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
+                                  window.open(directLink, '_blank')
+                                }}
+                                className="p-2 bg-white hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-slate-200 hover:border-blue-600 shadow-2xs cursor-pointer"
+                                title="فتح حساب الكاتب في نافذة جديدة"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* زر نسخ الرابط */}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyWriterLink(writer)}
+                                className={`p-2 rounded-xl transition border shadow-2xs cursor-pointer ${
+                                  copiedWriterId === writer.id
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-white hover:bg-indigo-600 text-indigo-700 hover:text-white border-slate-200 hover:border-indigo-600'
+                                }`}
+                                title={copiedWriterId === writer.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
+                              >
+                                {copiedWriterId === writer.id ? (
+                                  <Check className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+
+                              {/* زر الواتساب */}
+                              <button
+                                type="button"
+                                onClick={() => handleShareWriterWhatsApp(writer)}
+                                className="p-2 bg-white hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-slate-200 hover:border-emerald-600 shadow-2xs cursor-pointer"
+                                title="مشاركة رابط الدخول عبر واتساب"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* زر التعديل */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingWriter(writer)
+                                  setWriterName(writer.name)
+                                  setWriterPhone(writer.phone)
+                                  setSelectedWriterAreas(writer.assignedAreaIds || [])
+                                  setWriterWorkHoursEnabled(!!writer.workHoursEnabled)
+                                  setWriterWorkHourStart(writer.workHourStart || '08:00')
+                                  setWriterWorkHourEnd(writer.workHourEnd || '14:00')
+                                  if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
+                                    const sorted = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
+                                    setWriterRangeFrom(sorted[0].toString())
+                                    setWriterRangeTo(sorted[sorted.length - 1].toString())
+                                  } else {
+                                    setWriterRangeFrom('')
+                                    setWriterRangeTo('')
+                                  }
+                                  setShowWriterModal(true)
+                                }}
+                                className="p-2 bg-white hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl transition border border-slate-200 hover:border-purple-600 shadow-2xs cursor-pointer"
+                                title="تعديل بيانات الكاتب ومناطقه واشتراكاته"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* زر الحذف */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteWriter(writer.id, writer.name)}
+                                className="p-2 bg-white hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-slate-200 hover:border-rose-600 shadow-2xs cursor-pointer"
+                                title="حذف الكاتب"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
-                          {/* أزرار الإجراءات السريعة (نسخ، واتساب، تعديل، حذف) */}
-                          <div className="flex items-center justify-end gap-1.5 shrink-0">
-                            {/* زر نسخ الرابط */}
-                            <button
-                              type="button"
-                              onClick={() => handleCopyWriterLink(writer)}
-                              className={`p-2 rounded-xl transition border shadow-2xs cursor-pointer ${
-                                copiedWriterId === writer.id
-                                  ? 'bg-emerald-600 text-white border-emerald-600'
-                                  : 'bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border-indigo-200'
-                              }`}
-                              title={copiedWriterId === writer.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
-                            >
-                              {copiedWriterId === writer.id ? (
-                                <Check className="w-4 h-4" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
-
-                            {/* زر الواتساب */}
-                            <button
-                              type="button"
-                              onClick={() => handleShareWriterWhatsApp(writer)}
-                              className="p-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-emerald-200 shadow-2xs cursor-pointer"
-                              title="مشاركة رابط الدخول عبر واتساب"
-                            >
-                              <Share2 className="w-4 h-4" />
-                            </button>
-
-                            {/* زر التعديل */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingWriter(writer)
-                                setWriterName(writer.name)
-                                setWriterPhone(writer.phone)
-                                setSelectedWriterAreas(writer.assignedAreaIds || [])
-                                setWriterWorkHoursEnabled(!!writer.workHoursEnabled)
-                                setWriterWorkHourStart(writer.workHourStart || '08:00')
-                                setWriterWorkHourEnd(writer.workHourEnd || '14:00')
-                                if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
-                                  const sorted = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
-                                  setWriterRangeFrom(sorted[0].toString())
-                                  setWriterRangeTo(sorted[sorted.length - 1].toString())
-                                } else {
-                                  setWriterRangeFrom('')
-                                  setWriterRangeTo('')
-                                }
-                                setShowWriterModal(true)
-                              }}
-                              className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs cursor-pointer"
-                              title="تعديل بيانات الكاتب ومناطقه واشتراكاته"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-
-                            {/* زر الحذف */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteWriter(writer.id, writer.name)}
-                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-rose-200 shadow-2xs cursor-pointer"
-                              title="حذف الكاتب"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {/* زر فتح سجل نشاط وإحصائيات الكاتب بنقرة واحدة */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenWriterStats(writer)}
+                            className="w-full py-2 px-3 bg-purple-50 hover:bg-purple-700 text-purple-800 hover:text-white rounded-xl text-xs font-black transition border border-purple-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer group"
+                          >
+                            <BarChart3 className="w-4 h-4 text-purple-600 group-hover:text-white" />
+                            <span>سجل النشاط والعمليات (اليوم / الشهر / السنة)</span>
+                          </button>
                         </div>
                       </div>
                     )
@@ -3320,24 +3469,19 @@ export default function BranchManagerDashboard({
 
           {/* تبويب الإعدادات والذكاء الاصطناعي */}
           {activeTab === 'settings' && (
-            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-sm space-y-8">
+            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-6">
               {/* قسم إدارة واستيراد المشتركين */}
-              <div className="space-y-4 pb-7 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900">
-                      إدارة واستيراد بيانات المشتركين
-                    </h3>
-                    <p className="text-xs text-slate-500 font-bold mt-0.5">
-                      أدوات استيراد السجلات وفتح التطبيق الميداني الفوري
-                    </p>
-                  </div>
+              <div className="space-y-3 pb-6 border-b border-slate-200">
+                <div>
+                  <h3 className="text-sm md:text-base font-black text-slate-900">
+                    إدارة واستيراد بيانات المشتركين
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    أدوات استيراد السجلات وفتح التطبيق الميداني
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   {/* زر فتح تطبيق المشتركين */}
                   <button
                     onClick={() =>
@@ -3347,19 +3491,19 @@ export default function BranchManagerDashboard({
                         canEdit: true
                       })
                     }
-                    className="p-5 bg-gradient-to-br from-blue-50/70 via-white to-white hover:from-blue-100/70 border border-blue-200/90 hover:border-blue-400 text-right rounded-2xl transition-all duration-200 flex flex-col justify-between group shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    className="p-4 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
                   >
-                    <div className="flex items-center justify-between w-full mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
                         <ExternalLink className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-black px-2.5 py-1 rounded-full border border-blue-200/80">
-                        مباشر ميداني
+                      <span className="text-[10px] bg-blue-200/60 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                        مباشر
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-blue-700 transition-colors">تطبيق المشتركين</h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1 leading-relaxed">فتح واجهة المشتركين وإدارة الجباية والبحث الميداني</p>
+                      <h4 className="font-black text-slate-900 text-sm">تطبيق المشتركين</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">فتح واجهة المشتركين وإدارة الجباية</p>
                     </div>
                   </button>
 
@@ -3370,76 +3514,71 @@ export default function BranchManagerDashboard({
                       setExcelError(null)
                       setShowExcelModal(true)
                     }}
-                    className="p-5 bg-gradient-to-br from-emerald-50/70 via-white to-white hover:from-emerald-100/70 border border-emerald-200/90 hover:border-emerald-400 text-right rounded-2xl transition-all duration-200 flex flex-col justify-between group shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    className="p-4 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
                   >
-                    <div className="flex items-center justify-between w-full mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs">
                         <FileSpreadsheet className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-full border border-emerald-200/80">
-                        Excel الذكي
+                      <span className="text-[10px] bg-emerald-200/60 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                        Excel
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-emerald-700 transition-colors">استيراد ملف إكسل شامل</h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1 leading-relaxed">استخراج وتوليد المشتركين والمناطق والكتاب آلياً</p>
+                      <h4 className="font-black text-slate-900 text-sm">استيراد ملف إكسل شامل</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">استخراج المشتركين والمناطق والكتاب تلقائياً</p>
                     </div>
                   </button>
 
                   {/* زر استيراد نصي سريع */}
                   <button
                     onClick={() => setShowImportModal(true)}
-                    className="p-5 bg-gradient-to-br from-slate-50 via-white to-white hover:from-slate-100/80 border border-slate-200 hover:border-slate-400 text-right rounded-2xl transition-all duration-200 flex flex-col justify-between group shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    className="p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
                   >
-                    <div className="flex items-center justify-between w-full mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-slate-800 text-white flex items-center justify-center shadow-md shadow-slate-800/20 group-hover:scale-105 transition-transform">
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-slate-700 text-white rounded-xl shadow-xs">
                         <Upload className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] bg-slate-100 text-slate-700 font-black px-2.5 py-1 rounded-full border border-slate-200">
-                        لصق سريع
+                      <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-full">
+                        لصق
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-slate-900 transition-colors">استيراد نصي (لصق)</h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1 leading-relaxed">لصق قائمة أرقام وأسماء سطر بسطر وحفظها</p>
+                      <h4 className="font-black text-slate-900 text-sm">استيراد نصي (لصق)</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">لصق قائمة أرقام وأسماء سطر بسطر</p>
                     </div>
                   </button>
                 </div>
               </div>
 
               {/* قسم إدارة واستيراد المناطق (خيارات مجمعة ووقتية) */}
-              <div className="space-y-4 pb-7 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900">
-                      إدارة واستيراد المناطق المائية
-                    </h3>
-                    <p className="text-xs text-slate-500 font-bold mt-0.5">
-                      أدوات إضافة قوائم المناطق دفعة واحدة أو توليدها من الإكسل
-                    </p>
-                  </div>
+              <div className="space-y-3 pb-6 border-b border-slate-200">
+                <div>
+                  <h3 className="text-sm md:text-base font-black text-slate-900">
+                    إدارة واستيراد المناطق (خيارات مجمّعة)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    أدوات إضافة قوائم المناطق واستخراجها من ملفات الإكسل
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   {/* زر إضافة قائمة مناطق بسطور متعددة */}
                   <button
                     onClick={() => setShowAreasListModal(true)}
-                    className="p-5 bg-gradient-to-br from-indigo-50/70 via-white to-white hover:from-indigo-100/70 border border-indigo-200/90 hover:border-indigo-400 text-right rounded-2xl transition-all duration-200 flex flex-col justify-between group shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    className="p-4 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
                   >
-                    <div className="flex items-center justify-between w-full mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs">
                         <Upload className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] bg-indigo-100 text-indigo-800 font-black px-2.5 py-1 rounded-full border border-indigo-200/80">
+                      <span className="text-[10px] bg-emerald-200/60 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                         سطر بسطر
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-indigo-700 transition-colors">إضافة قائمة مناطق سريعة</h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1 leading-relaxed">لصق أسماء الأحياء والمناطق دفعة واحدة لإنشائها فوراً</p>
+                      <h4 className="font-black text-slate-900 text-sm">إضافة قائمة مناطق (كل منطقة بسطر)</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">لصق أسماء المناطق دفعة واحدة لتحويلها لمناطق بالنظام</p>
                     </div>
                   </button>
 
@@ -3450,72 +3589,60 @@ export default function BranchManagerDashboard({
                       setExcelError(null)
                       setShowExcelModal(true)
                     }}
-                    className="p-5 bg-gradient-to-br from-sky-50/70 via-white to-white hover:from-sky-100/70 border border-sky-200/90 hover:border-sky-400 text-right rounded-2xl transition-all duration-200 flex flex-col justify-between group shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    className="p-4 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 text-right rounded-2xl transition flex flex-col justify-between group shadow-xs"
                   >
-                    <div className="flex items-center justify-between w-full mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20 group-hover:scale-105 transition-transform">
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
                         <FileSpreadsheet className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] bg-sky-100 text-sky-800 font-black px-2.5 py-1 rounded-full border border-sky-200/80">
-                        استخراج آلي
+                      <span className="text-[10px] bg-blue-200/60 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                        Excel
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-sky-700 transition-colors">استخراج المناطق من الإكسل</h4>
-                      <p className="text-xs text-slate-500 font-bold mt-1 leading-relaxed">توليد شجرة المناطق المخدومة تلقائياً من جداول المشتركين</p>
+                      <h4 className="font-black text-slate-900 text-sm">استيراد من إكسل</h4>
+                      <p className="text-[11px] text-slate-500 font-bold mt-0.5">استخراج وتوليد المناطق تلقائياً من ملف الإكسل الشامل</p>
                     </div>
                   </button>
                 </div>
               </div>
 
               {/* قسم الذكاء الاصطناعي */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900">إعدادات الذكاء الاصطناعي (AI OCR)</h3>
-                    <p className="text-xs text-slate-500 font-bold mt-0.5">إدارة مفاتيح Gemini API لقراءة وصولات القبض واستخراج الأرقام إلكترونياً</p>
-                  </div>
+              <div>
+                <h3 className="text-sm md:text-base font-black text-slate-900">إعدادات الذكاء الاصطناعي (AI)</h3>
+                <p className="text-xs text-slate-500">إدارة مفاتيح Gemini API لاستخراج بيانات الوصولات إلكترونياً</p>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newApiKey}
+                    onChange={(e) => setNewApiKey(e.target.value)}
+                    placeholder="ألصق مفتاح Gemini API Key هنا..."
+                    className="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleAddAiKey}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1"
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>حفظ المفتاح</span>
+                  </button>
                 </div>
 
-                <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/90 space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-2.5">
-                    <input
-                      type="text"
-                      value={newApiKey}
-                      onChange={(e) => setNewApiKey(e.target.value)}
-                      placeholder="ألصق مفتاح Gemini API Key هنا..."
-                      className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
-                    />
-                    <button
-                      onClick={handleAddAiKey}
-                      className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black transition shadow-sm shadow-purple-500/20 shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span>حفظ المفتاح</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 pt-1">
-                    {(branch.aiApiKeys || []).length === 0 ? (
-                      <p className="text-xs text-slate-400 font-bold py-2 text-center">لا توجد مفاتيح محفوظة حالياً، يمكنك إضافة مفتاح لتفعيل استخراج الصور بالذكاء الاصطناعي</p>
-                    ) : (
-                      (branch.aiApiKeys || []).map((key, i) => (
-                        <div key={i} className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200/80 text-xs shadow-2xs">
-                          <span className="font-mono font-bold text-slate-700 dir-ltr">{key.substring(0, 10)}...{key.substring(key.length - 6)}</span>
-                          <button
-                            onClick={() => handleDeleteAiKey(key)}
-                            className="text-rose-600 hover:text-white hover:bg-rose-600 p-2 rounded-lg transition-colors cursor-pointer"
-                            title="حذف المفتاح"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                <div className="space-y-2 pt-2">
+                  {(branch.aiApiKeys || []).map((key, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 text-xs">
+                      <span className="font-mono text-slate-600">{key.substring(0, 10)}...{key.substring(key.length - 6)}</span>
+                      <button
+                        onClick={() => handleDeleteAiKey(key)}
+                        className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

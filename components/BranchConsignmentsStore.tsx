@@ -84,86 +84,65 @@ export default function BranchConsignmentsStore({
   return (
     <div className="space-y-6">
       {/* ========================================================
-          بطاقات إحصائيات مخزن الإرساليات الفخمة
+          بطاقات إحصائيات مخزن الإرساليات
           ======================================================== */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* إجمالي الإرساليات */}
-        <div className="bg-gradient-to-br from-blue-50/60 via-white to-white p-4 sm:p-5 rounded-2xl border border-blue-200/80 shadow-xs hover:shadow-md transition-all duration-200 group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold">إجمالي الإرساليات</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-100/80 text-blue-600 flex items-center justify-center transition-transform group-hover:scale-105 shadow-xs">
-              <Layers className="w-5 h-5" />
-            </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <Layers className="w-6 h-6" />
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
-              {stats.totalCount}
-              <span className="text-xs text-slate-400 font-bold mr-1.5 font-sans">إرسالية</span>
+          <div>
+            <p className="text-xs text-slate-500 font-bold">إجمالي الإرساليات</p>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
+              {stats.totalCount} <span className="text-xs text-slate-400 font-normal">إرسالية</span>
             </h3>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-blue-700 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span>{stats.totalReceipts} وصل مسجل ومدفوع</span>
-            </div>
+            <p className="text-[10px] text-slate-500 font-bold mt-0.5">{stats.totalReceipts} وصل مدفوع</p>
           </div>
         </div>
 
         {/* إجمالي المبالغ */}
-        <div className="bg-gradient-to-br from-emerald-50/60 via-white to-white p-4 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-xs hover:shadow-md transition-all duration-200 group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold">إجمالي مبالغ الإرساليات</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center transition-transform group-hover:scale-105 shadow-xs">
-              <Wallet className="w-5 h-5" />
-            </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Wallet className="w-6 h-6" />
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight truncate font-mono">
-              {stats.totalAmount.toLocaleString('ar-IQ')}
-              <span className="text-xs text-emerald-600 font-bold mr-1 font-sans">د.ع</span>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 font-bold">إجمالي مبالغ الإرساليات</p>
+            <h3 className="text-lg sm:text-xl font-black text-emerald-700 mt-0.5 truncate">
+              {stats.totalAmount.toLocaleString('ar-IQ')}{' '}
+              <span className="text-xs text-emerald-600 font-bold">د.ع</span>
             </h3>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-700 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>مجموع كل وصولات القبض</span>
-            </div>
+            <p className="text-[10px] text-slate-500 font-bold mt-0.5">مجموع كل الوصولات</p>
           </div>
         </div>
 
         {/* حصة الماء */}
-        <div className="bg-gradient-to-br from-sky-50/60 via-white to-white p-4 sm:p-5 rounded-2xl border border-sky-200/80 shadow-xs hover:shadow-md transition-all duration-200 group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold">حصة الماء المحصلة</span>
-            <div className="w-10 h-10 rounded-xl bg-sky-100/80 text-sky-600 flex items-center justify-center transition-transform group-hover:scale-105 shadow-xs">
-              <Building2 className="w-5 h-5" />
-            </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
+            <Building2 className="w-6 h-6" />
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-xl sm:text-2xl font-black text-sky-800 tracking-tight truncate font-mono">
-              {stats.totalWater.toLocaleString('ar-IQ')}
-              <span className="text-xs text-sky-600 font-bold mr-1 font-sans">د.ع</span>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 font-bold">حصة الماء المحصلة</p>
+            <h3 className="text-lg sm:text-xl font-black text-cyan-700 mt-0.5 truncate">
+              {stats.totalWater.toLocaleString('ar-IQ')}{' '}
+              <span className="text-xs text-cyan-600 font-bold">د.ع</span>
             </h3>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-sky-700 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-              <span>مديرية ماء البصرة</span>
-            </div>
+            <p className="text-[10px] text-slate-500 font-bold mt-0.5">مديرية ماء البصرة</p>
           </div>
         </div>
 
         {/* حصة البلدية */}
-        <div className="bg-gradient-to-br from-amber-50/60 via-white to-white p-4 sm:p-5 rounded-2xl border border-amber-200/80 shadow-xs hover:shadow-md transition-all duration-200 group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold">حصة البلدية المحصلة</span>
-            <div className="w-10 h-10 rounded-xl bg-amber-100/80 text-amber-600 flex items-center justify-center transition-transform group-hover:scale-105 shadow-xs">
-              <Hash className="w-5 h-5" />
-            </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Hash className="w-6 h-6" />
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-xl sm:text-2xl font-black text-amber-800 tracking-tight truncate font-mono">
-              {stats.totalMunicipality.toLocaleString('ar-IQ')}
-              <span className="text-xs text-amber-600 font-bold mr-1 font-sans">د.ع</span>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 font-bold">حصة البلدية المحصلة</p>
+            <h3 className="text-lg sm:text-xl font-black text-amber-700 mt-0.5 truncate">
+              {stats.totalMunicipality.toLocaleString('ar-IQ')}{' '}
+              <span className="text-xs text-amber-600 font-bold">د.ع</span>
             </h3>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-amber-700 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              <span>مبالغ البلدية المقتطعة</span>
-            </div>
+            <p className="text-[10px] text-slate-500 font-bold mt-0.5">مبالغ البلدية المقتطعة</p>
           </div>
         </div>
       </div>
@@ -171,23 +150,22 @@ export default function BranchConsignmentsStore({
       {/* ========================================================
           شريط الإجراءات والبحث والفلترة
           ======================================================== */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Layers className="w-4 h-4" />
-              </div>
+              <Layers className="w-5 h-5 text-blue-600" />
               <span>أرشيف ومخزن الإرساليات الرسمية</span>
             </h2>
-            <p className="text-xs text-slate-500 font-bold mt-1">
-              سجل كامل بجميع الإرساليات المحفوظة مع إمكانية استعراضها وطباعتها كاستمارة A4
+            <p className="text-xs text-slate-500 font-bold mt-0.5">
+              سجل كامل بجميع الإرساليات المحفوظة مع إمكانية استعراضها وطباعتها مجدداً كاستمارة A4
             </p>
           </div>
 
           <button
             onClick={onOpenNewConsignment}
-            className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer active:scale-95 shrink-0"
+            style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 transition flex items-center gap-2 shadow-md cursor-pointer active:scale-95 shrink-0"
           >
             <Plus className="w-4 h-4 text-white" />
             <span>إنشاء إرسالية جديدة (A4)</span>
@@ -195,16 +173,16 @@ export default function BranchConsignmentsStore({
         </div>
 
         {/* أدوات البحث والتصفية */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
           {/* البحث بالرقم أو الاسم */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ابحث برقم الورقة (مثال: 02951) أو اسم المحصل..."
-              className="w-full pr-10 pl-3 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full pr-9 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -213,7 +191,7 @@ export default function BranchConsignmentsStore({
             <select
               value={selectedCollectorFilter}
               onChange={(e) => setSelectedCollectorFilter(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">جميع المحصلين (الجباة)</option>
               {branch.collectors.map(c => (
@@ -228,12 +206,12 @@ export default function BranchConsignmentsStore({
               type="date"
               value={selectedDateFilter}
               onChange={(e) => setSelectedDateFilter(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             {selectedDateFilter && (
               <button
                 onClick={() => setSelectedDateFilter('')}
-                className="p-2.5 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 text-xs font-bold transition"
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 text-xs font-bold"
                 title="إلغاء فلتر التاريخ"
               >
                 مسح
@@ -247,8 +225,8 @@ export default function BranchConsignmentsStore({
           جدول الإرساليات المحفوظة
           ======================================================== */}
       {filteredConsignments.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-xs">
-          <div className="w-16 h-16 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mx-auto mb-3 border border-slate-100">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
             <Layers className="w-8 h-8" />
           </div>
           <h3 className="text-base sm:text-lg font-black text-slate-800">لا توجد إرساليات في المخزن</h3>
