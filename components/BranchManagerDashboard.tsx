@@ -1644,7 +1644,7 @@ export default function BranchManagerDashboard({
               ...w,
               name: writerName.trim(),
               phone: writerPhone.trim(),
-              assignedAreaIds: selectedWriterAreas,
+              assignedAreaIds: w.assignedAreaIds || [],
               assignedSubscriberIds: assignedSubs,
               workHoursEnabled: writerWorkHoursEnabled,
               workHourStart: writerWorkHoursEnabled ? writerWorkHourStart : undefined,
@@ -1658,7 +1658,7 @@ export default function BranchManagerDashboard({
         name: writerName.trim(),
         phone: writerPhone.trim(),
         token: generateSecureToken('wri'),
-        assignedAreaIds: selectedWriterAreas,
+        assignedAreaIds: [],
         assignedSubscriberIds: assignedSubs,
         workHoursEnabled: writerWorkHoursEnabled,
         workHourStart: writerWorkHoursEnabled ? writerWorkHourStart : undefined,
@@ -4208,11 +4208,10 @@ export default function BranchManagerDashboard({
           <div 
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: '24px',
+              borderRadius: '20px',
               width: '100%',
-              maxWidth: '980px',
-              height: '84vh',
-              maxHeight: '84vh',
+              maxWidth: '580px',
+              maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -4220,61 +4219,141 @@ export default function BranchManagerDashboard({
               border: '1px solid #cbd5e1'
             }}
           >
-            {/* الرأس المدمج بدون أي فراغ زائد - مع الحقول وأدوات البحث في حزمة واحدة أنيقة */}
-            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2.5">
-              {/* السطر الأول: العنوان على اليمين وزر الإغلاق على اليسار */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
-                    <BookOpen className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 leading-tight">
-                      {editingWriter ? 'تعديل بيانات ومناطق الكاتب' : 'إضافة كاتب جديد'}
-                    </h3>
-                    <p className="text-[10px] text-slate-500 font-bold leading-tight">حدد المناطق المخصصة لهذا الكاتب</p>
-                  </div>
+            {/* رأس النافذة الأنيق */}
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
+                  <BookOpen className="w-5 h-5" />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowWriterModal(false)
-                    setShowSelectedOnlyWriter(false)
-                  }}
-                  className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    {editingWriter ? 'تعديل بيانات الكاتب' : 'إضافة كاتب جديد'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-bold leading-tight mt-0.5">
+                    تحديد بيانات الكاتب ونطاق الاشتراكات وساعات العمل
+                  </p>
+                </div>
               </div>
 
-              {/* السطر الثاني: حقول الاسم والهاتف */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWriterModal(false)
+                }}
+                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* جسم النافذة القابل للتمرير إن لزم الأمر */}
+            <div className="p-4 space-y-3.5 overflow-y-auto max-h-[calc(90vh-130px)]">
+              {/* حقول الاسم ورقم الهاتف */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">اسم الكاتب:</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">اسم الكاتب:</label>
                   <input
                     type="text"
                     value={writerName}
                     onChange={(e) => setWriterName(e.target.value)}
-                    placeholder="الاسم..."
-                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                    placeholder="اسم الكاتب الكامل..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none transition"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رقم الهاتف:</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف:</label>
                   <input
                     type="text"
                     value={writerPhone}
                     onChange={(e) => setWriterPhone(e.target.value)}
                     placeholder="07xxxxxxxxx"
-                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none dir-ltr text-right font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none dir-ltr text-right font-mono transition"
                   />
                 </div>
               </div>
 
+              {/* قسم تخصيص نطاق اشتراكات الكاتب (من رقم إلى رقم) */}
+              {(() => {
+                const wFromNum = parseInt(writerRangeFrom.trim(), 10)
+                const wToNum = parseInt(writerRangeTo.trim(), 10)
+                const isValidRange = !isNaN(wFromNum) && !isNaN(wToNum) && wFromNum > 0 && wToNum > 0
+                const matchedCount = isValidRange ? (branch.subscribers || []).filter(s => {
+                  const id = Number(s.id)
+                  return !isNaN(id) && id >= Math.min(wFromNum, wToNum) && id <= Math.max(wFromNum, wToNum)
+                }).length : 0
+
+                return (
+                  <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-3.5 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-purple-700" />
+                        <span className="text-xs font-black text-purple-950">
+                          تحديد نطاق اشتراكات الكاتب (من وإلى):
+                        </span>
+                      </div>
+
+                      {isValidRange && (
+                        <span className="text-[11px] font-black bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full border border-purple-300">
+                          سيتم إسناد ({matchedCount}) مشترك لهذا الكاتب
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {/* حقل من اشتراك */}
+                      <div className="bg-white border border-purple-200 rounded-xl p-2 focus-within:ring-2 focus-within:ring-purple-500 shadow-2xs">
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">من اشتراك رقم:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={writerRangeFrom}
+                          onChange={(e) => setWriterRangeFrom(e.target.value)}
+                          placeholder="مثلاً: 11001"
+                          className="w-full font-black text-purple-950 outline-none bg-transparent text-sm font-mono"
+                        />
+                      </div>
+
+                      {/* حقل إلى اشتراك */}
+                      <div className="bg-white border border-purple-200 rounded-xl p-2 focus-within:ring-2 focus-within:ring-purple-500 shadow-2xs">
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">إلى اشتراك رقم:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={writerRangeTo}
+                          onChange={(e) => setWriterRangeTo(e.target.value)}
+                          placeholder="مثلاً: 12000"
+                          className="w-full font-black text-purple-950 outline-none bg-transparent text-sm font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <span className="text-[10px] text-slate-500 font-bold">
+                        (عند الحفظ سيتم ربط كافة المشتركين الواقعين ضمن هذا النطاق بالكاتب تلقائياً)
+                      </span>
+
+                      {(writerRangeFrom || writerRangeTo) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWriterRangeFrom('')
+                            setWriterRangeTo('')
+                          }}
+                          className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-bold transition border border-rose-200 flex items-center gap-1 cursor-pointer shrink-0"
+                          title="مسح النطاق"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>إفراغ النطاق</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
+
               {/* قسم تقييد ساعات العمل بالتوقيت العراقي */}
-              <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-2.5 space-y-2">
+              <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-3 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -4295,9 +4374,9 @@ export default function BranchManagerDashboard({
                 </div>
 
                 {writerWorkHoursEnabled && (
-                  <div className="flex flex-wrap items-center gap-3 pt-1.5 border-t border-amber-200/70">
-                    <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-amber-200 shadow-2xs">
-                      <span className="text-[11px] font-bold text-slate-700">مِـن الساعة:</span>
+                  <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-amber-200/70">
+                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-amber-200 shadow-2xs">
+                      <span className="text-[11px] font-bold text-slate-700">مِـن:</span>
                       <input
                         type="time"
                         value={writerWorkHourStart}
@@ -4307,8 +4386,8 @@ export default function BranchManagerDashboard({
                       <span className="text-[10px] text-slate-500 font-bold">({formatTimeArabic(writerWorkHourStart)})</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-amber-200 shadow-2xs">
-                      <span className="text-[11px] font-bold text-slate-700">إلـى الساعة:</span>
+                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-amber-200 shadow-2xs">
+                      <span className="text-[11px] font-bold text-slate-700">إلـى:</span>
                       <input
                         type="time"
                         value={writerWorkHourEnd}
@@ -4318,262 +4397,31 @@ export default function BranchManagerDashboard({
                       <span className="text-[10px] text-slate-500 font-bold">({formatTimeArabic(writerWorkHourEnd)})</span>
                     </div>
 
-                    <span className="text-[11px] text-slate-600 font-bold">
-                      الوقت الحالي في العراق: <strong className="text-amber-800 font-black">{getIraqCurrentTime().formatted12h}</strong>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      الوقت الحالي: <strong className="text-amber-800 font-black">{getIraqCurrentTime().formatted12h}</strong>
                     </span>
                   </div>
                 )}
               </div>
-
-              {/* قسم تخصيص نطاق اشتراكات الكاتب (من رقم إلى رقم) */}
-              {(() => {
-                const wFromNum = parseInt(writerRangeFrom.trim(), 10)
-                const wToNum = parseInt(writerRangeTo.trim(), 10)
-                const isValidRange = !isNaN(wFromNum) && !isNaN(wToNum) && wFromNum > 0 && wToNum > 0
-                const matchedCount = isValidRange ? (branch.subscribers || []).filter(s => {
-                  const id = Number(s.id)
-                  return !isNaN(id) && id >= Math.min(wFromNum, wToNum) && id <= Math.max(wFromNum, wToNum)
-                }).length : 0
-
-                return (
-                  <div className="bg-purple-50/80 border border-purple-200 rounded-xl p-2.5 space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-purple-700" />
-                        <span className="text-xs font-black text-purple-950">
-                          تحديد نطاق اشتراكات الكاتب (من وإلى):
-                        </span>
-                      </div>
-
-                      {isValidRange && (
-                        <span className="text-[11px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md border border-purple-300">
-                          سيتم إسناد ({matchedCount}) مشترك لهذا الكاتب
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      {/* حقل من اشتراك */}
-                      <div className="flex items-center gap-1.5 bg-white border border-purple-200 rounded-lg px-2.5 py-1 focus-within:ring-2 focus-within:ring-purple-500 shadow-2xs">
-                        <span className="text-[11px] font-bold text-slate-700">مِـن اشتراك رقم:</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={writerRangeFrom}
-                          onChange={(e) => setWriterRangeFrom(e.target.value)}
-                          placeholder="11001"
-                          className="w-20 font-black text-purple-950 text-center outline-none bg-transparent text-xs"
-                        />
-                      </div>
-
-                      {/* حقل إلى اشتراك */}
-                      <div className="flex items-center gap-1.5 bg-white border border-purple-200 rounded-lg px-2.5 py-1 focus-within:ring-2 focus-within:ring-purple-500 shadow-2xs">
-                        <span className="text-[11px] font-bold text-slate-700">إلـى اشتراك رقم:</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={writerRangeTo}
-                          onChange={(e) => setWriterRangeTo(e.target.value)}
-                          placeholder="12000"
-                          className="w-24 font-black text-purple-950 text-center outline-none bg-transparent text-xs"
-                        />
-                      </div>
-
-                      {/* زر إفراغ النطاق */}
-                      {(writerRangeFrom || writerRangeTo) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setWriterRangeFrom('')
-                            setWriterRangeTo('')
-                          }}
-                          className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-bold transition border border-rose-200 flex items-center gap-1 cursor-pointer"
-                          title="مسح النطاق وإلغاء تخصيص الاشتراكات للكاتب"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>إفراغ النطاق</span>
-                        </button>
-                      )}
-
-                      <span className="text-[10px] text-slate-500 font-bold">
-                        (عند ملء النطاق سيتم إسناد كافة الاشتراكات الواقعة بين الرقمين تلقائياً عند الحفظ)
-                      </span>
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {/* السطر الثالث: شريط البحث مع زر إظهار المناطق المختارة وأزرار التحديد السريع */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={writerAreaSearch}
-                    onChange={(e) => setWriterAreaSearch(e.target.value)}
-                    placeholder="ابحث عن اسم منطقة..."
-                    className="w-full pr-7 pl-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 text-[11px] font-bold shrink-0">
-                  {/* زر إظهار المناطق المختارة فقط */}
-                  <button
-                    type="button"
-                    onClick={() => setShowSelectedOnlyWriter(!showSelectedOnlyWriter)}
-                    className={`px-3 py-1 rounded-lg transition border flex items-center gap-1.5 shadow-2xs ${
-                      showSelectedOnlyWriter
-                        ? 'bg-amber-600 border-amber-700 text-white font-black'
-                        : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900'
-                    }`}
-                  >
-                    <span>{showSelectedOnlyWriter ? '✓ إظهار جميع المناطق' : 'المناطق المختارة فقط'}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                      showSelectedOnlyWriter ? 'bg-white text-amber-700' : 'bg-amber-200 text-amber-900'
-                    }`}>
-                      {selectedWriterAreas.length}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const filteredIds = (branch.areas || [])
-                        .filter(a => {
-                          if (showSelectedOnlyWriter && !selectedWriterAreas.includes(a.id)) return false
-                          if (writerAreaSearch && !a.name.toLowerCase().includes(writerAreaSearch.toLowerCase())) return false
-                          return true
-                        })
-                        .map(a => a.id)
-                      setSelectedWriterAreas(Array.from(new Set([...selectedWriterAreas, ...filteredIds])))
-                    }}
-                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
-                  >
-                    تحديد المعروض
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedWriterAreas([])}
-                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition"
-                  >
-                    إلغاء التحديد
-                  </button>
-                </div>
-              </div>
             </div>
 
-            {/* صندوق شبكة المناطق: 4 مناطق في السطر دائماً ومقاس مصغر */}
-            <div 
-              style={{
-                flex: 1,
-                minHeight: 0,
-                overflowY: 'auto',
-                padding: '10px 12px',
-                backgroundColor: '#f8fafc'
-              }}
-            >
-              <div 
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                  gap: '6px'
-                }}
+            {/* أزرار الإجراءات في الأسفل */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowWriterModal(false)}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition shadow-2xs cursor-pointer"
               >
-                {(branch.areas || [])
-                  .filter(a => {
-                    if (showSelectedOnlyWriter && !selectedWriterAreas.includes(a.id)) return false
-                    if (writerAreaSearch && !a.name.toLowerCase().includes(writerAreaSearch.toLowerCase())) return false
-                    return true
-                  })
-                  .map(area => {
-                    const isChecked = selectedWriterAreas.includes(area.id)
-                    return (
-                      <label
-                        key={area.id}
-                        className={`flex items-center gap-1.5 p-1.5 rounded-lg cursor-pointer transition border select-none text-[11px] ${
-                          isChecked
-                            ? 'bg-amber-50 border-amber-400 text-amber-950 font-black shadow-2xs'
-                            : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 font-bold'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedWriterAreas([...selectedWriterAreas, area.id])
-                            } else {
-                              setSelectedWriterAreas(selectedWriterAreas.filter(id => id !== area.id))
-                            }
-                          }}
-                          className="w-3 h-3 rounded text-amber-600 border-slate-300 cursor-pointer shrink-0"
-                        />
-                        <span className="truncate" title={area.name}>{area.name}</span>
-                      </label>
-                    )
-                  })}
-              </div>
-
-              {/* رسائل التنبيه عند عدم وجود نتائج */}
-              {(() => {
-                const filteredCount = (branch.areas || []).filter(a => {
-                  if (showSelectedOnlyWriter && !selectedWriterAreas.includes(a.id)) return false
-                  if (writerAreaSearch && !a.name.toLowerCase().includes(writerAreaSearch.toLowerCase())) return false
-                  return true
-                }).length
-
-                if (filteredCount === 0) {
-                  return (
-                    <div className="text-center py-10 text-slate-400 font-bold text-xs space-y-1">
-                      {showSelectedOnlyWriter ? (
-                        <>
-                          <p className="text-slate-600 font-black">لم تقم بتحديد أي مناطق لهذا الكاتب حتى الآن</p>
-                          <p className="text-[11px] text-slate-400">انقر على &quot;إظهار جميع المناطق&quot; لتحديد المناطق المطلوبة</p>
-                        </>
-                      ) : (
-                        <p>لا توجد مناطق مطابقة للبحث</p>
-                      )}
-                    </div>
-                  )
-                }
-                return null
-              })()}
-            </div>
-
-            {/* أزرار الإجراءات في الأسفل مثبتة ومصغرة */}
-            <div 
-              style={{
-                flexShrink: 0,
-                padding: '10px 16px',
-                borderTop: '1px solid #e2e8f0',
-                backgroundColor: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}
-            >
-              <div className="text-xs font-black text-slate-700">
-                المحدد: <span className="text-amber-700 font-mono font-black text-xs">{selectedWriterAreas.length}</span> منطقة
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowWriterModal(false)}
-                  className="px-3.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-100 transition shadow-2xs"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveWriter}
-                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-lg transition shadow-sm flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>حفظ الكاتب</span>
-                </button>
-              </div>
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveWriter}
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>حفظ الكاتب</span>
+              </button>
             </div>
           </div>
         </div>
