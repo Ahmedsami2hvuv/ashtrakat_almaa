@@ -163,6 +163,8 @@ export default function BranchManagerDashboard({
   const [selectedCollectorAreas, setSelectedCollectorAreas] = useState<string[]>([])
   const [collectorAreaSearch, setCollectorAreaSearch] = useState('')
   const [showSelectedOnlyCollector, setShowSelectedOnlyCollector] = useState(false)
+  const [collectorRangeFrom, setCollectorRangeFrom] = useState('')
+  const [collectorRangeTo, setCollectorRangeTo] = useState('')
 
   // حالات الكتاب
   const [showWriterModal, setShowWriterModal] = useState(false)
@@ -175,6 +177,8 @@ export default function BranchManagerDashboard({
   const [writerWorkHoursEnabled, setWriterWorkHoursEnabled] = useState(false)
   const [writerWorkHourStart, setWriterWorkHourStart] = useState('08:00')
   const [writerWorkHourEnd, setWriterWorkHourEnd] = useState('14:00')
+  const [writerRangeFrom, setWriterRangeFrom] = useState('')
+  const [writerRangeTo, setWriterRangeTo] = useState('')
   const [copiedWriterId, setCopiedWriterId] = useState<string | null>(null)
   const [copiedCollectorId, setCopiedCollectorId] = useState<string | null>(null)
   const [collectorSearch, setCollectorSearch] = useState('')
@@ -1508,6 +1512,27 @@ export default function BranchManagerDashboard({
       return
     }
 
+    let assignedSubs: number[] = editingCollector?.assignedSubscriberIds || []
+    const cFrom = collectorRangeFrom.trim()
+    const cTo = collectorRangeTo.trim()
+
+    if (cFrom === '' && cTo === '') {
+      assignedSubs = []
+    } else if (cFrom !== '' && cTo !== '') {
+      const fromNum = parseInt(cFrom, 10)
+      const toNum = parseInt(cTo, 10)
+      if (!isNaN(fromNum) && !isNaN(toNum) && fromNum > 0 && toNum > 0) {
+        const start = Math.min(fromNum, toNum)
+        const end = Math.max(fromNum, toNum)
+        assignedSubs = (branch.subscribers || [])
+          .filter(s => {
+            const id = Number(s.id)
+            return !isNaN(id) && id >= start && id <= end
+          })
+          .map(s => s.id)
+      }
+    }
+
     let updatedCollectors = [...(branch.collectors || [])]
     if (editingCollector) {
       updatedCollectors = updatedCollectors.map(c =>
@@ -1517,7 +1542,8 @@ export default function BranchManagerDashboard({
               name: collectorName.trim(),
               phone: collectorPhone.trim(),
               canEdit: collectorCanEdit,
-              assignedAreaIds: selectedCollectorAreas
+              assignedAreaIds: selectedCollectorAreas,
+              assignedSubscriberIds: assignedSubs
             }
           : c
       )
@@ -1528,6 +1554,7 @@ export default function BranchManagerDashboard({
         phone: collectorPhone.trim(),
         token: generateSecureToken('col'),
         assignedAreaIds: selectedCollectorAreas,
+        assignedSubscriberIds: assignedSubs,
         canEdit: collectorCanEdit,
         createdAt: new Date().toISOString()
       }
@@ -1540,6 +1567,8 @@ export default function BranchManagerDashboard({
     setCollectorName('')
     setCollectorPhone('')
     setSelectedCollectorAreas([])
+    setCollectorRangeFrom('')
+    setCollectorRangeTo('')
   }
 
   const handleDeleteCollector = (collectorId: string, name: string) => {
@@ -1586,6 +1615,27 @@ export default function BranchManagerDashboard({
       return
     }
 
+    let assignedSubs: number[] = editingWriter?.assignedSubscriberIds || []
+    const wFrom = writerRangeFrom.trim()
+    const wTo = writerRangeTo.trim()
+
+    if (wFrom === '' && wTo === '') {
+      assignedSubs = []
+    } else if (wFrom !== '' && wTo !== '') {
+      const fromNum = parseInt(wFrom, 10)
+      const toNum = parseInt(wTo, 10)
+      if (!isNaN(fromNum) && !isNaN(toNum) && fromNum > 0 && toNum > 0) {
+        const start = Math.min(fromNum, toNum)
+        const end = Math.max(fromNum, toNum)
+        assignedSubs = (branch.subscribers || [])
+          .filter(s => {
+            const id = Number(s.id)
+            return !isNaN(id) && id >= start && id <= end
+          })
+          .map(s => s.id)
+      }
+    }
+
     let updatedWriters = [...(branch.writers || [])]
     if (editingWriter) {
       updatedWriters = updatedWriters.map(w =>
@@ -1595,6 +1645,7 @@ export default function BranchManagerDashboard({
               name: writerName.trim(),
               phone: writerPhone.trim(),
               assignedAreaIds: selectedWriterAreas,
+              assignedSubscriberIds: assignedSubs,
               workHoursEnabled: writerWorkHoursEnabled,
               workHourStart: writerWorkHoursEnabled ? writerWorkHourStart : undefined,
               workHourEnd: writerWorkHoursEnabled ? writerWorkHourEnd : undefined
@@ -1608,6 +1659,7 @@ export default function BranchManagerDashboard({
         phone: writerPhone.trim(),
         token: generateSecureToken('wri'),
         assignedAreaIds: selectedWriterAreas,
+        assignedSubscriberIds: assignedSubs,
         workHoursEnabled: writerWorkHoursEnabled,
         workHourStart: writerWorkHoursEnabled ? writerWorkHourStart : undefined,
         workHourEnd: writerWorkHoursEnabled ? writerWorkHourEnd : undefined,
@@ -1625,6 +1677,8 @@ export default function BranchManagerDashboard({
     setWriterWorkHoursEnabled(false)
     setWriterWorkHourStart('08:00')
     setWriterWorkHourEnd('14:00')
+    setWriterRangeFrom('')
+    setWriterRangeTo('')
   }
 
   const handleDeleteWriter = (writerId: string, name: string) => {
@@ -2610,6 +2664,8 @@ export default function BranchManagerDashboard({
                       setCollectorPhone('')
                       setCollectorCanEdit(false)
                       setSelectedCollectorAreas([])
+                      setCollectorRangeFrom('')
+                      setCollectorRangeTo('')
                       setShowCollectorModal(true)
                     }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
@@ -2856,7 +2912,6 @@ export default function BranchManagerDashboard({
                             </button>
 
                             {/* زر التعديل - أيقونة */}
-                            {/* زر التعديل - أيقونة */}
                             <button
                               type="button"
                               onClick={() => {
@@ -2865,10 +2920,18 @@ export default function BranchManagerDashboard({
                                 setCollectorPhone(collector.phone)
                                 setCollectorCanEdit(collector.canEdit)
                                 setSelectedCollectorAreas(collector.assignedAreaIds || [])
+                                if (collector.assignedSubscriberIds && collector.assignedSubscriberIds.length > 0) {
+                                  const sorted = Array.from(new Set(collector.assignedSubscriberIds)).sort((a, b) => a - b)
+                                  setCollectorRangeFrom(sorted[0].toString())
+                                  setCollectorRangeTo(sorted[sorted.length - 1].toString())
+                                } else {
+                                  setCollectorRangeFrom('')
+                                  setCollectorRangeTo('')
+                                }
                                 setShowCollectorModal(true)
                               }}
                               className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs"
-                              title="تعديل بيانات المحصل ومناطقه"
+                              title="تعديل بيانات المحصل ومناطقه واشتراكاته"
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
@@ -2939,6 +3002,8 @@ export default function BranchManagerDashboard({
                       setWriterWorkHoursEnabled(false)
                       setWriterWorkHourStart('08:00')
                       setWriterWorkHourEnd('14:00')
+                      setWriterRangeFrom('')
+                      setWriterRangeTo('')
                       setShowWriterModal(true)
                     }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
@@ -3213,10 +3278,18 @@ export default function BranchManagerDashboard({
                                 setWriterWorkHoursEnabled(!!writer.workHoursEnabled)
                                 setWriterWorkHourStart(writer.workHourStart || '08:00')
                                 setWriterWorkHourEnd(writer.workHourEnd || '14:00')
+                                if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
+                                  const sorted = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
+                                  setWriterRangeFrom(sorted[0].toString())
+                                  setWriterRangeTo(sorted[sorted.length - 1].toString())
+                                } else {
+                                  setWriterRangeFrom('')
+                                  setWriterRangeTo('')
+                                }
                                 setShowWriterModal(true)
                               }}
                               className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs"
-                              title="تعديل بيانات الكاتب ومناطقه"
+                              title="تعديل بيانات الكاتب ومناطقه واشتراكاته"
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
@@ -3863,6 +3936,84 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
+              {/* قسم تخصيص نطاق اشتراكات المحصل (من رقم إلى رقم) */}
+              {(() => {
+                const cFromNum = parseInt(collectorRangeFrom.trim(), 10)
+                const cToNum = parseInt(collectorRangeTo.trim(), 10)
+                const isValidRange = !isNaN(cFromNum) && !isNaN(cToNum) && cFromNum > 0 && cToNum > 0
+                const matchedCount = isValidRange ? (branch.subscribers || []).filter(s => {
+                  const id = Number(s.id)
+                  return !isNaN(id) && id >= Math.min(cFromNum, cToNum) && id <= Math.max(cFromNum, cToNum)
+                }).length : 0
+
+                return (
+                  <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-2.5 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-blue-700" />
+                        <span className="text-xs font-black text-blue-950">
+                          تحديد نطاق اشتراكات المحصل (من وإلى):
+                        </span>
+                      </div>
+
+                      {isValidRange && (
+                        <span className="text-[11px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md border border-blue-300">
+                          سيتم إسناد ({matchedCount}) مشترك لهذا المحصل
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      {/* حقل من اشتراك */}
+                      <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1 focus-within:ring-2 focus-within:ring-blue-500 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-700">مِـن اشتراك رقم:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={collectorRangeFrom}
+                          onChange={(e) => setCollectorRangeFrom(e.target.value)}
+                          placeholder="11001"
+                          className="w-20 font-black text-blue-950 text-center outline-none bg-transparent text-xs"
+                        />
+                      </div>
+
+                      {/* حقل إلى اشتراك */}
+                      <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1 focus-within:ring-2 focus-within:ring-blue-500 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-700">إلـى اشتراك رقم:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={collectorRangeTo}
+                          onChange={(e) => setCollectorRangeTo(e.target.value)}
+                          placeholder="12000"
+                          className="w-24 font-black text-blue-950 text-center outline-none bg-transparent text-xs"
+                        />
+                      </div>
+
+                      {/* زر إفراغ النطاق */}
+                      {(collectorRangeFrom || collectorRangeTo) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCollectorRangeFrom('')
+                            setCollectorRangeTo('')
+                          }}
+                          className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-bold transition border border-rose-200 flex items-center gap-1 cursor-pointer"
+                          title="مسح النطاق وإلغاء تخصيص الاشتراكات للمحصل"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>إفراغ النطاق</span>
+                        </button>
+                      )}
+
+                      <span className="text-[10px] text-slate-500 font-bold">
+                        (عند ملء النطاق سيتم إسناد كافة الاشتراكات الواقعة بين الرقمين تلقائياً عند الحفظ)
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
+
               {/* السطر الثالث: شريط البحث مع زر إظهار المناطق المختارة وأزرار التحديد السريع */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
                 <div className="relative flex-1 min-w-[200px]">
@@ -4173,6 +4324,84 @@ export default function BranchManagerDashboard({
                   </div>
                 )}
               </div>
+
+              {/* قسم تخصيص نطاق اشتراكات الكاتب (من رقم إلى رقم) */}
+              {(() => {
+                const wFromNum = parseInt(writerRangeFrom.trim(), 10)
+                const wToNum = parseInt(writerRangeTo.trim(), 10)
+                const isValidRange = !isNaN(wFromNum) && !isNaN(wToNum) && wFromNum > 0 && wToNum > 0
+                const matchedCount = isValidRange ? (branch.subscribers || []).filter(s => {
+                  const id = Number(s.id)
+                  return !isNaN(id) && id >= Math.min(wFromNum, wToNum) && id <= Math.max(wFromNum, wToNum)
+                }).length : 0
+
+                return (
+                  <div className="bg-purple-50/80 border border-purple-200 rounded-xl p-2.5 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-purple-700" />
+                        <span className="text-xs font-black text-purple-950">
+                          تحديد نطاق اشتراكات الكاتب (من وإلى):
+                        </span>
+                      </div>
+
+                      {isValidRange && (
+                        <span className="text-[11px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md border border-purple-300">
+                          سيتم إسناد ({matchedCount}) مشترك لهذا الكاتب
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      {/* حقل من اشتراك */}
+                      <div className="flex items-center gap-1.5 bg-white border border-purple-200 rounded-lg px-2.5 py-1 focus-within:ring-2 focus-within:ring-purple-500 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-700">مِـن اشتراك رقم:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={writerRangeFrom}
+                          onChange={(e) => setWriterRangeFrom(e.target.value)}
+                          placeholder="11001"
+                          className="w-20 font-black text-purple-950 text-center outline-none bg-transparent text-xs"
+                        />
+                      </div>
+
+                      {/* حقل إلى اشتراك */}
+                      <div className="flex items-center gap-1.5 bg-white border border-purple-200 rounded-lg px-2.5 py-1 focus-within:ring-2 focus-within:ring-purple-500 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-700">إلـى اشتراك رقم:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={writerRangeTo}
+                          onChange={(e) => setWriterRangeTo(e.target.value)}
+                          placeholder="12000"
+                          className="w-24 font-black text-purple-950 text-center outline-none bg-transparent text-xs"
+                        />
+                      </div>
+
+                      {/* زر إفراغ النطاق */}
+                      {(writerRangeFrom || writerRangeTo) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWriterRangeFrom('')
+                            setWriterRangeTo('')
+                          }}
+                          className="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-bold transition border border-rose-200 flex items-center gap-1 cursor-pointer"
+                          title="مسح النطاق وإلغاء تخصيص الاشتراكات للكاتب"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>إفراغ النطاق</span>
+                        </button>
+                      )}
+
+                      <span className="text-[10px] text-slate-500 font-bold">
+                        (عند ملء النطاق سيتم إسناد كافة الاشتراكات الواقعة بين الرقمين تلقائياً عند الحفظ)
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* السطر الثالث: شريط البحث مع زر إظهار المناطق المختارة وأزرار التحديد السريع */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
