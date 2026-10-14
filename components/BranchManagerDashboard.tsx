@@ -1859,37 +1859,24 @@ export default function BranchManagerDashboard({
         }
       `}</style>
 
-      {/* الترويسة العلوية الرسمية الفخمة المطابقة للملف الأصلي (Enterprise Executive Header) */}
+      {/* الترويسة العلوية الرسمية الفخمة بسطر واحد (Single-row Enterprise Executive Header) */}
       <header className="gov-header sticky top-0 z-40 shadow-md">
-        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* الجانب الأيمن: شعار الماء واسم الفرع (تم حذف عبارة الوزارة والمديرية تماماً) */}
-          <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
+          {/* الجانب الأيمن: شعار الماء واسم الفرع بسطر واحد نظيف */}
+          <div className="flex items-center gap-3 shrink-0">
             <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
               style={{ backgroundColor: 'rgba(2, 132, 199, 0.2)', border: '1px solid #0284c7' }}
             >
               <Droplets className="w-6 h-6" style={{ color: '#38bdf8' }} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded font-extrabold"
-                  style={{ backgroundColor: '#0284c7', color: '#0F172A' }}
-                >
-                  نظام إدارة الإيرادات المائية
-                </span>
-                <span className="text-[10px] font-bold" style={{ color: '#38bdf8' }}>
-                  مزامنة سحابية مباشرة
-                </span>
-              </div>
-              <h1 className="text-lg font-black tracking-wide text-white mt-0.5">
-                {branch.name}
-              </h1>
-            </div>
+            <h1 className="text-base sm:text-lg font-black tracking-wide text-white m-0">
+              {branch.name}
+            </h1>
           </div>
 
-          {/* الجانب الأيسر: ساعة العراق، بطاقة مسؤول الفرع المباشر، وأزرار الإرساليات */}
-          <div className="flex items-center flex-wrap md:flex-nowrap gap-3 w-full md:w-auto justify-end">
+          {/* الجانب الأيسر: ساعة العراق، بطاقة مسؤول الفرع المباشر (حسين علي لفته)، وزر إنشاء إرسالية A4 بسطر واحد */}
+          <div className="flex items-center gap-3 shrink-0">
             {iraqTime && (
               <div 
                 className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
@@ -1901,51 +1888,29 @@ export default function BranchManagerDashboard({
               </div>
             )}
 
-            {/* بطاقة مسؤول الفرع المباشر (مثل تصميم الملف الأصلي السطور 110-118 تماماً) */}
+            {/* بطاقة مسؤول الفرع المباشر (حسين علي لفتة) */}
             <div 
-              className="flex items-center gap-3 px-4 py-2 rounded-xl shadow-inner"
+              className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl shadow-inner"
               style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(2, 132, 199, 0.5)' }}
             >
               <div 
-                className="w-9 h-9 rounded-lg font-black flex items-center justify-center text-sm shadow shrink-0"
+                className="w-8 h-8 rounded-lg font-black flex items-center justify-center text-xs shadow shrink-0"
                 style={{ backgroundColor: '#0284c7', color: '#0F172A' }}
               >
-                {(currentManager?.name || 'علي').charAt(0)}
+                {(currentManager?.name || 'حسين').charAt(0)}
               </div>
               <div className="text-right">
                 <span 
-                  className="text-[10px] font-bold uppercase tracking-widest block"
+                  className="text-[9px] font-bold uppercase tracking-widest block leading-tight"
                   style={{ color: '#38bdf8' }}
                 >
                   مسؤول الفرع المباشر
                 </span>
-                <h3 className="text-xs font-bold text-white">
-                  {currentManager ? currentManager.name : 'الأستاذ / علي حسين علي لفته'}
+                <h3 className="text-xs font-bold text-white leading-tight">
+                  {currentManager ? currentManager.name : 'الأستاذ / حسين علي لفته'}
                 </h3>
               </div>
             </div>
-
-            <button
-              onClick={() => {
-                setSelectedConsignmentForView(null)
-                setActiveTab('consignments')
-              }}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-              style={{
-                backgroundColor: activeTab === 'consignments' ? '#0284c7' : 'rgba(30, 41, 59, 0.9)',
-                color: '#ffffff',
-                border: '1px solid rgba(56, 189, 248, 0.4)'
-              }}
-            >
-              <Layers className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} />
-              <span>مخزن الإرساليات</span>
-              <span 
-                className="text-[10px] px-2 py-0.5 rounded font-black"
-                style={{ backgroundColor: 'rgba(2, 132, 199, 0.25)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}
-              >
-                {branch.consignments?.length || 0}
-              </span>
-            </button>
 
             <button
               onClick={() => {
@@ -1955,7 +1920,7 @@ export default function BranchManagerDashboard({
                 setSelectedConsignmentForView(null)
                 setIsConsignmentA4Open(true)
               }}
-              className="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md shrink-0 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md shrink-0 cursor-pointer active:scale-95"
               style={{
                 backgroundColor: '#0284c7',
                 color: '#ffffff',
@@ -2176,7 +2141,7 @@ export default function BranchManagerDashboard({
                     className="font-bold text-sm"
                     style={{ color: '#0F172A' }}
                   >
-                    توجيه إداري صادر من مكتب مسؤول الفرع ({currentManager?.name || 'الأستاذ / علي حسين علي لفته'})
+                    توجيه إداري صادر من مكتب مسؤول الفرع ({currentManager?.name || 'الأستاذ / حسين علي لفته'})
                   </h4>
                   <p className="text-xs text-gray-600 mt-1">
                     يُرجى من كافة السادة المحصلين والكتّاب الالتزام التام بتدقيق السجلات اليومية وتسليم الإرساليات إلى المخزن المالي في موعد أقصاه الساعة الثانية ظهراً.
