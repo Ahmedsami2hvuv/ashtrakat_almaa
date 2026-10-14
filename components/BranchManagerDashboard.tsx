@@ -1813,60 +1813,113 @@ export default function BranchManagerDashboard({
   ]
 
   return (
-    <div className="min-h-screen bg-[#f0f7fb] text-slate-800 flex flex-col font-sans water-cursor" dir="rtl">
-      {/* مؤشر الفأرة المائي المخصص (Water Droplet Cursor) */}
+    <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ backgroundColor: '#F4F6F9', color: '#1E293B' }} dir="rtl">
+      {/* ستايل مخصص ومباشر 100% لضمان تطابق التصميم الحكومي الفخم ومؤشر قطرة الماء */}
       <style>{`
-        .water-cursor, .water-cursor * {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%230284c7' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3Cpath d='M12 7c-2 2-2 4 0 6' stroke='%23bae6fd' stroke-width='1' fill='none'/%3E%3C/svg%3E") 12 2, auto !important;
+        .water-dashboard, .water-dashboard * {
+          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%230284c7' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3C/svg%3E") 12 2, auto !important;
         }
-        .water-cursor button, .water-cursor a, .water-cursor input, .water-cursor select, .water-cursor [role='button'], .water-cursor .cursor-pointer {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%2306b6d4' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23ffffff'/%3E%3C/svg%3E") 12 2, pointer !important;
+        .water-dashboard button, .water-dashboard a, .water-dashboard input, .water-dashboard select, .water-dashboard [role='button'], .water-dashboard .cursor-pointer {
+          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%2338bdf8' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23ffffff'/%3E%3C/svg%3E") 12 2, pointer !important;
+        }
+        .gov-header {
+          background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+          border-bottom: 2px solid #0284c7 !important;
+          color: #ffffff !important;
+        }
+        .gov-nav {
+          background-color: #0F172A !important;
+          border-bottom: 1px solid #334155 !important;
+        }
+        .gov-nav-btn {
+          color: #cbd5e1 !important;
+          background-color: transparent !important;
+          border: 1px solid transparent !important;
+          transition: all 0.2s ease !important;
+        }
+        .gov-nav-btn:hover {
+          color: #ffffff !important;
+          background-color: #1E293B !important;
+        }
+        .gov-nav-btn-active {
+          background-color: #0284c7 !important;
+          color: #ffffff !important;
+          font-weight: 800 !important;
+          border: 1px solid #38bdf8 !important;
+          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4) !important;
+        }
+        .gov-card {
+          background: #FFFFFF !important;
+          border: 1px solid #E2E8F0 !important;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+          transition: all 0.2s ease !important;
+        }
+        .gov-card:hover {
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08) !important;
         }
       `}</style>
 
-      {/* الترويسة العلوية الفخمة بنظام الألوان المائية الباردة الرسمية */}
-      <header className="bg-gradient-to-r from-[#032541] via-[#082f49] to-[#0f172a] text-white border-b-2 border-cyan-400 sticky top-0 z-40 shadow-xl">
-        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* الجانب الأيمن: أيقونة الماء البارد واسم الفرع الرسمي */}
-          <div className="flex items-center gap-3.5 w-full md:w-auto">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.35)] shrink-0">
-              <Droplets className="w-6 h-6 text-cyan-300" />
+      {/* الترويسة العلوية الرسمية الفخمة المطابقة للملف الأصلي (Enterprise Executive Header) */}
+      <header className="gov-header sticky top-0 z-40 shadow-md">
+        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* الجانب الأيمن: شعار الماء واسم الفرع (تم حذف عبارة الوزارة والمديرية تماماً) */}
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: 'rgba(2, 132, 199, 0.2)', border: '1px solid #0284c7' }}
+            >
+              <Droplets className="w-6 h-6" style={{ color: '#38bdf8' }} />
             </div>
-            <div className="min-w-0">
+            <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] bg-cyan-950/90 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded font-extrabold tracking-wide">
+                <span 
+                  className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded font-extrabold"
+                  style={{ backgroundColor: '#0284c7', color: '#0F172A' }}
+                >
                   نظام إدارة الإيرادات المائية
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span className="text-[10px] font-bold" style={{ color: '#38bdf8' }}>
                   مزامنة سحابية مباشرة
                 </span>
               </div>
-              <h1 className="text-base sm:text-lg font-black tracking-wide text-white mt-0.5 truncate">
+              <h1 className="text-lg font-black tracking-wide text-white mt-0.5">
                 {branch.name}
               </h1>
             </div>
           </div>
 
-          {/* الجانب الأيسر: بطاقة مسؤول الفرع المباشر وساعة العراق وأزرار الإجراءات */}
-          <div className="flex items-center flex-wrap md:flex-nowrap gap-2.5 w-full md:w-auto justify-end">
+          {/* الجانب الأيسر: ساعة العراق، بطاقة مسؤول الفرع المباشر، وأزرار الإرساليات */}
+          <div className="flex items-center flex-wrap md:flex-nowrap gap-3 w-full md:w-auto justify-end">
             {iraqTime && (
-              <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/30 text-cyan-200 text-xs font-bold shadow-inner" title="توقيت بغداد الرسمي">
-                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+              <div 
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
+                style={{ backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#bae6fd' }}
+                title="توقيت بغداد الرسمي"
+              >
+                <Clock className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} />
                 <span>توقيت العراق: {iraqTime}</span>
               </div>
             )}
 
-            {/* بطاقة مسؤول الفرع المباشر (مثل تصميم enterprise dashboard بألوان مائية) */}
-            <div className="flex items-center gap-3 bg-[#0c243c]/90 border border-cyan-400/40 px-3.5 py-1.5 rounded-xl shadow-inner">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-sky-600 text-slate-950 font-black flex items-center justify-center text-sm shadow-[0_0_10px_rgba(6,182,212,0.4)] shrink-0">
+            {/* بطاقة مسؤول الفرع المباشر (مثل تصميم الملف الأصلي السطور 110-118 تماماً) */}
+            <div 
+              className="flex items-center gap-3 px-4 py-2 rounded-xl shadow-inner"
+              style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(2, 132, 199, 0.5)' }}
+            >
+              <div 
+                className="w-9 h-9 rounded-lg font-black flex items-center justify-center text-sm shadow shrink-0"
+                style={{ backgroundColor: '#0284c7', color: '#0F172A' }}
+              >
                 {(currentManager?.name || 'علي').charAt(0)}
               </div>
               <div className="text-right">
-                <span className="text-[9px] text-cyan-300 font-black uppercase tracking-wider block">
+                <span 
+                  className="text-[10px] font-bold uppercase tracking-widest block"
+                  style={{ color: '#38bdf8' }}
+                >
                   مسؤول الفرع المباشر
                 </span>
-                <h3 className="text-xs font-bold text-white truncate max-w-[150px] sm:max-w-[200px]">
+                <h3 className="text-xs font-bold text-white">
                   {currentManager ? currentManager.name : 'الأستاذ / علي حسين علي لفته'}
                 </h3>
               </div>
@@ -1877,15 +1930,19 @@ export default function BranchManagerDashboard({
                 setSelectedConsignmentForView(null)
                 setActiveTab('consignments')
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                activeTab === 'consignments'
-                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md font-black'
-                  : 'bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-100 border-cyan-500/40'
-              }`}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              style={{
+                backgroundColor: activeTab === 'consignments' ? '#0284c7' : 'rgba(30, 41, 59, 0.9)',
+                color: '#ffffff',
+                border: '1px solid rgba(56, 189, 248, 0.4)'
+              }}
             >
-              <Layers className="w-3.5 h-3.5 text-cyan-300" />
+              <Layers className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} />
               <span>مخزن الإرساليات</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-cyan-900/80 text-cyan-200 border border-cyan-500/30">
+              <span 
+                className="text-[10px] px-2 py-0.5 rounded font-black"
+                style={{ backgroundColor: 'rgba(2, 132, 199, 0.25)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}
+              >
                 {branch.consignments?.length || 0}
               </span>
             </button>
@@ -1898,17 +1955,22 @@ export default function BranchManagerDashboard({
                 setSelectedConsignmentForView(null)
                 setIsConsignmentA4Open(true)
               }}
-              className="px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-[0_2px_14px_rgba(6,182,212,0.4)] shrink-0 cursor-pointer active:scale-95"
+              className="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md shrink-0 cursor-pointer active:scale-95"
+              style={{
+                backgroundColor: '#0284c7',
+                color: '#ffffff',
+                border: '1px solid #38bdf8'
+              }}
             >
-              <FileText className="w-3.5 h-3.5 text-slate-950" />
+              <FileText className="w-3.5 h-3.5 text-white" />
               <span>إنشاء إرسالية (A4)</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* شريط التنقل والتبويبات المائية (Aquatic Navigation Bar) */}
-      <nav className="bg-[#091e33] border-b border-cyan-950/80 px-4 sm:px-6 py-2 shadow-md sticky top-[69px] sm:top-[73px] z-30">
+      {/* شريط التنقل والتبويبات المطابق للملف الأصلي (Enterprise Navigation Bar) */}
+      <nav className="gov-nav px-4 sm:px-6 py-2 shadow sticky top-0 md:top-[68px] z-30">
         <div className="max-w-[1700px] mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon
@@ -1917,20 +1979,21 @@ export default function BranchManagerDashboard({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as TabType)}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 font-black shadow-[0_2px_10px_rgba(6,182,212,0.4)]'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  isActive ? 'gov-nav-btn-active' : 'gov-nav-btn'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-950' : 'text-cyan-400'}`} />
+                <Icon className="w-4 h-4" style={{ color: isActive ? '#ffffff' : '#38bdf8' }} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-black border ${
-                    isActive
-                      ? 'bg-slate-950/20 text-slate-950 border-slate-950/30'
-                      : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/30'
-                  }`}>
+                  <span 
+                    className="text-[10px] px-2 py-0.5 rounded font-bold"
+                    style={{
+                      backgroundColor: isActive ? 'rgba(15, 23, 42, 0.3)' : 'rgba(2, 132, 199, 0.2)',
+                      color: isActive ? '#ffffff' : '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.3)'
+                    }}
+                  >
                     {item.count}
                   </span>
                 )}
@@ -1941,218 +2004,201 @@ export default function BranchManagerDashboard({
       </nav>
 
       {/* المحتوى الرئيسي */}
-      <div className="flex-1 max-w-[1700px] mx-auto w-full p-4 sm:p-6 md:p-8 space-y-6">
-
-        {/* جسم الشاشة الرئيسي */}
-        <main className="space-y-6">
-          {/* 1. تبويب الرئيسية والمؤشرات (لوحة المؤشرات المائية الإدارية) */}
-          {activeTab === 'dashboard' && (
-            <section className="space-y-6 animate-in fade-in duration-200">
-              {/* ترويسة لوحة المؤشرات */}
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-3">
-                <div>
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-cyan-600" />
-                    لوحة المؤشرات والإحصائيات الإدارية
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    نظرة شاملة ومحدثة لأداء الإيرادات والجباية في {branch.name}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-[#091e33] text-cyan-300 border border-cyan-500/40 px-3 py-1 rounded-md font-mono font-bold shadow-xs">
-                    تحديث مباشر
-                  </span>
-                  <button
-                    onClick={() => fetchBranchSubscribers(true)}
-                    disabled={isLoadingSubscribers}
-                    className="p-1.5 text-cyan-700 hover:text-cyan-900 hover:bg-cyan-50 rounded-lg transition"
-                    title="تحديث البيانات"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoadingSubscribers ? 'animate-spin' : ''}`} />
-                  </button>
-                </div>
+      <div className="flex-1 max-w-[1700px] mx-auto w-full p-4 sm:p-6 md:p-8 space-y-8">
+        <main className="space-y-8">
+        {/* 1. DASHBOARD & INDICATORS SECTION (لوحة المؤشرات والإحصائيات الإدارية) */}
+        {activeTab === 'dashboard' && (
+          <section className="space-y-6">
+            <div 
+              className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-3"
+              style={{ borderBottom: '1px solid #cbd5e1' }}
+            >
+              <div>
+                <h2 
+                  className="text-lg font-black flex items-center gap-2"
+                  style={{ color: '#0F172A' }}
+                >
+                  <BarChart3 className="w-5 h-5" style={{ color: '#0284c7' }} />
+                  لوحة المؤشرات والإحصائيات الإدارية
+                </h2>
+                <p className="text-xs" style={{ color: '#64748B' }}>
+                  نظرة شاملة ومحدثة لأداء الإيرادات والجباية في {branch.name}
+                </p>
               </div>
-
-              {/* شبكة بطاقات الإحصائيات الأربع (Stats Grid Cards) مع الأشرطة العلوية المائية الباردة */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {/* البطاقة 1: إجمالي المشتركين */}
-                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 border-t-4 border-t-cyan-500 shadow-xs hover:shadow-md transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500">إجمالي المشتركين المسجلين</span>
-                      <h3 className="text-2xl sm:text-3xl font-black text-[#032541] mt-2">
-                        {stats.totalSubscribers.toLocaleString('ar-IQ')}
-                      </h3>
-                      <p className="text-[11px] text-emerald-600 mt-2 font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        تغطية تامة لجميع الأحياء والمناطق
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600">
-                      <Users className="w-6 h-6" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* البطاقة 2: المناطق المائية */}
-                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 border-t-4 border-t-sky-500 shadow-xs hover:shadow-md transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500">المناطق المائية المعتمدة</span>
-                      <h3 className="text-2xl sm:text-3xl font-black text-[#032541] mt-2">
-                        {stats.totalAreas} <span className="text-xs font-normal text-slate-500">منطقة</span>
-                      </h3>
-                      <p className="text-[11px] text-cyan-700 mt-2 font-bold flex items-center gap-1">
-                        <Droplets className="w-3.5 h-3.5 text-cyan-600" />
-                        نطاقات اشتراك موزعة ميدانياً
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
-                      <MapPin className="w-6 h-6" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* البطاقة 3: كادر المحصلين والكتّاب */}
-                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 border-t-4 border-t-teal-500 shadow-xs hover:shadow-md transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500">كادر المحصلين والكتّاب</span>
-                      <h3 className="text-2xl sm:text-3xl font-black text-[#032541] mt-2">
-                        {stats.totalCollectors + stats.totalWriters} <span className="text-xs font-normal text-slate-500">موظف ميداني</span>
-                      </h3>
-                      <p className="text-[11px] text-emerald-600 mt-2 font-bold flex items-center gap-1">
-                        <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        {stats.totalCollectors} محصل جباية | {stats.totalWriters} كاتب سجلات
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
-                      <UserCheck className="w-6 h-6" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* البطاقة 4: الإرساليات المعتمدة */}
-                <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 border-t-4 border-t-blue-600 shadow-xs hover:shadow-md transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500">الإرساليات المعتمدة بالمخزن</span>
-                      <h3 className="text-2xl sm:text-3xl font-black text-[#032541] mt-2">
-                        {(branch.consignments || []).length} <span className="text-xs font-normal text-slate-500">إرسالية</span>
-                      </h3>
-                      <p className="text-[11px] text-blue-700 mt-2 font-bold flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-blue-600" />
-                        مودعة بالمخزن المالي وموثقة A4
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-                      <Layers className="w-6 h-6" />
-                    </div>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <span 
+                  className="text-xs px-3 py-1 rounded-md font-mono font-bold shadow-sm"
+                  style={{ backgroundColor: '#1E293B', color: '#38bdf8' }}
+                >
+                  تحديث مباشر
+                </span>
+                <button
+                  onClick={() => fetchBranchSubscribers(true)}
+                  disabled={isLoadingSubscribers}
+                  className="p-1.5 rounded-lg transition"
+                  style={{ color: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)' }}
+                  title="تحديث البيانات"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingSubscribers ? 'animate-spin' : ''}`} />
+                </button>
               </div>
+            </div>
 
-              {/* صندوق التوجيه الإداري الصادر من مكتب مسؤول الفرع */}
-              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 border-r-4 border-r-cyan-500 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center shrink-0 shadow-xs">
-                    <Megaphone className="w-5 h-5 text-cyan-700" />
-                  </div>
+            {/* بطاقات الإحصائيات الأربع (Stats Grid Cards) مثل الملف الأصلي السطور 167-223 تماماً */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Card 1: إجمالي المشتركين */}
+              <div 
+                className="gov-card p-6 rounded-2xl"
+                style={{ borderTop: '4px solid #0F172A' }}
+              >
+                <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-black text-slate-900 text-sm">
-                      توجيه إداري صادر من مكتب مسؤول الفرع ({currentManager?.name || 'الأستاذ / علي حسين علي لفته'})
-                    </h4>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      يُرجى من كافة السادة المحصلين والكتّاب الالتزام التام بتدقيق السجلات اليومية وتسليم الإرساليات إلى المخزن المالي في موعد أقصاه الساعة الثانية ظهراً.
+                    <span className="text-xs font-semibold text-gray-500">إجمالي المشتركين المسجلين</span>
+                    <h3 
+                      className="text-3xl font-black mt-2"
+                      style={{ color: '#0F172A' }}
+                    >
+                      {stats.totalSubscribers.toLocaleString('ar-IQ')}
+                    </h3>
+                    <p className="text-[11px] text-emerald-600 mt-2 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      تغطية تامة لجميع الأحياء
                     </p>
                   </div>
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.1)', color: '#0F172A' }}
+                  >
+                    <Users className="w-6 h-6" />
+                  </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('consignments')}
-                  className="px-4 py-2.5 rounded-xl bg-[#091e33] hover:bg-[#0c243c] text-cyan-300 font-bold text-xs transition whitespace-nowrap border border-cyan-500/40 shadow-xs shrink-0 cursor-pointer"
-                >
-                  استعراض مخزن الإرساليات
-                </button>
               </div>
 
-              {/* أزرار الوصول السريع للأقسام */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button
-                  onClick={() => setActiveTab('subscribers')}
-                  className="bg-white hover:bg-cyan-50/50 p-4 rounded-xl border border-slate-200 transition text-right group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-cyan-100/70 text-cyan-700 flex items-center justify-center group-hover:scale-105 transition">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800">سجل المشتركين</h4>
-                      <p className="text-[11px] text-slate-500">إدارة وتدقيق المشتركين</p>
-                    </div>
+              {/* Card 2: المناطق المائية المعتمدة */}
+              <div 
+                className="gov-card p-6 rounded-2xl"
+                style={{ borderTop: '4px solid #0284c7' }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500">المناطق المائية المعتمدة</span>
+                    <h3 
+                      className="text-2xl font-black mt-2"
+                      style={{ color: '#0F172A' }}
+                    >
+                      {stats.totalAreas} <span className="text-xs font-normal text-gray-500">منطقة</span>
+                    </h3>
+                    <p className="text-[11px] font-bold mt-2 flex items-center gap-1" style={{ color: '#0284c7' }}>
+                      <Droplets className="w-3.5 h-3.5" />
+                      نطاقات اشتراك موزعة ميدانياً
+                    </p>
                   </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-cyan-600 transition" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('areas')}
-                  className="bg-white hover:bg-sky-50/50 p-4 rounded-xl border border-slate-200 transition text-right group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-sky-100/70 text-sky-700 flex items-center justify-center group-hover:scale-105 transition">
-                      <MapPin className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800">المناطق المائية</h4>
-                      <p className="text-[11px] text-slate-500">تقسيم الأحياء والحدود</p>
-                    </div>
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}
+                  >
+                    <MapPin className="w-6 h-6" />
                   </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-sky-600 transition" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('writers')}
-                  className="bg-white hover:bg-teal-50/50 p-4 rounded-xl border border-slate-200 transition text-right group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-teal-100/70 text-teal-700 flex items-center justify-center group-hover:scale-105 transition">
-                      <BookOpen className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800">كُتّاب الاشتراكات</h4>
-                      <p className="text-[11px] text-slate-500">تخصيص الأرقام والسجلات</p>
-                    </div>
-                  </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-teal-600 transition" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!hasLoadedSubscribers) {
-                      fetchBranchSubscribers()
-                    }
-                    setSelectedConsignmentForView(null)
-                    setIsConsignmentA4Open(true)
-                  }}
-                  className="bg-white hover:bg-blue-50/50 p-4 rounded-xl border border-slate-200 transition text-right group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100/70 text-blue-700 flex items-center justify-center group-hover:scale-105 transition">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800">إرسالية جديدة A4</h4>
-                      <p className="text-[11px] text-slate-500">توليد وطباعة الإرساليات</p>
-                    </div>
-                  </div>
-                  <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition" />
-                </button>
+                </div>
               </div>
-            </section>
-          )}
 
-          {/* تبويب المشتركين: سجل المشتركين مع وضع التحديد والتخصيص الجماعي */}
-          {activeTab === 'subscribers' && (
+              {/* Card 3: كادر المحصلين والكتّاب */}
+              <div 
+                className="gov-card p-6 rounded-2xl"
+                style={{ borderTop: '4px solid #0F172A' }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500">كادر المحصلين والكتّاب</span>
+                    <h3 
+                      className="text-3xl font-black mt-2"
+                      style={{ color: '#0F172A' }}
+                    >
+                      {stats.totalCollectors + stats.totalWriters} <span className="text-xs font-normal text-gray-500">موظف ميداني</span>
+                    </h3>
+                    <p className="text-[11px] text-emerald-600 mt-2 font-bold flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      {stats.totalCollectors} محصل جباية | {stats.totalWriters} كاتب
+                    </p>
+                  </div>
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.1)', color: '#0F172A' }}
+                  >
+                    <UserCheck className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: الإرساليات المعتمدة */}
+              <div 
+                className="gov-card p-6 rounded-2xl"
+                style={{ borderTop: '4px solid #0284c7' }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500">الإرساليات المعتمدة بالمخزن</span>
+                    <h3 
+                      className="text-3xl font-black mt-2"
+                      style={{ color: '#0F172A' }}
+                    >
+                      {(branch.consignments || []).length} <span className="text-xs font-normal text-gray-500">إرسالية</span>
+                    </h3>
+                    <p className="text-[11px] font-bold mt-2 flex items-center gap-1" style={{ color: '#0369a1' }}>
+                      <Layers className="w-3.5 h-3.5" />
+                      مودعة بالمخزن المالي وموثقة A4
+                    </p>
+                  </div>
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}
+                  >
+                    <Layers className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Management Notice Box (صندوق التوجيه الإداري مثل الملف الأصلي السطور 225-239 تماماً) */}
+            <div 
+              className="gov-card p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4"
+              style={{ borderRight: '4px solid #0284c7' }}
+            >
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}
+                >
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 
+                    className="font-bold text-sm"
+                    style={{ color: '#0F172A' }}
+                  >
+                    توجيه إداري صادر من مكتب مسؤول الفرع ({currentManager?.name || 'الأستاذ / علي حسين علي لفته'})
+                  </h4>
+                  <p className="text-xs text-gray-600 mt-1">
+                    يُرجى من كافة السادة المحصلين والكتّاب الالتزام التام بتدقيق السجلات اليومية وتسليم الإرساليات إلى المخزن المالي في موعد أقصاه الساعة الثانية ظهراً.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setActiveTab('consignments')}
+                className="px-4 py-2 rounded-xl font-bold text-xs transition whitespace-nowrap cursor-pointer shadow"
+                style={{
+                  backgroundColor: '#0F172A',
+                  color: '#38bdf8',
+                  border: '1px solid #334155'
+                }}
+              >
+                استعراض مخزن الإرساليات
+              </button>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'subscribers' && (
             <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
