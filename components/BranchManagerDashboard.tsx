@@ -1890,16 +1890,10 @@ export default function BranchManagerDashboard({
 
             {/* بطاقة مسؤول الفرع المباشر (حسين علي لفتة) */}
             <div 
-              className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl shadow-inner"
+              className="flex items-center px-3.5 py-1.5 rounded-xl shadow-inner text-right"
               style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(2, 132, 199, 0.5)' }}
             >
-              <div 
-                className="w-8 h-8 rounded-lg font-black flex items-center justify-center text-xs shadow shrink-0"
-                style={{ backgroundColor: '#0284c7', color: '#0F172A' }}
-              >
-                {(currentManager?.name || 'حسين').charAt(0)}
-              </div>
-              <div className="text-right">
+              <div>
                 <span 
                   className="text-[9px] font-bold uppercase tracking-widest block leading-tight"
                   style={{ color: '#38bdf8' }}
