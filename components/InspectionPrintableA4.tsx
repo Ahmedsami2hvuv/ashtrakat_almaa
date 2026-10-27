@@ -17,7 +17,9 @@ import {
   ArrowRight,
   Maximize2,
   Minimize2,
-  RotateCcw
+  RotateCcw,
+  X,
+  Sliders
 } from 'lucide-react'
 
 interface InspectionPrintableA4Props {
@@ -30,6 +32,24 @@ interface InspectionPrintableA4Props {
   branchManagerName?: string
 }
 
+// أسماء العناصر بالعربي لسهولة الاختيار والتحكم
+const ELEMENT_LABELS: Record<keyof InspectionLayoutConfig, string> = {
+  version: 'الإصدار',
+  logo: 'شعار مديرية ماء البصرة',
+  qrCode: 'رمز الباركود (QR)',
+  headerText: 'نص الترويسة (اسم الدائرة والفرع)',
+  titleBadge: 'مستطيل الكشف الفني',
+  citizenRow: 'سطر بيانات المواطن',
+  dateRow: 'سطر التاريخ ورقم السند',
+  table: 'جدول بيانات العقار',
+  reportBadge: 'مستطيل تقرير الكشف',
+  reportPoints: 'نقاط وسطور تقرير الكشف',
+  signatures: 'كتلة التواقيع بالكامل',
+  inspectorSign: 'خانة موظف الكشف',
+  networksSign: 'خانة م. الشبكات',
+  revenuesSign: 'خانة م. الواردات'
+}
+
 export default function InspectionPrintableA4({
   inspection,
   isEditable = false,
@@ -40,7 +60,7 @@ export default function InspectionPrintableA4({
   branchManagerName
 }: InspectionPrintableA4Props) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
-  const [activeElementId, setActiveElementId] = useState<string | null>(null)
+  const [activeElementId, setActiveElementId] = useState<keyof InspectionLayoutConfig | null>(null)
   const [layout, setLayout] = useState<InspectionLayoutConfig>(
     propLayoutConfig || DEFAULT_LAYOUT_CONFIG
   )
@@ -124,22 +144,22 @@ export default function InspectionPrintableA4({
       const step = e.shiftKey ? 10 : 2
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        updateElementLayout(activeElementId as any, { dy: -step })
+        updateElementLayout(activeElementId, { dy: -step })
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
-        updateElementLayout(activeElementId as any, { dy: step })
+        updateElementLayout(activeElementId, { dy: step })
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
-        updateElementLayout(activeElementId as any, { dx: step })
+        updateElementLayout(activeElementId, { dx: step })
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        updateElementLayout(activeElementId as any, { dx: -step })
+        updateElementLayout(activeElementId, { dx: -step })
       } else if (e.key === '+' || e.key === '=') {
         e.preventDefault()
-        updateElementLayout(activeElementId as any, { dScale: 0.05, dFont: 1 })
+        updateElementLayout(activeElementId, { dScale: 0.05, dFont: 1 })
       } else if (e.key === '-' || e.key === '_') {
         e.preventDefault()
-        updateElementLayout(activeElementId as any, { dScale: -0.05, dFont: -1 })
+        updateElementLayout(activeElementId, { dScale: -0.05, dFont: -1 })
       } else if (e.key === 'Escape') {
         setActiveElementId(null)
       }
@@ -201,98 +221,19 @@ export default function InspectionPrintableA4({
     })
   }
 
-  // شريط التحكم المصغر الذي يظهر فوق أي عنصر ينقر عليه المسؤول
-  const renderFloatingControl = (elementKey: keyof InspectionLayoutConfig, label: string) => {
-    if (!isDesignMode || activeElementId !== elementKey) return null
-
-    return (
-      <div
-        className="absolute -top-11 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 text-white px-2.5 py-1 rounded-xl shadow-2xl flex items-center gap-1 border border-sky-400 text-xs font-mono select-none print:hidden pointer-events-auto"
-        dir="ltr"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span className="font-bold text-[11px] text-sky-300 mr-1 whitespace-nowrap">{label}</span>
-
-        {/* أزرار التحريك الأربعة */}
-        <button
-          type="button"
-          onClick={() => updateElementLayout(elementKey, { dy: -3 })}
-          className="p-1 hover:bg-slate-700 text-slate-200 rounded transition cursor-pointer"
-          title="تحريك لأعلى ⬆️"
-        >
-          <ArrowUp className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => updateElementLayout(elementKey, { dy: 3 })}
-          className="p-1 hover:bg-slate-700 text-slate-200 rounded transition cursor-pointer"
-          title="تحريك لأسفل ⬇️"
-        >
-          <ArrowDown className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => updateElementLayout(elementKey, { dx: 3 })}
-          className="p-1 hover:bg-slate-700 text-slate-200 rounded transition cursor-pointer"
-          title="تحريك لليمين ➡️"
-        >
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => updateElementLayout(elementKey, { dx: -3 })}
-          className="p-1 hover:bg-slate-700 text-slate-200 rounded transition cursor-pointer"
-          title="تحريك لليسار ⬅️"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-        </button>
-
-        <div className="h-3 w-px bg-slate-700 mx-0.5" />
-
-        {/* أزرار التكبير والتصغير */}
-        <button
-          type="button"
-          onClick={() => updateElementLayout(elementKey, { dScale: 0.08, dFont: 1 })}
-          className="p-1 hover:bg-slate-700 text-emerald-400 rounded transition cursor-pointer"
-          title="تكبير الحجم ➕"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => updateElementLayout(elementKey, { dScale: -0.08, dFont: -1 })}
-          className="p-1 hover:bg-slate-700 text-rose-400 rounded transition cursor-pointer"
-          title="تصغير الحجم ➖"
-        >
-          <Minimize2 className="w-3.5 h-3.5" />
-        </button>
-
-        {/* استعادة الوضع الافتراضي */}
-        <button
-          type="button"
-          onClick={() => resetElementLayout(elementKey)}
-          className="p-1 hover:bg-slate-700 text-amber-300 rounded transition cursor-pointer"
-          title="استعادة الوضع الافتراضي"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    )
-  }
-
   // كلاس الغلاف عند تفعيل وضع التصميم للعنصر
-  const getElementWrapperClass = (elementKey: string) => {
+  const getElementWrapperClass = (elementKey: keyof InspectionLayoutConfig) => {
     if (!isDesignMode) return 'relative'
     const isActive = activeElementId === elementKey
     return `relative transition-all cursor-pointer ${
       isActive
-        ? 'ring-2 ring-blue-500 ring-offset-2 rounded-lg bg-blue-50/30 shadow-md'
-        : 'hover:ring-1 hover:ring-blue-400/80 hover:bg-blue-50/10'
+        ? 'ring-2 ring-blue-600 ring-offset-2 rounded-lg bg-blue-100/40 shadow-md z-10'
+        : 'hover:ring-2 hover:ring-blue-400 hover:bg-blue-50/20'
     }`
   }
 
   // دالة النقر على العنصر في وضع التصميم
-  const handleElementClick = (e: React.MouseEvent, key: string) => {
+  const handleElementClick = (e: React.MouseEvent, key: keyof InspectionLayoutConfig) => {
     if (!isDesignMode) return
     e.stopPropagation()
     setActiveElementId(key)
@@ -338,6 +279,101 @@ export default function InspectionPrintableA4({
         }
       `}</style>
 
+      {/* لوحة تحكم ثابتة في أسفل الشاشة واضحة جداً ولا تختفي خلف أي عنصر إطلاقاً */}
+      {isDesignMode && activeElementId && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white px-4 py-2.5 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.5)] border-2 border-sky-400 flex flex-wrap items-center gap-3 backdrop-blur-md select-none print:hidden"
+          dir="rtl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* اسم العنصر المحدد حالياً */}
+          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-700">
+            <Sliders className="w-4 h-4 text-sky-400" />
+            <span className="text-xs font-bold text-sky-300">
+              {ELEMENT_LABELS[activeElementId] || 'العنصر المحدد'}
+            </span>
+          </div>
+
+          {/* أزرار التحريك الأربعة واضحة وكبيرة */}
+          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700" dir="ltr">
+            <button
+              type="button"
+              onClick={() => updateElementLayout(activeElementId, { dy: -3 })}
+              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              title="تحريك لأعلى ⬆️"
+            >
+              <ArrowUp className="w-4 h-4 text-sky-400" />
+            </button>
+            <button
+              type="button"
+              onClick={() => updateElementLayout(activeElementId, { dy: 3 })}
+              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              title="تحريك لأسفل ⬇️"
+            >
+              <ArrowDown className="w-4 h-4 text-sky-400" />
+            </button>
+            <button
+              type="button"
+              onClick={() => updateElementLayout(activeElementId, { dx: 3 })}
+              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              title="تحريك لليمين ➡️"
+            >
+              <ArrowRight className="w-4 h-4 text-sky-400" />
+            </button>
+            <button
+              type="button"
+              onClick={() => updateElementLayout(activeElementId, { dx: -3 })}
+              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              title="تحريك لليسار ⬅️"
+            >
+              <ArrowLeft className="w-4 h-4 text-sky-400" />
+            </button>
+          </div>
+
+          {/* أزرار التكبير والتصغير */}
+          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+            <button
+              type="button"
+              onClick={() => updateElementLayout(activeElementId, { dScale: 0.08, dFont: 1 })}
+              className="px-2 py-1 hover:bg-slate-700 active:scale-95 text-emerald-400 rounded-lg transition cursor-pointer text-xs font-bold flex items-center gap-1"
+              title="تكبير الحجم والخط ➕"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>تكبير</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => updateElementLayout(activeElementId, { dScale: -0.08, dFont: -1 })}
+              className="px-2 py-1 hover:bg-slate-700 active:scale-95 text-rose-400 rounded-lg transition cursor-pointer text-xs font-bold flex items-center gap-1"
+              title="تصغير الحجم والخط ➖"
+            >
+              <Minimize2 className="w-3.5 h-3.5" />
+              <span>تصغير</span>
+            </button>
+          </div>
+
+          {/* استعادة الوضع الافتراضي للعنصر */}
+          <button
+            type="button"
+            onClick={() => resetElementLayout(activeElementId)}
+            className="p-1.5 hover:bg-slate-800 text-amber-300 rounded-lg transition cursor-pointer"
+            title="استعادة الموضع الأصلي الافتراضي لهذا العنصر"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          {/* زر إغلاق التحديد */}
+          <button
+            type="button"
+            onClick={() => setActiveElementId(null)}
+            className="p-1.5 hover:bg-rose-900/60 text-slate-300 hover:text-white rounded-lg transition cursor-pointer mr-1"
+            title="إلغاء التحديد"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div
         className="inspection-print-container bg-white text-black mx-auto shadow-xl print:shadow-none print:m-0 relative select-none"
         style={{
@@ -376,7 +412,6 @@ export default function InspectionPrintableA4({
                     fontSize: layout.headerText.fontSize ? `${layout.headerText.fontSize}px` : undefined
                   }}
                 >
-                  {renderFloatingControl('headerText', 'نص الترويسة')}
                   <div className="text-right leading-tight flex flex-col justify-center">
                     <h2 className="text-lg font-bold text-slate-900 whitespace-nowrap">
                       مديرية ماء البصرة
@@ -395,7 +430,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.logo.x}px, ${layout.logo.y}px) scale(${layout.logo.scale ?? 1})`
                   }}
                 >
-                  {renderFloatingControl('logo', 'شعار الدائرة')}
                   <div className="flex items-center justify-center">
                     <img
                       src="/icons/directorate-logo.png"
@@ -413,7 +447,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.qrCode.x}px, ${layout.qrCode.y}px) scale(${layout.qrCode.scale ?? 1})`
                   }}
                 >
-                  {renderFloatingControl('qrCode', 'الباركود')}
                   <div className="flex items-center justify-end">
                     {qrCodeUrl ? (
                       <img
@@ -437,7 +470,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.titleBadge.x}px, ${layout.titleBadge.y}px) scale(${layout.titleBadge.scale ?? 1})`
                   }}
                 >
-                  {renderFloatingControl('titleBadge', 'عنوان الكشف')}
                   <div className="border border-slate-800 rounded px-6 py-0.5 h-7 flex items-center justify-center bg-white shadow-2xs">
                     <h1
                       className="text-base font-black text-[#b91c1c] tracking-wide leading-none"
@@ -457,7 +489,6 @@ export default function InspectionPrintableA4({
                   transform: `translate(${layout.citizenRow.x}px, ${layout.citizenRow.y}px)`
                 }}
               >
-                {renderFloatingControl('citizenRow', 'بيانات المواطن')}
                 <div className="border-t-2 border-b-2 border-[#b91c1c] py-1.5 px-3 my-3">
                   <div
                     className="flex items-center text-base sm:text-lg font-bold text-slate-900 leading-normal gap-2"
@@ -496,7 +527,6 @@ export default function InspectionPrintableA4({
                   transform: `translate(${layout.dateRow.x}px, ${layout.dateRow.y}px)`
                 }}
               >
-                {renderFloatingControl('dateRow', 'سطر التاريخ')}
                 <div
                   className="flex justify-between items-center my-2 text-sm sm:text-base font-bold text-slate-900 px-1"
                   style={{ fontSize: layout.dateRow.fontSize ? `${layout.dateRow.fontSize}px` : undefined }}
@@ -533,7 +563,6 @@ export default function InspectionPrintableA4({
                   transform: `translate(${layout.table.x}px, ${layout.table.y}px)`
                 }}
               >
-                {renderFloatingControl('table', 'جدول العقار')}
                 <div className="my-2.5">
                   <table
                     className="w-full text-center border-collapse border border-slate-900 text-slate-900 font-bold"
@@ -669,7 +698,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.reportBadge.x}px, ${layout.reportBadge.y}px) scale(${layout.reportBadge.scale ?? 1})`
                   }}
                 >
-                  {renderFloatingControl('reportBadge', 'شارة التقرير')}
                   <div className="border border-slate-800 rounded px-3 py-0.5 h-6 flex items-center justify-center bg-white shadow-2xs">
                     <h3
                       className="text-xs sm:text-sm font-bold text-[#b91c1c] leading-none"
@@ -689,7 +717,6 @@ export default function InspectionPrintableA4({
                   transform: `translate(${layout.reportPoints.x}px, ${layout.reportPoints.y}px)`
                 }}
               >
-                {renderFloatingControl('reportPoints', 'نقاط التقرير')}
                 <div
                   className="space-y-3 px-1 min-h-[140px] text-base sm:text-lg font-bold text-slate-950 leading-relaxed"
                   style={{ fontSize: layout.reportPoints.fontSize ? `${layout.reportPoints.fontSize}px` : undefined }}
@@ -755,7 +782,6 @@ export default function InspectionPrintableA4({
                 transform: `translate(${layout.signatures.x}px, ${layout.signatures.y}px)`
               }}
             >
-              {renderFloatingControl('signatures', 'كتلة التواقيع')}
               <div
                 className="grid grid-cols-3 text-center items-start text-slate-900"
                 style={{ fontSize: layout.signatures.fontSize ? `${layout.signatures.fontSize}px` : undefined }}
@@ -768,7 +794,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.inspectorSign.x}px, ${layout.inspectorSign.y}px)`
                   }}
                 >
-                  {renderFloatingControl('inspectorSign', 'موظف الكشف')}
                   <div className="flex flex-col items-center">
                     <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                       موظف الكشف
@@ -802,7 +827,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.networksSign.x}px, ${layout.networksSign.y}px)`
                   }}
                 >
-                  {renderFloatingControl('networksSign', 'م. الشبكات')}
                   <div className="flex flex-col items-center">
                     <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                       م. الشبكات
@@ -836,7 +860,6 @@ export default function InspectionPrintableA4({
                     transform: `translate(${layout.revenuesSign.x}px, ${layout.revenuesSign.y}px)`
                   }}
                 >
-                  {renderFloatingControl('revenuesSign', 'م. الواردات')}
                   <div className="flex flex-col items-center">
                     <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                       م. الواردات
