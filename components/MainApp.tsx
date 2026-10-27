@@ -845,6 +845,9 @@ export default function MainApp({
   const [collectorPhone, setCollectorPhone] = useState<string>('07801234567')
   const [rangeFrom, setRangeFrom] = useState<number>(1)
   const [rangeTo, setRangeTo] = useState<number>(999999)
+  // عرض المشتركين على دفعات لتجنب إنشاء آلاف العناصر داخل DOM دفعة واحدة
+  const [subscriberPage, setSubscriberPage] = useState(0)
+  const SUBSCRIBERS_PAGE_SIZE = 100
 
   // حساب النطاق الحصري المخصص للكاتب إذا وجد
   const effectiveWriterRange = useMemo(() => {
@@ -1562,6 +1565,11 @@ export default function MainApp({
     })
   }, [typeFiltered, filterMeters, filterCustomMeter])
 
+  // إعادة القائمة إلى الصفحة الأولى عند تغيير البحث أو أي فلتر
+  useEffect(() => {
+    setSubscriberPage(0)
+  }, [searchQuery, selectedAreaId, activeBranchId, filterTypes, filterMeters, filterCustomMeter, filterAreas, filterBranches, filterStatuses])
+
   // عدد المشتركين لكل منطقة بناءً على نوع العقار ونوع المتر المختار
   const areaCounts = useMemo(() => {
     const map = new Map<string, number>()
@@ -1732,6 +1740,13 @@ export default function MainApp({
     filterBranches,
     filterStatuses
   ])
+
+  // نعرض 100 مشترك فقط في كل صفحة بدل إنشاء القائمة كاملة في DOM
+  const visibleSubscribers = useMemo(() => {
+    const start = subscriberPage * SUBSCRIBERS_PAGE_SIZE
+    return displayedSubscribers.slice(start, start + SUBSCRIBERS_PAGE_SIZE)
+  }, [displayedSubscribers, subscriberPage])
+  const totalSubscriberPages = Math.max(1, Math.ceil(displayedSubscribers.length / SUBSCRIBERS_PAGE_SIZE))
 
   // مسح الفلاتر
   const clearAllFilters = () => {
@@ -3817,8 +3832,8 @@ export default function MainApp({
             <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center gap-2 bg-sky-50/40">
                 <div className="text-[11px] text-slate-600">
-                  <span className="font-bold text-slate-900">{formatNumber(displayedSubscribers.length)}</span> من{' '}
-                  {formatNumber(subscribersInRange.length)} • {formatNumber(displayedRangeFrom)} - {formatNumber(displayedRangeTo)}
+                  <span className="font-bold text-slate-900">{formatNumber(displayedSubscribers.length)}</span> نتيجة • عرض{' '}
+                  {formatNumber(displayedSubscribers.length === 0 ? 0 : subscriberPage * SUBSCRIBERS_PAGE_SIZE + 1)} - {formatNumber(Math.min((subscriberPage + 1) * SUBSCRIBERS_PAGE_SIZE, displayedSubscribers.length))}
                 </div>
                 <div className="text-[11px] text-slate-400">
                   اسحب المشترك لليسار للتعديل السريع
@@ -3831,7 +3846,7 @@ export default function MainApp({
                     لا يوجد مشتركون مطابقون للبحث أو الفلتر
                   </div>
                 ) : (
-                  displayedSubscribers.map((sub) => {
+                  visibleSubscribers.map((sub) => {
                     const currentDue = getSubscriberCurrentDue(sub.id)
                     return (
                       <div
@@ -3913,6 +3928,23 @@ export default function MainApp({
                   })
                 )}
               </div>
+              {displayedSubscribers.length > SUBSCRIBERS_PAGE_SIZE && (
+                <div className="flex items-center justify-between gap-3 border-t border-sky-100 bg-sky-50/40 px-4 py-3">
+                  <button
+                    type="button"
+                    disabled={subscriberPage === 0}
+                    onClick={() => setSubscriberPage((page) => Math.max(0, page - 1))}
+                    className="rounded-xl border border-sky-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >السابق</button>
+                  <span className="text-xs text-slate-600">صفحة {formatNumber(subscriberPage + 1)} من {formatNumber(totalSubscriberPages)}</span>
+                  <button
+                    type="button"
+                    disabled={subscriberPage >= totalSubscriberPages - 1}
+                    onClick={() => setSubscriberPage((page) => Math.min(totalSubscriberPages - 1, page + 1))}
+                    className="rounded-xl border border-sky-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >التالي</button>
+                </div>
+              )}
             </div>
           </div>
         )}
