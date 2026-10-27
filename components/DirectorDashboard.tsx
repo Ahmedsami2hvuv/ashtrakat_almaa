@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
+import ManagerInspectionDashboardModal from './ManagerInspectionDashboardModal'
 import { DirectorateData, DirectorateBranch, BranchManager, BranchCollector, BranchWriter } from '@/lib/directorateTypes'
 import { generateSecureToken, generateWhatsAppLink, loadBranchSubscribersAndBilling } from '@/lib/directorateStore'
 import {
@@ -34,7 +35,8 @@ import {
   ChevronLeft,
   Phone,
   ShieldCheck,
-  Share2
+  Share2,
+  FileText
 } from 'lucide-react'
 
 interface DirectorDashboardProps {
@@ -57,6 +59,7 @@ export default function DirectorDashboard({
 
   // القسم النشط في القائمة الجانبية
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard')
+  const [showInspectionDashboard, setShowInspectionDashboard] = useState(false)
 
   // الفرع المختار لعرض صفحته المستقلة
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
@@ -722,6 +725,32 @@ export default function DirectorDashboard({
           </div>
 
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {/* الكشوفات الفنية */}
+            <li style={{ marginBottom: '10px' }}>
+              <button
+                onClick={() => setShowInspectionDashboard(true)}
+                style={{
+                  width: '100%',
+                  textAlign: 'right',
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(2, 132, 199, 0.25)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <FileText style={{ width: '18px', height: '18px', color: '#38bdf8' }} />
+                <span>قسم الكشوفات الفنية</span>
+              </button>
+            </li>
+
             {/* 1. لوحة التحكم */}
             <li style={{ marginBottom: '10px' }}>
               <button
@@ -4477,6 +4506,11 @@ export default function DirectorDashboard({
           <span>المحصلين</span>
         </button>
       </nav>
+          {/* لوحة الكشوفات الفنية لمدير الواردات */}
+      <ManagerInspectionDashboardModal
+        isOpen={showInspectionDashboard}
+        onClose={() => setShowInspectionDashboard(false)}
+      />
     </div>
   )
 }

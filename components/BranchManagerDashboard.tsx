@@ -17,6 +17,7 @@ import {
 import { Area, Subscriber, BillingRecords } from '@/components/MainApp'
 import ConsignmentsA4Page from './ConsignmentsA4Page'
 import BranchConsignmentsStore from './BranchConsignmentsStore'
+import ManagerInspectionDashboardModal from './ManagerInspectionDashboardModal'
 import * as XLSX from 'xlsx'
 import {
   Users,
@@ -91,6 +92,7 @@ export default function BranchManagerDashboard({
 }: BranchManagerDashboardProps) {
   // التبويب الافتراضي يبدأ بلوحة المؤشرات الرئيسية الرسمية
   const [activeTab, setActiveTab] = useState<TabType>('dashboard')
+  const [showInspectionDashboard, setShowInspectionDashboard] = useState(false)
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
   const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -6988,6 +6990,13 @@ export default function BranchManagerDashboard({
         </div>
       )}
 
+          {/* لوحة الكشوفات الفنية للمدير */}
+      <ManagerInspectionDashboardModal
+        isOpen={showInspectionDashboard}
+        onClose={() => setShowInspectionDashboard(false)}
+        branchId={branch.id}
+        branchName={branch.name}
+      />
     </div>
   )
 }

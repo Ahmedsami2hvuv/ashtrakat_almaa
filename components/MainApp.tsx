@@ -5,12 +5,14 @@ import { supabase } from '../lib/supabase'
 import ReceiptScannerModal from './ReceiptScannerModal'
 import InstallmentsPage from './InstallmentsPage'
 import DebtCellInput from './DebtCellInput'
+import WriterCollectorInspectionModal from './WriterCollectorInspectionModal'
+import ManagerInspectionDashboardModal from './ManagerInspectionDashboardModal'
 import { testGeminiApiKey } from '../lib/aiReceiptScanner'
 import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateStore'
 import { logWriterActivity } from '../lib/writerActivityStore'
 import { logCollectorActivity } from '../lib/collectorActivityStore'
 import type { Consignment, ConsignmentItem } from '../lib/directorateTypes'
-import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell } from 'lucide-react'
+import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell, FileText } from 'lucide-react'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -899,6 +901,7 @@ export default function MainApp({
   // صفحة تنزيل الإرساليات والذكاء الاصطناعي
   const [showInstallmentsPage, setShowInstallmentsPage] = useState<boolean>(initialShowInstallments)
   const [showReceiptScannerModal, setShowReceiptScannerModal] = useState<boolean>(false)
+  const [showInspectionModal, setShowInspectionModal] = useState<boolean>(false)
   const [aiApiKeys, setAiApiKeys] = useState<string[]>([])
   const [newAiKeyInput, setNewAiKeyInput] = useState<string>('')
   const [aiTestingKey, setAiTestingKey] = useState<string | null>(null)
@@ -3011,6 +3014,22 @@ export default function MainApp({
                 <span className="inline text-[11px] font-extrabold">الإشعارات</span>
               </button>
             )}
+
+            {/* زر نظام الكشوفات الفنية للكاتب والمحصل والمدير */}
+            <button
+              type="button"
+              aria-label="الكشوفات"
+              onClick={() => {
+                setShowInspectionModal(true)
+                setSearchOpen(false)
+                setFilterDrawerOpen(false)
+              }}
+              className="relative h-8 px-2.5 rounded-xl border flex items-center gap-1.5 transition-all text-xs font-black shadow-sm active:scale-95 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+              title="نظام الكشوفات الفنية ورفع التقارير الميدانية"
+            >
+              <FileText className="w-3.5 h-3.5 text-white" />
+              <span className="inline text-[11px] font-black">الكشوفات</span>
+            </button>
 
             {/* زر البحث - رمز بحث SVG فقط بدون كلمة وبدون أي إيموجي */}
             <button
@@ -7271,6 +7290,26 @@ export default function MainApp({
             </div>
           </div>
         </div>
+      )}
+
+      {/* نافذة الكشوفات للكاتب أو المحصل */}
+      {(userRole === 'writer' || userRole === 'collector') && (
+        <WriterCollectorInspectionModal
+          isOpen={showInspectionModal}
+          onClose={() => setShowInspectionModal(false)}
+          userRole={userRole}
+          userName={userRole === 'writer' ? (writerName || customHeaderTitle || 'كاتب') : (activeCollectorName || customHeaderTitle || 'محصل')}
+          branchId={branchId}
+        />
+      )}
+
+      {/* لوحة الكشوفات لمسؤول الواردات والمدير */}
+      {userRole !== 'writer' && userRole !== 'collector' && (
+        <ManagerInspectionDashboardModal
+          isOpen={showInspectionModal}
+          onClose={() => setShowInspectionModal(false)}
+          branchId={branchId}
+        />
       )}
     </div>
   )
