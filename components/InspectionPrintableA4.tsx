@@ -227,7 +227,7 @@ export default function InspectionPrintableA4({
     const isActive = activeElementId === elementKey
     return `relative transition-all cursor-pointer ${
       isActive
-        ? 'ring-2 ring-blue-600 ring-offset-2 rounded-lg bg-blue-100/40 shadow-md z-10'
+        ? 'ring-2 ring-blue-600 ring-offset-2 rounded-lg bg-blue-50/40 shadow-sm z-10'
         : 'hover:ring-2 hover:ring-blue-400 hover:bg-blue-50/20'
     }`
   }
@@ -279,75 +279,75 @@ export default function InspectionPrintableA4({
         }
       `}</style>
 
-      {/* لوحة تحكم ثابتة في أسفل الشاشة واضحة جداً ولا تختفي خلف أي عنصر إطلاقاً */}
+      {/* لوحة تحكم سفلية بتصميم زجاجي شفاف فاخر مع خطوط وأيقونات سوداء نقية */}
       {isDesignMode && activeElementId && (
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white px-4 py-2.5 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.5)] border-2 border-sky-400 flex flex-wrap items-center gap-3 backdrop-blur-md select-none print:hidden"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/85 backdrop-blur-2xl text-slate-900 px-4 py-2.5 rounded-2xl shadow-[0_15px_45px_rgba(0,0,0,0.18)] border border-white/80 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-3 select-none print:hidden"
           dir="rtl"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* اسم العنصر المحدد حالياً */}
-          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-700">
-            <Sliders className="w-4 h-4 text-sky-400" />
-            <span className="text-xs font-bold text-sky-300">
+          {/* اسم العنصر المحدد حالياً باللون الأسود */}
+          <div className="flex items-center gap-1.5 pl-3 border-l border-slate-300">
+            <Sliders className="w-4 h-4 text-slate-900 shrink-0" />
+            <span className="text-xs font-black text-slate-950 whitespace-nowrap">
               {ELEMENT_LABELS[activeElementId] || 'العنصر المحدد'}
             </span>
           </div>
 
-          {/* أزرار التحريك الأربعة واضحة وكبيرة */}
-          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700" dir="ltr">
+          {/* أزرار التحريك الأربعة - خلفية زجاجية مع أيقونات وخطوط سوداء واضحة جداً */}
+          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200" dir="ltr">
             <button
               type="button"
               onClick={() => updateElementLayout(activeElementId, { dy: -3 })}
-              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
               title="تحريك لأعلى ⬆️"
             >
-              <ArrowUp className="w-4 h-4 text-sky-400" />
+              <ArrowUp className="w-4 h-4 text-slate-950 stroke-[2.5]" />
             </button>
             <button
               type="button"
               onClick={() => updateElementLayout(activeElementId, { dy: 3 })}
-              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
               title="تحريك لأسفل ⬇️"
             >
-              <ArrowDown className="w-4 h-4 text-sky-400" />
+              <ArrowDown className="w-4 h-4 text-slate-950 stroke-[2.5]" />
             </button>
             <button
               type="button"
               onClick={() => updateElementLayout(activeElementId, { dx: 3 })}
-              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
               title="تحريك لليمين ➡️"
             >
-              <ArrowRight className="w-4 h-4 text-sky-400" />
+              <ArrowRight className="w-4 h-4 text-slate-950 stroke-[2.5]" />
             </button>
             <button
               type="button"
               onClick={() => updateElementLayout(activeElementId, { dx: -3 })}
-              className="p-1.5 hover:bg-slate-700 active:scale-95 text-white rounded-lg transition cursor-pointer flex items-center gap-1"
+              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
               title="تحريك لليسار ⬅️"
             >
-              <ArrowLeft className="w-4 h-4 text-sky-400" />
+              <ArrowLeft className="w-4 h-4 text-slate-950 stroke-[2.5]" />
             </button>
           </div>
 
-          {/* أزرار التكبير والتصغير */}
-          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+          {/* أزرار التكبير والتصغير - زجاجي شفاف مع خط أسود عريض */}
+          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
             <button
               type="button"
               onClick={() => updateElementLayout(activeElementId, { dScale: 0.08, dFont: 1 })}
-              className="px-2 py-1 hover:bg-slate-700 active:scale-95 text-emerald-400 rounded-lg transition cursor-pointer text-xs font-bold flex items-center gap-1"
+              className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1 shadow-2xs hover:shadow-xs"
               title="تكبير الحجم والخط ➕"
             >
-              <Maximize2 className="w-3.5 h-3.5" />
+              <Maximize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
               <span>تكبير</span>
             </button>
             <button
               type="button"
               onClick={() => updateElementLayout(activeElementId, { dScale: -0.08, dFont: -1 })}
-              className="px-2 py-1 hover:bg-slate-700 active:scale-95 text-rose-400 rounded-lg transition cursor-pointer text-xs font-bold flex items-center gap-1"
+              className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1 shadow-2xs hover:shadow-xs"
               title="تصغير الحجم والخط ➖"
             >
-              <Minimize2 className="w-3.5 h-3.5" />
+              <Minimize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
               <span>تصغير</span>
             </button>
           </div>
@@ -356,20 +356,21 @@ export default function InspectionPrintableA4({
           <button
             type="button"
             onClick={() => resetElementLayout(activeElementId)}
-            className="p-1.5 hover:bg-slate-800 text-amber-300 rounded-lg transition cursor-pointer"
+            className="p-2 hover:bg-slate-100 active:scale-95 text-slate-900 rounded-xl transition cursor-pointer border border-slate-200 flex items-center gap-1 text-xs font-bold"
             title="استعادة الموضع الأصلي الافتراضي لهذا العنصر"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5 text-slate-950 stroke-[2]" />
+            <span className="hidden sm:inline">استعادة</span>
           </button>
 
           {/* زر إغلاق التحديد */}
           <button
             type="button"
             onClick={() => setActiveElementId(null)}
-            className="p-1.5 hover:bg-rose-900/60 text-slate-300 hover:text-white rounded-lg transition cursor-pointer mr-1"
+            className="p-1.5 hover:bg-rose-100 text-slate-800 hover:text-rose-700 rounded-xl transition cursor-pointer"
             title="إلغاء التحديد"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
       )}

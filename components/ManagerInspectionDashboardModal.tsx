@@ -210,45 +210,45 @@ export default function ManagerInspectionDashboardModal({
       className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-md print:bg-white print:p-0"
       dir="rtl"
     >
-      {/* شريط الأدوات العلوي الثابت - يختفي تلقائياً عند الطباعة */}
-      <header className="print-hide bg-white border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md shrink-0 z-20">
+      {/* شريط الأدوات العلوي الثابت - تصميم زجاجي شفاف فاخر مع خطوط سوداء واضحة */}
+      <header className="print-hide bg-white/80 backdrop-blur-2xl border-b border-slate-200/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0 z-20">
         {/* القسم الأيمن: عنوان الكشف وبياناته */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0c4a8a] border border-blue-200 flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-white/90 text-slate-950 border border-slate-300/80 flex items-center justify-center shrink-0 shadow-2xs">
+            <FileText className="w-5 h-5 text-slate-950 stroke-[2.2]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-black text-slate-900">
+              <h1 className="text-base font-black text-slate-950">
                 استمارة الكشف الفني الموقعي (A4)
               </h1>
               {currentInspection && (
-                <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-300">
+                <span className="text-xs font-mono font-black bg-white text-slate-900 px-2 py-0.5 rounded-lg border border-slate-300 shadow-2xs">
                   {currentInspection.citizenName || 'كشف رسمي'}
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+            <p className="text-[11px] text-slate-600 font-bold hidden sm:block">
               تعديل مباشر على الورقة + تحريك وتكبير وتخصيص أي عنصر بالماوس والكيبورد
             </p>
           </div>
         </div>
 
-        {/* القسم الأوسط/الأيسر: أزرار العمليات الرئيسية مرتبة وواضحة جداً */}
+        {/* القسم الأوسط/الأيسر: أزرار العمليات الرئيسية مرتبة وواضحة جداً بتصميم زجاجي شفاف وخطوط سوداء */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* زر تفعيل/إلغاء وضع تصميم وتخصيص العناصر المباشر */}
           <button
             type="button"
             onClick={() => setIsDesignMode(!isDesignMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border ${
               isDesignMode
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-600 ring-2 ring-amber-300 animate-pulse'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                ? 'bg-amber-400 text-slate-950 border-amber-500 ring-2 ring-amber-300'
+                : 'bg-white/90 hover:bg-white text-slate-950 border-slate-300/80'
             }`}
             title="انقر لتفعيل إمكانية النقر على أي عنصر بالورقة لتحريكه وتكبيره وتصغيره"
           >
-            <Move className="w-4 h-4 text-indigo-700" />
-            <span>{isDesignMode ? '🎨 إيقاف تعديل المظهر' : '🎨 تعديل مكان وحجم العناصر'}</span>
+            <Move className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+            <span>{isDesignMode ? 'إيقاف تعديل المظهر' : 'تعديل مكان وحجم العناصر'}</span>
           </button>
 
           {/* في حال تفعيل وضع التصميم: أزرار حفظ التصميم واستعادته */}
@@ -257,51 +257,51 @@ export default function ManagerInspectionDashboardModal({
               <button
                 type="button"
                 onClick={handleSaveLayout}
-                className="flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-sm transition active:scale-95 cursor-pointer"
+                className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border border-emerald-600"
                 title="حفظ موضع وحجم العناصر الحالي كافتراضي دائم"
               >
-                <Save className="w-3.5 h-3.5" />
+                <Save className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
                 <span>حفظ التصميم</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleResetLayout}
-                className="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-300 cursor-pointer transition"
+                className="flex items-center gap-1 bg-white/90 hover:bg-white text-slate-950 px-2.5 py-1.5 rounded-xl text-xs font-black border border-slate-300 cursor-pointer transition shadow-2xs"
                 title="استعادة المواضع الافتراضية للورقة"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                <RotateCcw className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
                 <span>الافتراضي</span>
               </button>
             </>
           )}
 
           {/* التحكم في حجم الورقة وزووم الرؤية */}
-          <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 text-slate-700 hidden md:flex">
+          <div className="flex items-center bg-white/90 rounded-xl p-1 border border-slate-300/80 text-slate-950 hidden md:flex shadow-2xs">
             <button
               type="button"
               onClick={() => setZoomLevel((prev) => Math.max(70, prev - 10))}
-              className="p-1.5 hover:bg-white rounded-lg transition"
+              className="p-1.5 hover:bg-slate-100 rounded-lg transition"
               title="تصغير العرض"
             >
-              <ZoomOut className="w-3.5 h-3.5" />
+              <ZoomOut className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
             </button>
-            <span className="text-xs font-mono font-bold px-2">{zoomLevel}%</span>
+            <span className="text-xs font-mono font-black px-2 text-slate-950">{zoomLevel}%</span>
             <button
               type="button"
               onClick={() => setZoomLevel((prev) => Math.min(130, prev + 10))}
-              className="p-1.5 hover:bg-white rounded-lg transition"
+              className="p-1.5 hover:bg-slate-100 rounded-lg transition"
               title="تكبير العرض"
             >
-              <ZoomIn className="w-3.5 h-3.5" />
+              <ZoomIn className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
             </button>
             <button
               type="button"
               onClick={() => setZoomLevel(100)}
-              className="p-1.5 hover:bg-white rounded-lg transition text-[11px] font-bold"
+              className="p-1.5 hover:bg-slate-100 rounded-lg transition text-[11px] font-black text-slate-950"
               title="الحجم الافتراضي"
             >
-              <Maximize2 className="w-3.5 h-3.5" />
+              <Maximize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
             </button>
           </div>
 
@@ -310,10 +310,10 @@ export default function ManagerInspectionDashboardModal({
             type="button"
             onClick={handleRunAI}
             disabled={isAiProcessing || !currentInspection}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-slate-950 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border border-slate-300/80 disabled:opacity-50"
             title="إعادة استخلاص وترتيب البيانات بالذكاء الاصطناعي"
           >
-            <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isAiProcessing ? 'animate-spin' : ''}`} />
+            <Sparkles className={`w-3.5 h-3.5 text-amber-500 stroke-[2.5] ${isAiProcessing ? 'animate-spin' : ''}`} />
             <span>{isAiProcessing ? 'جاري التنسيق...' : 'ترتيب بالذكاء الاصطناعي'}</span>
           </button>
 
@@ -322,25 +322,25 @@ export default function ManagerInspectionDashboardModal({
             type="button"
             onClick={handleSave}
             disabled={isSaving || !currentInspection}
-            className={`flex items-center gap-1.5 text-white px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer disabled:opacity-50 ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-50 border ${
               saveSuccess
-                ? 'bg-emerald-600 ring-2 ring-emerald-300'
-                : 'bg-emerald-600 hover:bg-emerald-700'
+                ? 'bg-emerald-400 text-slate-950 border-emerald-500 ring-2 ring-emerald-300'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-600'
             }`}
           >
             {isSaving ? (
               <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-950" />
                 <span>جاري الحفظ...</span>
               </>
             ) : saveSuccess ? (
               <>
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>تم الحفظ في السحابة ✓</span>
+                <CheckCircle className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                <span>تم الحفظ ✓</span>
               </>
             ) : (
               <>
-                <CheckCircle className="w-3.5 h-3.5" />
+                <CheckCircle className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
                 <span>حفظ البيانات</span>
               </>
             )}
@@ -351,11 +351,11 @@ export default function ManagerInspectionDashboardModal({
             type="button"
             onClick={handlePrint}
             disabled={!currentInspection}
-            className="flex items-center gap-1.5 bg-[#0c4a8a] hover:bg-blue-800 text-white px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border border-sky-600"
             title="طباعة ورقة الكشف الفني فقط"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>طباعة الاستمارة (A4)</span>
+            <Printer className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+            <span>طباعة الاستمارة</span>
           </button>
 
           {/* زر صور العقار */}
@@ -363,13 +363,13 @@ export default function ManagerInspectionDashboardModal({
             <button
               type="button"
               onClick={() => setShowImagesDrawer(!showImagesDrawer)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition border cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition border cursor-pointer shadow-2xs ${
                 showImagesDrawer
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
+                  ? 'bg-amber-100 text-slate-950 border-amber-300'
+                  : 'bg-white/90 text-slate-950 hover:bg-white border-slate-300/80'
               }`}
             >
-              <Camera className="w-3.5 h-3.5 text-emerald-600" />
+              <Camera className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
               <span>الصور ({currentInspection.images.length})</span>
             </button>
           )}
@@ -379,10 +379,10 @@ export default function ManagerInspectionDashboardModal({
             <button
               type="button"
               onClick={handleCopyLink}
-              className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-300 cursor-pointer transition"
+              className="flex items-center gap-1 bg-white/90 hover:bg-white text-slate-950 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-black border border-slate-300/80 cursor-pointer transition shadow-2xs"
               title="نسخ رابط صفحة المواطن"
             >
-              <Copy className="w-3 h-3 text-blue-600" />
+              <Copy className="w-3 h-3 text-slate-950 stroke-[2.5]" />
               <span>{copiedLink ? 'تم النسخ!' : 'رابط الباركود'}</span>
             </button>
           )}
@@ -391,9 +391,9 @@ export default function ManagerInspectionDashboardModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-sm transition active:scale-95 cursor-pointer ml-1"
+            className="flex items-center gap-1 bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer ml-1 border border-rose-600"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>إغلاق</span>
           </button>
         </div>
