@@ -102,16 +102,16 @@ export default function BranchInspectionsTab({
           <div className="flex items-center gap-2">
             <button
               onClick={fetchInspections}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-black text-slate-950 bg-white hover:bg-slate-50 border border-slate-300 shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               title="تحديث البيانات من السحابة"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-950 stroke-[2.2] ${loading ? 'animate-spin' : ''}`} />
               <span>تحديث</span>
             </button>
 
             <button
               onClick={() => onOpenInspectionModal()}
-              className="px-4 py-2 rounded-xl text-xs font-black text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm transition flex items-center gap-2 cursor-pointer active:scale-95"
+              className="px-4 py-2 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition flex items-center gap-2 cursor-pointer active:scale-95 border border-blue-700"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               <span>فتح لوحة الكشوفات والذكاء الاصطناعي والطباعة</span>
@@ -265,10 +265,10 @@ export default function BranchInspectionsTab({
                         {/* نسخ رابط المواطن */}
                         <button
                           onClick={() => handleCopyLink(item)}
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition cursor-pointer"
+                          className="p-1.5 bg-white hover:bg-blue-50 text-slate-900 border border-slate-300 rounded-lg transition cursor-pointer shadow-2xs"
                           title="نسخ رابط الباركود للمواطن"
                         >
-                          <Copy className="w-3.5 h-3.5 text-blue-500" />
+                          <Copy className="w-3.5 h-3.5 text-blue-600 stroke-[2.2]" />
                         </button>
 
                         {/* صفحة المواطن */}
@@ -276,19 +276,19 @@ export default function BranchInspectionsTab({
                           href={`/inspection/${item.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition cursor-pointer"
+                          className="p-1.5 bg-white hover:bg-emerald-50 text-slate-900 border border-slate-300 rounded-lg transition cursor-pointer shadow-2xs"
                           title="فتح صفحة المواطن"
                         >
-                          <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                          <ExternalLink className="w-3.5 h-3.5 text-emerald-600 stroke-[2.2]" />
                         </a>
 
                         {/* حذف */}
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 bg-slate-100 hover:bg-rose-600 text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
+                          className="p-1.5 bg-white hover:bg-rose-50 text-slate-900 hover:text-rose-600 border border-slate-300 rounded-lg transition cursor-pointer shadow-2xs"
                           title="حذف الكشف"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5 stroke-[2.2]" />
                         </button>
                       </div>
                     </td>
