@@ -11,17 +11,14 @@ import {
   Printer,
   Trash2,
   CheckCircle,
-  ExternalLink,
   Copy,
   X,
-  Key,
   Camera,
   RefreshCw,
-  Eye,
   Info,
-  CheckCircle2,
-  ChevronRight,
-  ChevronLeft
+  ZoomIn,
+  ZoomOut,
+  Maximize2
 } from 'lucide-react'
 
 interface ManagerInspectionDashboardModalProps {
@@ -49,6 +46,7 @@ export default function ManagerInspectionDashboardModal({
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showImagesDrawer, setShowImagesDrawer] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState<number>(100) // نسبة التكبير 100%
 
   // تحميل الكشوفات
   const loadData = async () => {
@@ -118,13 +116,11 @@ export default function ManagerInspectionDashboardModal({
       }
 
       setCurrentInspection(updated)
-      // حفظ تلقائي فوري
       await updateInspectionRecord(updated)
       setInspections((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
 
-      // إظهار رسالة تأكيد صريحة للمدير توضح ما الذي قام به الذكاء الاصطناعي
-      setAiNotice(`✨ نجح الذكاء الاصطناعي في ترتيب الكشف: ${extracted.aiSummary}`)
-      setTimeout(() => setAiNotice(null), 7000)
+      setAiNotice(`✨ قام الذكاء الاصطناعي بترتيب الكشف: ${extracted.aiSummary}`)
+      setTimeout(() => setAiNotice(null), 8000)
     } catch (err: unknown) {
       setAiNotice('حدث خطأ أثناء معالجة التقرير بالذكاء الاصطناعي')
     } finally {
@@ -143,7 +139,7 @@ export default function ManagerInspectionDashboardModal({
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3500)
     } catch (e) {
-      alert('حدث خطأ أثناء حفظ التعديلات في السحابة')
+      alert('حدث خطأ أثناء حفظ التعديلات')
     } finally {
       setIsSaving(false)
     }
@@ -158,259 +154,264 @@ export default function ManagerInspectionDashboardModal({
     setTimeout(() => setCopiedLink(false), 2500)
   }
 
-  // حذف الكشف
-  const handleDelete = async () => {
-    if (!currentInspection) return
-    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الكشف الفني نهائياً؟')) return
-    await deleteInspectionRecord(currentInspection.id)
-    const remaining = inspections.filter((i) => i.id !== currentInspection.id)
-    setInspections(remaining)
-    if (remaining.length > 0) {
-      setCurrentInspection(remaining[0])
-      setSelectedIndex(0)
-    } else {
-      setCurrentInspection(null)
-    }
-  }
-
   if (!isOpen) return null
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
-      style={{
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)'
-      }}
+      className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-md"
       dir="rtl"
     >
-      <div
-        className="relative w-full max-w-6xl max-h-[96vh] rounded-3xl shadow-[0_20px_70px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden my-auto border border-white/20 bg-slate-900 text-white"
-      >
-        {/* شريط الأدوات العلوي الفاخر المباشر فوق ورقة الـ A4 */}
-        <div className="bg-slate-950/90 border-b border-white/15 p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600/30 text-sky-400 border border-sky-400/40 flex items-center justify-center">
-              <FileText className="w-5 h-5" />
+      {/* شريط الأدوات العلوي الثابت والمريح جداً - ذو تصميم نظيف وعصري */}
+      <header className="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-md shrink-0 z-20">
+        {/* القسم الأيمن: عنوان الكشف وبياناته */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0c4a8a] border border-blue-200 flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-black text-slate-900">
+                ورقة الكشف الفني الموقعي (A4)
+              </h1>
+              {currentInspection && (
+                <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-300">
+                  {currentInspection.citizenName || 'كشف رسمي'}
+                </span>
+              )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-white">
-                  معاينة وتعديل ورقة الكشف الفني (A4)
-                </h1>
-                {currentInspection && (
-                  <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-400/30 px-2 py-0.5 rounded-md font-mono">
-                    #{currentInspection.id.substring(currentInspection.id.length - 6)}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-400">
-                يمكنك التعديل والكتابة مباشرة داخل خلايا وسطور الورقة أدناه، والطباعة فوراً
-              </p>
-            </div>
+            <p className="text-xs text-slate-500 font-medium hidden sm:block">
+              تعديل مباشر على الورقة + طباعة فورية + حفظ سحابي
+            </p>
+          </div>
+        </div>
+
+        {/* القسم الأوسط/الأيسر: أزرار العمليات الرئيسية مرتبة وواضحة جداً */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* التحكم في حجم الورقة وزووم الرؤية */}
+          <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 text-slate-700 hidden md:flex">
+            <button
+              type="button"
+              onClick={() => setZoomLevel((prev) => Math.max(70, prev - 10))}
+              className="p-1.5 hover:bg-white rounded-lg transition"
+              title="تصغير العرض"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-mono font-bold px-2">{zoomLevel}%</span>
+            <button
+              type="button"
+              onClick={() => setZoomLevel((prev) => Math.min(140, prev + 10))}
+              className="p-1.5 hover:bg-white rounded-lg transition"
+              title="تكبير العرض"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(100)}
+              className="p-1.5 hover:bg-white rounded-lg transition text-[11px] font-bold"
+              title="الحجم الافتراضي"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* أزرار الإجراءات الرئيسية فوق الورقة */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* زر تشغيل وترتيب الذكاء الاصطناعي مع إيضاح صريح */}
-            <button
-              type="button"
-              onClick={handleRunAI}
-              disabled={isAiProcessing || !currentInspection}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50"
-              title="يستخلص اسم المواطن والمحلة ويرتب النقاط تلقائياً"
-            >
-              <Sparkles className={`w-4 h-4 text-amber-300 ${isAiProcessing ? 'animate-spin' : ''}`} />
-              <span>{isAiProcessing ? 'جاري التنسيق الذكي...' : 'ترتيب وصياغة بالذكاء الاصطناعي'}</span>
-            </button>
+          {/* زر الترتيب بالذكاء الاصطناعي */}
+          <button
+            type="button"
+            onClick={handleRunAI}
+            disabled={isAiProcessing || !currentInspection}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer disabled:opacity-50"
+            title="إعادة استخلاص وترتيب البيانات بالذكاء الاصطناعي"
+          >
+            <Sparkles className={`w-4 h-4 text-amber-300 ${isAiProcessing ? 'animate-spin' : ''}`} />
+            <span>{isAiProcessing ? 'جاري التنسيق...' : 'ترتيب بالذكاء الاصطناعي'}</span>
+          </button>
 
-            {/* زر حفظ التعديلات في السحابة */}
+          {/* زر حفظ التعديلات في السحابة */}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || !currentInspection}
+            className={`flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer disabled:opacity-50 ${
+              saveSuccess
+                ? 'bg-emerald-600 ring-2 ring-emerald-300'
+                : 'bg-emerald-600 hover:bg-emerald-700'
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>جاري الحفظ...</span>
+              </>
+            ) : saveSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>تم الحفظ في السحابة ✓</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>حفظ التعديلات</span>
+              </>
+            )}
+          </button>
+
+          {/* زر الطباعة الفورية A4 */}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={!currentInspection}
+            className="flex items-center gap-1.5 bg-[#0c4a8a] hover:bg-blue-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer"
+          >
+            <Printer className="w-4 h-4" />
+            <span>طباعة الاستمارة (A4)</span>
+          </button>
+
+          {/* زر صور العقار */}
+          {currentInspection && currentInspection.images && currentInspection.images.length > 0 && (
             <button
               type="button"
-              onClick={handleSave}
-              disabled={isSaving || !currentInspection}
-              className={`flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 ${
-                saveSuccess
-                  ? 'bg-emerald-500 border border-emerald-300'
-                  : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400'
+              onClick={() => setShowImagesDrawer(!showImagesDrawer)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition border cursor-pointer ${
+                showImagesDrawer
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
               }`}
             >
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>جاري الحفظ...</span>
-                </>
-              ) : saveSuccess ? (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  <span>تم الحفظ في السحابة ✓</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  <span>حفظ التعديلات</span>
-                </>
-              )}
+              <Camera className="w-4 h-4 text-emerald-600" />
+              <span>الصور ({currentInspection.images.length})</span>
             </button>
+          )}
 
-            {/* زر الطباعة الفورية A4 */}
+          {/* زر نسخ رابط المواطن */}
+          {currentInspection && (
             <button
               type="button"
-              onClick={() => window.print()}
-              disabled={!currentInspection}
-              className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-xl text-xs font-black shadow-md transition active:scale-95 cursor-pointer"
+              onClick={handleCopyLink}
+              className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border border-slate-300 cursor-pointer transition"
+              title="نسخ رابط صفحة المواطن"
             >
-              <Printer className="w-4 h-4" />
-              <span>طباعة فورية (A4)</span>
+              <Copy className="w-3.5 h-3.5 text-blue-600" />
+              <span>{copiedLink ? 'تم النسخ!' : 'رابط الباركود'}</span>
             </button>
+          )}
 
-            {/* زر عرض صور العقار المرفوعة */}
-            {currentInspection && currentInspection.images && currentInspection.images.length > 0 && (
+          {/* زر إغلاق النافذة البارز */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black shadow-sm transition active:scale-95 cursor-pointer ml-1"
+          >
+            <X className="w-4 h-4" />
+            <span>إغلاق</span>
+          </button>
+        </div>
+      </header>
+
+      {/* شريط إشعار الذكاء الاصطناعي الفاتح والأنيق */}
+      {aiNotice && (
+        <div className="bg-indigo-50 border-b border-indigo-200 px-4 py-2.5 text-xs sm:text-sm font-bold text-indigo-900 flex items-center justify-between gap-3 shadow-xs shrink-0">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>{aiNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAiNotice(null)}
+            className="text-indigo-600 hover:text-indigo-900 text-xs font-bold"
+          >
+            إغلاق الإشعار ✕
+          </button>
+        </div>
+      )}
+
+      {/* قائمة الكشوفات المتعددة إن وجدت */}
+      {inspections.length > 1 && (
+        <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 text-xs">
+          <span className="font-bold text-slate-600 whitespace-nowrap">الكشوفات الواردة ({inspections.length}):</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {inspections.map((item, idx) => (
               <button
-                type="button"
-                onClick={() => setShowImagesDrawer(!showImagesDrawer)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
-                  showImagesDrawer
-                    ? 'bg-amber-600 text-white border-amber-400'
-                    : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border-slate-700'
+                key={item.id}
+                onClick={() => handleSelectInspection(item, idx)}
+                className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer whitespace-nowrap border ${
+                  selectedIndex === idx
+                    ? 'bg-[#0c4a8a] text-white border-[#0c4a8a] shadow-xs'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                 }`}
               >
-                <Camera className="w-4 h-4 text-emerald-400" />
-                <span>صور العقار ({currentInspection.images.length})</span>
+                <span>{item.citizenName || `كشف ${idx + 1}`}</span>
+                <span className="text-[10px] opacity-75 mr-1 font-mono">({item.writerOrCollectorName})</span>
               </button>
-            )}
-
-            {/* رابط الباركود للمواطن */}
-            {currentInspection && (
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition border border-slate-700 cursor-pointer"
-                title="نسخ الرابط الذي يفتحه الباركود"
-              >
-                <Copy className="w-3.5 h-3.5 text-blue-400" />
-                <span>{copiedLink ? 'تم النسخ!' : 'رابط الباركود'}</span>
-              </button>
-            )}
-
-            {/* زر إغلاق النافذة البارز والصريح باللون الأحمر */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-black shadow-lg transition active:scale-95 cursor-pointer border border-rose-400/50"
-            >
-              <X className="w-4 h-4" />
-              <span>إغلاق النافذة ✕</span>
-            </button>
+            ))}
           </div>
         </div>
+      )}
 
-        {/* إشعار تأكيد عمل الذكاء الاصطناعي وما قام به */}
-        {aiNotice && (
-          <div className="bg-indigo-950/90 border-b border-indigo-500/50 p-3 text-xs sm:text-sm font-bold text-indigo-200 flex items-center justify-between gap-3 animate-fade-in shrink-0">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span>{aiNotice}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAiNotice(null)}
-              className="text-indigo-400 hover:text-white text-xs"
-            >
-              إخفاء
-            </button>
+      {/* منطقة عرض الورقة - خلفية محايدة فاتحة ومريحة للعين جداً تشبه مستعرضات المستندات الرسمية */}
+      <main className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-8 bg-slate-200 flex flex-col items-center">
+        {loading ? (
+          <div className="py-24 text-center text-slate-600 flex flex-col items-center justify-center">
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3" />
+            <span className="font-bold">جاري تحميل استمارة الكشف الفني...</span>
           </div>
-        )}
-
-        {/* شريط اختيار الكشف والتبديل السريع بين الكشوفات الواردة */}
-        {inspections.length > 1 && (
-          <div className="bg-slate-950/60 border-b border-slate-800 px-4 py-2 flex items-center justify-between text-xs overflow-x-auto shrink-0 gap-2">
-            <div className="flex items-center gap-1.5 text-slate-400 font-bold whitespace-nowrap">
-              <span>الكشوفات الواردة ({inspections.length}):</span>
-            </div>
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              {inspections.map((item, idx) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelectInspection(item, idx)}
-                  className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer whitespace-nowrap ${
-                    selectedIndex === idx
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  <span>{item.citizenName || `كشف ${idx + 1}`}</span>
-                  <span className="text-[10px] opacity-75 mr-1 font-mono">({item.writerOrCollectorName})</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* جسم النافذة: ورقة الـ A4 الرسمية في المنتصف مع إمكانية التعديل المباشر */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950 flex flex-col items-center">
-          {loading ? (
-            <div className="py-20 text-center text-slate-400 text-sm flex flex-col items-center justify-center">
-              <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <span>جاري تحميل ورقة الكشف الفني...</span>
-            </div>
-          ) : currentInspection ? (
-            <div className="w-full flex flex-col items-center space-y-4">
-              {/* التقرير الأصلي للكاتب كمرجع سريع فوق الورقة للمقارنة */}
-              <div className="w-full max-w-[210mm] bg-slate-900 border border-slate-800 p-3.5 rounded-2xl text-xs text-slate-300 print:hidden shadow-md">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-black text-sky-400 flex items-center gap-1.5">
-                    <Info className="w-4 h-4" />
-                    <span>النص الميداني الأصلي المرفوع من: {currentInspection.writerOrCollectorName}</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500">{currentInspection.inspectionDate}</span>
-                </div>
-                <p className="bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 leading-relaxed font-mono text-slate-300">
-                  {currentInspection.rawReportText}
-                </p>
-              </div>
-
-              {/* معرض صور العقار المرفوعة - يفتح عند النقر */}
-              {showImagesDrawer && currentInspection.images && currentInspection.images.length > 0 && (
-                <div className="w-full max-w-[210mm] bg-slate-900 border border-slate-800 p-4 rounded-2xl print:hidden animate-fade-in shadow-xl">
-                  <h4 className="text-xs font-black text-emerald-400 mb-3 flex items-center gap-2">
-                    <Camera className="w-4 h-4" />
-                    <span>صور العقار المرفقة بهذا الكشف ({currentInspection.images.length} صورة WebP)</span>
+        ) : currentInspection ? (
+          <div className="w-full flex flex-col items-center space-y-6">
+            {/* معرض الصور المرفقة إن نقر عليه */}
+            {showImagesDrawer && currentInspection.images && currentInspection.images.length > 0 && (
+              <div className="w-full max-w-[210mm] bg-white border border-slate-300 p-4 rounded-xl shadow-lg print:hidden">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-emerald-600" />
+                    <span>صور العقار المرفوعة ({currentInspection.images.length} صورة)</span>
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {currentInspection.images.map((img, idx) => (
-                      <div
-                        key={img.id || idx}
-                        className="rounded-xl overflow-hidden border border-slate-700 bg-black aspect-video relative group shadow"
-                      >
-                        <img src={img.dataUrl} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-1 right-1 bg-black/80 text-[9px] text-white px-1.5 py-0.5 rounded font-mono">
-                          {Math.round((img.sizeBytes || 0) / 1024)} KB
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowImagesDrawer(false)}
+                    className="text-slate-400 hover:text-slate-700 text-xs"
+                  >
+                    ✕
+                  </button>
                 </div>
-              )}
-
-              {/* ورقة الـ A4 الرسمية الحقيقية - تعديل مباشر داخلها وطباعة مباشرة */}
-              <div className="p-1 sm:p-3 bg-slate-800/60 rounded-2xl border border-slate-700 shadow-2xl overflow-x-auto max-w-full">
-                <InspectionPrintableA4
-                  inspection={currentInspection}
-                  isEditable={true}
-                  onUpdate={(updated) => setCurrentInspection(updated)}
-                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {currentInspection.images.map((img, idx) => (
+                    <div
+                      key={img.id || idx}
+                      className="rounded-lg overflow-hidden border border-slate-200 bg-slate-100 aspect-video relative shadow-xs"
+                    >
+                      <img src={img.dataUrl} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-1 right-1 bg-black/70 text-[9px] text-white px-1.5 py-0.5 rounded font-mono">
+                        {Math.round((img.sizeBytes || 0) / 1024)} KB
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* الحاوية الرسمية لورقة الـ A4 مع إمكانية التكبير والتصغير وتعديل الحقول مباشرة */}
+            <div
+              className="transition-transform duration-150 origin-top flex justify-center w-full"
+              style={{
+                transform: `scale(${zoomLevel / 100})`,
+                marginBottom: zoomLevel > 100 ? `${(zoomLevel - 100) * 2.8}mm` : '0px'
+              }}
+            >
+              <InspectionPrintableA4
+                inspection={currentInspection}
+                isEditable={true}
+                onUpdate={(updated) => setCurrentInspection(updated)}
+              />
             </div>
-          ) : (
-            <div className="py-24 text-center text-slate-500 text-sm">
-              <FileText className="w-16 h-16 text-slate-700 mx-auto mb-3" />
-              <p className="font-bold text-slate-400 text-base">لا توجد كشوفات فنية لعرضها</p>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : (
+          <div className="py-24 text-center text-slate-600">
+            <FileText className="w-14 h-14 text-slate-400 mx-auto mb-2" />
+            <p className="font-bold text-base">لا توجد كشوفات فنية حالياً</p>
+          </div>
+        )}
+      </main>
     </div>
   )
 }
