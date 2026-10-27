@@ -3868,22 +3868,18 @@ export default function MainApp({
 
               {displayedSubscribers.length > SUBSCRIBERS_PAGE_SIZE && (
                 <div className="border-b border-sky-100 bg-sky-50 px-3 py-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3">
                     <button
                       type="button"
+                      aria-label="الصفحة السابقة"
+                      title="الصفحة السابقة"
                       disabled={subscriberPage === 0}
                       onClick={() => setSubscriberPage((page) => Math.max(0, page - 1))}
-                      className="shrink-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >السابق</button>
-                    <span className="text-xs font-bold text-slate-700">صفحة {formatNumber(subscriberPage + 1)} من {formatNumber(totalSubscriberPages)}</span>
-                    <button
-                      type="button"
-                      disabled={subscriberPage >= totalSubscriberPages - 1}
-                      onClick={() => setSubscriberPage((page) => Math.min(totalSubscriberPages - 1, page + 1))}
-                      className="shrink-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >التالي</button>
-                  </div>
-                  <div className="flex items-center justify-center gap-1.5 overflow-x-auto pb-1" aria-label="أرقام صفحات المشتركين">
+                      className="shrink-0 w-11 h-10 rounded-xl border border-sky-200 bg-white text-slate-700 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                    </button>
+                    <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5 overflow-x-auto pb-1" aria-label="أرقام صفحات المشتركين">
                     {Array.from({ length: totalSubscriberPages }, (_, index) => index).map((page) => (
                       <button
                         key={page}
@@ -3894,6 +3890,17 @@ export default function MainApp({
                         className={`min-w-9 h-9 px-3 rounded-lg border text-sm font-bold transition-colors shrink-0 ${subscriberPage === page ? "bg-slate-900 text-white border-slate-900 shadow-sm" : "bg-white text-slate-700 border-sky-200 hover:bg-sky-100"}`}
                       >{formatNumber(page + 1)}</button>
                     ))}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="الصفحة التالية"
+                      title="الصفحة التالية"
+                      disabled={subscriberPage >= totalSubscriberPages - 1}
+                      onClick={() => setSubscriberPage((page) => Math.min(totalSubscriberPages - 1, page + 1))}
+                      className="shrink-0 w-11 h-10 rounded-xl border border-sky-200 bg-white text-slate-700 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
                   </div>
                 </div>
               )}
