@@ -354,17 +354,6 @@ export default function InspectionPrintableA4({
           }
         }}
       >
-        {/* شريط توجيهي يظهر فقط للمسؤول أثناء تفعيل وضع التصميم */}
-        {isDesignMode && (
-          <div className="absolute top-2 left-4 right-4 bg-blue-600 text-white text-xs py-1.5 px-3 rounded-lg shadow-md flex items-center justify-between z-40 print:hidden font-sans">
-            <span className="font-bold flex items-center gap-1.5">
-              <span>🎨 وضع تعديل التصميم مفعّل:</span>
-              <span className="font-normal opacity-90">انقر على أي عنصر لتحريكه بالأسهم أو تكبيره وتصغيره، ثم انقر حفظ التصميم.</span>
-            </span>
-            <span className="text-[11px] opacity-75 font-mono">الأسهم للكيبورد + و - للتكبير</span>
-          </div>
-        )}
-
         {/* الإطار الأزرق المزدوج المطابق لنموذج ماء البصرة الورقي */}
         <div
           className="w-full h-full border-[3px] border-[#0c4a8a] p-1 flex flex-col justify-between"
