@@ -20,9 +20,6 @@ export default function InspectionPrintableA4({
 }: InspectionPrintableA4Props) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
 
-  // توليد كود الكشف التسلسلي
-  const inspectionCode = `BAS-WAT-${inspection.inspectionDate?.replace(/\//g, '') || '2026'}-${inspection.id.substring(inspection.id.length - 4).toUpperCase()}`
-
   useEffect(() => {
     let isMounted = true
     generateInspectionQRDataUrl(inspection.id).then((url) => {
@@ -33,7 +30,7 @@ export default function InspectionPrintableA4({
     }
   }, [inspection.id])
 
-  // استخلاص اسم الفرع النظيف لمنع تكرار كلمة "مركز جباية واردات"
+  // استخلاص اسم الفرع النظيف
   const rawBranch = inspection.branchName || 'أبي الخصيب'
   const cleanBranch = rawBranch
     .replace(/مديرية\s+ماء\s+البصرة/gi, '')
@@ -102,7 +99,7 @@ export default function InspectionPrintableA4({
 
   return (
     <>
-      {/* تضمين تنسيقات الطباعة الصارمة لإخفاء كافة أزرار وتفاصيل النظام الخارجية */}
+      {/* تضمين تنسيقات الطباعة الصارمة */}
       <style jsx global>{`
         @media print {
           body {
@@ -111,7 +108,6 @@ export default function InspectionPrintableA4({
             margin: 0 !important;
             padding: 0 !important;
           }
-          /* إخفاء كل العناصر ما عدا ورقة الطباعة */
           header, nav, aside, footer, button, .print-hide, [role="dialog"] > div:not(.print-allow) {
             display: none !important;
           }
@@ -127,7 +123,6 @@ export default function InspectionPrintableA4({
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
-          /* إخفاء حقول الإدخال وإظهار النص النظيف فقط في الطباعة */
           .screen-only-input {
             display: none !important;
           }
@@ -164,56 +159,52 @@ export default function InspectionPrintableA4({
           >
             {/* الجزء العلوي والبيانات والجدول والتقرير */}
             <div>
-              {/* أولاً: الترويسة العليا في نفس السطر مدمجة جداً (بارتفاع سطرين فقط) */}
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-300">
+              {/* الترويسة العليا: الشعار والباركود بحجم البلوك (مكبرين ومطابقين لارتفاع السطرين) وبدون أي نصوص كود زائدة */}
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-300">
                 {/* اليمين: جملة مديرية ماء البصرة بسطر واحد، وتحتها مركز جباية واردات [اسم الفرع] */}
-                <div className="text-right leading-tight">
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">
+                <div className="text-right leading-tight flex flex-col justify-center">
+                  <h2 className="text-lg font-bold text-slate-900 whitespace-nowrap">
                     مديرية ماء البصرة
                   </h2>
-                  <h3 className="text-sm sm:text-base font-bold text-[#b91c1c] whitespace-nowrap mt-0.5">
+                  <h3 className="text-base font-bold text-[#b91c1c] whitespace-nowrap mt-1">
                     مركز جباية واردات {cleanBranch}
                   </h3>
                 </div>
 
-                {/* المنتصف: الشعار في نفس السطر ومطابق لارتفاع السطرين فقط (صغير الحجم) */}
+                {/* المنتصف: الشعار بحجم البلوك تماماً (مكبر ومطابق لارتفاع الترويسة) */}
                 <div className="flex items-center justify-center">
                   <img
                     src="/icons/directorate-logo.png"
                     alt="شعار مديرية ماء البصرة"
-                    className="h-11 w-11 object-contain"
+                    className="h-14 w-14 object-contain"
                   />
                 </div>
 
-                {/* اليسار: الباركود وكود الكشف في نفس السطر */}
-                <div className="flex items-center gap-2 text-left">
+                {/* اليسار: الباركود فقط بحجم البلوك تماماً (مكبر بدون أي كتابات كود زائدة) */}
+                <div className="flex items-center justify-end">
                   {qrCodeUrl ? (
                     <img
                       src={qrCodeUrl}
                       alt="QR Code"
-                      className="w-10 h-10 border border-slate-300 p-0.5 bg-white shadow-xs"
+                      className="w-14 h-14 border border-slate-300 p-0.5 bg-white shadow-xs"
                     />
-                  ) : null}
-                  <div className="flex flex-col text-left">
-                    <span className="text-[10px] text-slate-700 font-mono font-bold leading-tight">
-                      {inspectionCode}
-                    </span>
-                    <span className="text-[9px] text-slate-500 font-medium">كود الكشف الفني</span>
-                  </div>
+                  ) : (
+                    <div className="w-14 h-14 border border-dashed border-slate-300" />
+                  )}
                 </div>
               </div>
 
-              {/* ثانياً: بلوك الكشف الفني بارتفاع صغير جداً ولا يأخذ حيزاً كبيراً */}
-              <div className="flex justify-center my-1.5">
-                <div className="border border-slate-800 rounded px-8 py-0.5 bg-white">
-                  <h1 className="text-lg font-black text-[#b91c1c] tracking-wide leading-none">
+              {/* بلوك الكشف الفني بارتفاع صغير جداً مع ترك فراغ بينه وبين ما قبله وما بعده */}
+              <div className="flex justify-center my-3.5">
+                <div className="border border-slate-800 rounded px-6 py-0.5 h-7 flex items-center justify-center bg-white shadow-2xs">
+                  <h1 className="text-base font-black text-[#b91c1c] tracking-wide leading-none">
                     الكشف الفـني
                   </h1>
                 </div>
               </div>
 
-              {/* سطر بيانات المواطن المحاط بإطار أحمر رفيع كما في الورقة الرسمية */}
-              <div className="border-t-2 border-b-2 border-[#b91c1c] py-1.5 px-3 my-2.5">
+              {/* سطر بيانات المواطن مع فراغ متناسق */}
+              <div className="border-t-2 border-b-2 border-[#b91c1c] py-1.5 px-3 my-3.5">
                 <div className="flex items-center text-base sm:text-lg font-bold text-slate-900 leading-normal gap-2">
                   <span className="whitespace-nowrap">
                     تم اجراء الكشف الفني على العقار العائد للمواطن /ة
@@ -240,7 +231,7 @@ export default function InspectionPrintableA4({
               </div>
 
               {/* سطر التاريخ وعبارة سند الطابو */}
-              <div className="flex justify-between items-center my-2 text-sm sm:text-base font-bold text-slate-900 px-1">
+              <div className="flex justify-between items-center my-2.5 text-sm sm:text-base font-bold text-slate-900 px-1">
                 <div className="flex items-center gap-1.5 whitespace-nowrap">
                   <span>بتاريخ</span>
                   {isEditable ? (
@@ -264,8 +255,8 @@ export default function InspectionPrintableA4({
                 </span>
               </div>
 
-              {/* جدول بيانات العقار المطابق لورقة الكشف الرسمية */}
-              <div className="my-2.5">
+              {/* جدول بيانات العقار */}
+              <div className="my-3">
                 <table className="w-full text-center border-collapse border border-slate-900 text-slate-900 font-bold">
                   <thead>
                     <tr className="border-b border-slate-900 text-sm sm:text-base">
@@ -387,25 +378,26 @@ export default function InspectionPrintableA4({
                 </table>
               </div>
 
-              {/* ثالثاً: جملة تقرير الكشف في أقصى اليمين وبأقل ارتفاع ممكن */}
-              <div className="flex justify-start my-2">
-                <div className="border border-slate-800 rounded px-4 py-0.5 bg-white">
-                  <h3 className="text-sm sm:text-base font-bold text-[#b91c1c] leading-none">
+              {/* جملة تقرير الكشف في أقصى اليمين وبأقل ارتفاع عمودي مع فراغ بينها وبين التقرير */}
+              <div className="flex justify-start mt-3 mb-3">
+                <div className="border border-slate-800 rounded px-3 py-0.5 h-6 flex items-center justify-center bg-white shadow-2xs">
+                  <h3 className="text-xs sm:text-sm font-bold text-[#b91c1c] leading-none">
                     تقرير الكشف
                   </h3>
                 </div>
               </div>
 
-              {/* رابعاً: نقاط تقرير الكشف - في الشاشة خلايا للتعديل، وفي الطباعة تظهر كنص مطبوع رسمي نظيف تماماً */}
-              <div className="space-y-2.5 px-1 min-h-[140px] text-justify text-base sm:text-lg font-bold text-slate-950 leading-relaxed">
+              {/* نقاط تقرير الكشف - النص مقابل رقم النقطة تماماً في نفس السطر */}
+              <div className="space-y-3 px-1 min-h-[140px] text-base sm:text-lg font-bold text-slate-950 leading-relaxed">
                 {inspection.reportPoints && inspection.reportPoints.length > 0 ? (
                   inspection.reportPoints.map((point, index) => (
                     <div key={index} className="flex items-start gap-2">
-                      <span className="font-bold text-slate-900 shrink-0 mt-0.5">
+                      {/* رقم النقطة */}
+                      <span className="font-bold text-slate-900 shrink-0 select-none pt-0.5 whitespace-nowrap">
                         {index + 1}-
                       </span>
 
-                      {/* في وضع الشاشة: حقل تعديل سلس */}
+                      {/* نص التقرير مقابل رقم النقطة */}
                       {isEditable ? (
                         <>
                           <div className="screen-only-input flex-1 flex items-start gap-2">
@@ -413,7 +405,7 @@ export default function InspectionPrintableA4({
                               rows={2}
                               value={point}
                               onChange={(e) => handlePointChange(index, e.target.value)}
-                              className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded p-1.5 font-bold text-base sm:text-lg text-slate-950 outline-none leading-relaxed resize-y"
+                              className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded p-1 font-bold text-base sm:text-lg text-slate-950 outline-none leading-relaxed resize-y m-0"
                             />
                             <button
                               type="button"
@@ -424,13 +416,13 @@ export default function InspectionPrintableA4({
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                          {/* في وضع الطباعة: نص رسمي نظيف بدون أي إطارات إطلاقاً */}
-                          <p className="print-only-text flex-1 text-justify font-bold leading-relaxed text-slate-950">
+                          {/* في الطباعة: نص رسمي نقي ممتد ومقابل رقم النقطة مباشرة */}
+                          <p className="print-only-text flex-1 text-justify font-bold leading-relaxed text-slate-950 m-0 p-0">
                             {point}
                           </p>
                         </>
                       ) : (
-                        <p className="flex-1 text-justify font-bold leading-relaxed">{point}</p>
+                        <p className="flex-1 text-justify font-bold leading-relaxed m-0 p-0">{point}</p>
                       )}
                     </div>
                   ))
@@ -453,12 +445,12 @@ export default function InspectionPrintableA4({
               </div>
             </div>
 
-            {/* خامساً: التواقيع الرسمية - سطر واحد فقط فيه (موظف الكشف، م. الشبكات، م. الواردات) بدون سطر مكرر */}
-            <div className="mt-6 pt-3">
-              <div className="grid grid-cols-3 text-center items-end text-slate-900">
-                {/* 1. موظف الكشف: اسم الكاتب أو المحصل الذي قام بالكشف */}
+            {/* التواقيع الرسمية - الاسم تحت الكلمة مباشرة بدون مسافات تباعد كبيرة */}
+            <div className="mt-6 pt-2">
+              <div className="grid grid-cols-3 text-center items-start text-slate-900">
+                {/* 1. موظف الكشف */}
                 <div className="flex flex-col items-center">
-                  <span className="text-base sm:text-lg font-bold text-slate-900 mb-6 sm:mb-8">
+                  <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                     موظف الكشف
                   </span>
                   {isEditable ? (
@@ -468,9 +460,9 @@ export default function InspectionPrintableA4({
                         value={inspection.writerOrCollectorName || inspection.inspectorEmployeeName || ''}
                         onChange={(e) => handleFieldChange('writerOrCollectorName', e.target.value)}
                         placeholder="اسم موظف الكشف"
-                        className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-sm sm:text-base"
+                        className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-base"
                       />
-                      <span className="print-only-text font-bold text-sm sm:text-base">
+                      <span className="print-only-text font-bold text-base">
                         {inspection.writerOrCollectorName || inspection.inspectorEmployeeName || '................................'}
                       </span>
                     </>
@@ -483,7 +475,7 @@ export default function InspectionPrintableA4({
 
                 {/* 2. م. الشبكات */}
                 <div className="flex flex-col items-center">
-                  <span className="text-base sm:text-lg font-bold text-slate-900 mb-6 sm:mb-8">
+                  <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                     م. الشبكات
                   </span>
                   {isEditable ? (
@@ -493,9 +485,9 @@ export default function InspectionPrintableA4({
                         value={inspection.networksManagerName || ''}
                         onChange={(e) => handleFieldChange('networksManagerName', e.target.value)}
                         placeholder="................................"
-                        className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-300 outline-none font-bold text-sm sm:text-base"
+                        className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-300 outline-none font-bold text-base"
                       />
-                      <span className="print-only-text font-bold text-sm sm:text-base">
+                      <span className="print-only-text font-bold text-base">
                         {inspection.networksManagerName || '................................'}
                       </span>
                     </>
@@ -506,9 +498,9 @@ export default function InspectionPrintableA4({
                   )}
                 </div>
 
-                {/* 3. م. الواردات: حسب مسؤول الفرع وليس اسماً معمماً */}
+                {/* 3. م. الواردات */}
                 <div className="flex flex-col items-center">
-                  <span className="text-base sm:text-lg font-bold text-slate-900 mb-6 sm:mb-8">
+                  <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                     م. الواردات
                   </span>
                   {isEditable ? (
@@ -518,9 +510,9 @@ export default function InspectionPrintableA4({
                         value={inspection.revenuesManagerName || defaultRevenuesManager}
                         onChange={(e) => handleFieldChange('revenuesManagerName', e.target.value)}
                         placeholder="مسؤول الواردات"
-                        className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-sm sm:text-base"
+                        className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-base"
                       />
-                      <span className="print-only-text font-bold text-sm sm:text-base">
+                      <span className="print-only-text font-bold text-base">
                         {inspection.revenuesManagerName || defaultRevenuesManager}
                       </span>
                     </>
