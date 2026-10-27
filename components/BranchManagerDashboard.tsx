@@ -7008,6 +7008,7 @@ export default function BranchManagerDashboard({
         onClose={() => setShowInspectionDashboard(false)}
         branchId={branch.id}
         branchName={branch.name}
+        branchManagerName={currentManager?.name || branch.managers?.[0]?.name}
       />
     </div>
   )
