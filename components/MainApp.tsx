@@ -7300,6 +7300,7 @@ export default function MainApp({
           userRole={userRole}
           userName={userRole === 'writer' ? (writerName || customHeaderTitle || 'كاتب') : (activeCollectorName || customHeaderTitle || 'محصل')}
           branchId={branchId}
+          branchName={customHeaderTitle || 'مركز جباية واردات أبي الخصيب'}
         />
       )}
 
@@ -7309,6 +7310,7 @@ export default function MainApp({
           isOpen={showInspectionModal}
           onClose={() => setShowInspectionModal(false)}
           branchId={branchId}
+          branchName={customHeaderTitle || 'مركز جباية واردات أبي الخصيب'}
         />
       )}
     </div>

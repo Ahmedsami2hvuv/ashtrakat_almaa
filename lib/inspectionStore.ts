@@ -3,12 +3,8 @@ import { InspectionRecord } from './inspectionTypes'
 import QRCode from 'qrcode'
 
 const LOCAL_STORAGE_KEY = 'ashtrakat_inspections_cache'
-const SYNC_ROW_KEY = 'inspections_data_v1'
 
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://amqyttpcezmbsylsdgzd.supabase.co'
-const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_Gn4ywDpWxxEtLPdtQVxxBA_yPNoEVgx'
-
-// جلب الكشوفات من السحابة أو الكاش المحلي
+// جلب الكشوفات من السحابة عبر API السيرفر الآمن
 export async function loadInspectionsFromCloud(): Promise<InspectionRecord[]> {
   // 1. محاولة القراءة من الكاش المحلي أولاً للسرعة القصوى
   let localCache: InspectionRecord[] = []
@@ -21,37 +17,34 @@ export async function loadInspectionsFromCloud(): Promise<InspectionRecord[]> {
     } catch {}
   }
 
-  // 2. الجلب من سوبابيس
+  // إذا كنا غير متصلين بالإنترنت، نكتفي بالكاش المحلي
   if (typeof window !== 'undefined' && !navigator.onLine) {
     return localCache
   }
 
+  // 2. الجلب السحابي الموثوق من السيرفر
   try {
-    const res = await fetch(
-      `${SB_URL}/rest/v1/app_sync?key=eq.${SYNC_ROW_KEY}&select=value`,
-      {
-        headers: {
-          apikey: SB_KEY,
-          Authorization: `Bearer ${SB_KEY}`
-        },
-        cache: 'no-store'
-      }
-    )
+    const res = await fetch('/api/inspections', {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    })
 
     if (res.ok) {
-      const rows = await res.json()
-      if (rows && rows[0]?.value) {
-        const cloudData: InspectionRecord[] = rows[0].value
+      const json = await res.json()
+      if (json.success && Array.isArray(json.data)) {
+        const cloudData: InspectionRecord[] = json.data
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData))
-          } catch {}
+          } catch (e) {
+            console.warn('LocalStorage limit reached for inspections, continuing in memory', e)
+          }
         }
         return cloudData
       }
     }
   } catch (err) {
-    console.error('Failed to load inspections from cloud:', err)
+    console.error('Failed to load inspections from cloud API:', err)
   }
 
   return localCache
@@ -68,27 +61,24 @@ export async function saveInspectionsToCloud(inspections: InspectionRecord[]): P
     }
   }
 
-  // حفظ في سوبابيس
+  // حفظ في السحابة عبر السيرفر الآمن
   try {
-    const now = new Date().toISOString()
-    const payload = {
-      key: SYNC_ROW_KEY,
-      value: inspections,
-      updated_at: now
-    }
-
-    await fetch(`${SB_URL}/rest/v1/app_sync`, {
+    const res = await fetch('/api/inspections', {
       method: 'POST',
       headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        data: inspections
+      })
     })
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null)
+      console.error('API failed to save inspections:', errJson)
+    }
   } catch (err) {
-    console.error('Failed to save inspections to cloud:', err)
+    console.error('Failed to save inspections to cloud API:', err)
   }
 }
 

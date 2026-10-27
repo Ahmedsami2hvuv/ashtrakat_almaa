@@ -23,7 +23,8 @@ import {
   Shield,
   Layers,
   Camera,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react'
 
 interface ManagerInspectionDashboardModalProps {
@@ -288,7 +289,20 @@ export default function ManagerInspectionDashboardModal({
               </div>
               <div className="flex justify-between items-center mt-2 text-[11px] text-slate-400 font-bold px-1">
                 <span>إجمالي الكشوفات: {filteredInspections.length}</span>
-                <span className="text-emerald-400">سحابية موثقة</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true)
+                    const data = await loadInspectionsFromCloud()
+                    setInspections(data)
+                    setLoading(false)
+                  }}
+                  className="flex items-center gap-1 text-sky-400 hover:text-sky-300 transition"
+                  title="تحديث من السحابة الآن"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                  <span>تحديث السحابة</span>
+                </button>
               </div>
             </div>
 

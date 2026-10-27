@@ -17,6 +17,7 @@ import {
 import { Area, Subscriber, BillingRecords } from '@/components/MainApp'
 import ConsignmentsA4Page from './ConsignmentsA4Page'
 import BranchConsignmentsStore from './BranchConsignmentsStore'
+import BranchInspectionsTab from './BranchInspectionsTab'
 import ManagerInspectionDashboardModal from './ManagerInspectionDashboardModal'
 import * as XLSX from 'xlsx'
 import {
@@ -82,7 +83,7 @@ interface BranchManagerDashboardProps {
   }) => void
 }
 
-type TabType = 'dashboard' | 'subscribers' | 'areas' | 'consignments' | 'collectors' | 'writers' | 'settings'
+type TabType = 'dashboard' | 'subscribers' | 'areas' | 'consignments' | 'inspections' | 'collectors' | 'writers' | 'settings'
 
 export default function BranchManagerDashboard({
   branch,
@@ -1811,6 +1812,7 @@ export default function BranchManagerDashboard({
     { id: 'collectors', label: 'المحصلين (الجباة)', icon: Wallet, count: stats.totalCollectors },
     { id: 'writers', label: 'كُتّاب الاشتراكات', icon: BookOpen, count: stats.totalWriters },
     { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers, count: (branch.consignments || []).length },
+    { id: 'inspections', label: 'الكشوفات الفنية', icon: FileText },
     { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', icon: Settings }
   ]
 
@@ -2909,6 +2911,16 @@ export default function BranchManagerDashboard({
                 setIsConsignmentA4Open(true)
               }}
               onDeleteConsignment={handleDeleteConsignment}
+            />
+          )}
+
+          {/* تبويب الكشوفات الفنية لمسؤول الفرع */}
+          {activeTab === 'inspections' && (
+            <BranchInspectionsTab
+              branch={branch}
+              onOpenInspectionModal={(record) => {
+                setShowInspectionDashboard(true)
+              }}
             />
           )}
 
