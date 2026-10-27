@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { InspectionRecord, InspectionImage } from '@/lib/inspectionTypes'
 import { compressAndConvertToWebP } from '@/lib/imageCompressor'
 import { addInspectionRecord } from '@/lib/inspectionStore'
-import { Camera, Upload, Trash2, CheckCircle2, AlertCircle, FileText, X, Sparkles } from 'lucide-react'
+import { Camera, Upload, Trash2, CheckCircle2, AlertCircle, FileText, X, Sparkles, XCircle, Send } from 'lucide-react'
 
 interface WriterCollectorInspectionModalProps {
   isOpen: boolean
@@ -129,73 +129,106 @@ export default function WriterCollectorInspectionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" dir="rtl">
-      <div className="bg-slate-900 border border-blue-900/60 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-6">
-        {/* رأس النافذة */}
-        <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-900 p-5 border-b border-blue-900/40 flex items-center justify-between">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      style={{
+        backgroundColor: 'rgba(5, 10, 25, 0.45)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)'
+      }}
+      dir="rtl"
+    >
+      {/* الحاوية الزجاجية الشفافة الفخمة (Glassmorphism Container) */}
+      <div
+        className="relative max-w-2xl w-full rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden my-auto border border-white/30"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)',
+          backdropFilter: 'blur(25px)',
+          WebkitBackdropFilter: 'blur(25px)'
+        }}
+      >
+        {/* شريط الإضاءة العلوي المنعكس على الزجاج */}
+        <div className="absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r from-transparent via-sky-300 to-transparent opacity-80" />
+
+        {/* رأس النافذة الزجاجي */}
+        <div
+          className="p-5 border-b border-white/15 flex items-center justify-between"
+          style={{ background: 'rgba(15, 23, 42, 0.4)' }}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6" />
+            <div className="w-11 h-11 bg-sky-500/20 text-sky-300 border border-sky-400/40 rounded-2xl flex items-center justify-center shadow-inner">
+              <FileText className="w-6 h-6 text-sky-300" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white">إجراء ورفع كشف موقعي جديد</h2>
-              <p className="text-xs text-slate-400">
-                القائم بالكشف: <span className="text-blue-300 font-bold">{userName}</span> ({userRole === 'writer' ? 'كاتب' : 'محصل'})
+              <h2 className="text-lg sm:text-xl font-black text-white drop-shadow-md">
+                إجراء ورفع كشف موقعي جديد
+              </h2>
+              <p className="text-xs text-sky-200/90 font-bold mt-0.5">
+                القائم بالكشف: <span className="text-white bg-white/20 px-2 py-0.5 rounded-md">{userName}</span> ({userRole === 'writer' ? 'كاتب' : 'محصل'})
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+            className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-all border border-white/20 hover:scale-105 active:scale-95 shadow-md"
+            title="إغلاق"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* جسم النموذج */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-6">
           {successMessage && (
-            <div className="bg-emerald-950/80 border border-emerald-600/60 text-emerald-200 p-4 rounded-2xl flex items-center gap-3 animate-fade-in text-sm font-bold">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+            <div className="bg-emerald-500/30 border border-emerald-400/60 text-emerald-100 p-4 rounded-2xl flex items-center gap-3 animate-fade-in text-sm font-black shadow-lg backdrop-blur-md">
+              <CheckCircle2 className="w-6 h-6 text-emerald-300 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
 
           {errorMessage && (
-            <div className="bg-rose-950/80 border border-rose-600/60 text-rose-200 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold">
-              <AlertCircle className="w-6 h-6 text-rose-400 shrink-0" />
+            <div className="bg-rose-500/30 border border-rose-400/60 text-rose-100 p-4 rounded-2xl flex items-center gap-3 text-sm font-black shadow-lg backdrop-blur-md">
+              <AlertCircle className="w-6 h-6 text-rose-300 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* نص التقرير */}
+          {/* نص التقرير - مع تباين فائق 100% وخلفية داكنة واضحة ومستقرة تماماً */}
           <div>
-            <label className="block text-sm font-bold text-slate-200 mb-2">
-              📝 نص تقرير الكشف الموقعي:
+            <label className="block text-sm sm:text-base font-black text-white drop-shadow mb-2 flex items-center gap-2">
+              <span>📝 نص تقرير الكشف الموقعي:</span>
+              <span className="text-xs font-normal text-sky-200">(اكتب التقرير بوضوح)</span>
             </label>
             <textarea
-              rows={5}
+              rows={6}
               value={reportText}
               onChange={(e) => setReportText(e.target.value)}
-              placeholder="اكتب تفاصيل الكشف (مثال: تم إجراء الكشف على الدار العائدة للمواطن ... الكائنة في منطقة ... وتبين أن العقار ...)"
-              className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-2xl p-4 text-white text-sm leading-relaxed placeholder-slate-500 resize-none outline-none transition-all"
+              placeholder="اكتب تفاصيل الكشف هنا... (مثال: بناءً على طلب الكشف المقدم بخصوص الدار العائدة للمواطن حسين قدوري الكائنة في منطقة العوجة مقاطعة شيخ إبراهيم، قمنا بإجراء الكشف وتبين أنها مغلقة وقابلة للسقوط ولا يوجد ماء...)"
+              style={{
+                backgroundColor: 'rgba(11, 18, 38, 0.92)',
+                color: '#ffffff',
+                caretColor: '#38bdf8'
+              }}
+              className="w-full border-2 border-sky-400/60 focus:border-sky-300 focus:ring-4 focus:ring-sky-400/20 rounded-2xl p-4 text-base font-bold leading-relaxed placeholder:text-slate-400 placeholder:font-normal resize-none outline-none shadow-2xl transition-all"
               required
             />
-            <p className="text-xs text-slate-400 mt-1.5">
-              💡 ملاحظة: اكتب التقرير بأسلوبك وسيقوم الذكاء الاصطناعي في لوحة المدير بترتيبه واستخلاص الأسماء والتفاصيل بدقة.
+            <p className="text-xs text-sky-100 font-bold mt-2 bg-sky-950/40 p-2.5 rounded-xl border border-sky-400/30 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>اكتب التقرير بأسلوبك العادي، وسيقوم الذكاء الاصطناعي في لوحة المدير باستخلاص وتنسيق الأسماء والمناطق والنقاط بدقة تامة.</span>
             </p>
           </div>
 
-          {/* رفع صور العقار مع التحويل إلى WebP */}
+          {/* رفع صور العقار مع التحويل التلقائي لـ WebP */}
           <div>
-            <label className="block text-sm font-bold text-slate-200 mb-2">
+            <label className="block text-sm sm:text-base font-black text-white drop-shadow mb-2">
               📸 صور العقار الملتقطة:
             </label>
 
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-all shadow-md active:scale-95">
-                <Camera className="w-4 h-4" />
-                <span>التقاط أو اختيار صور</span>
+              <label className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-5 py-3 rounded-2xl text-sm font-black cursor-pointer transition-all shadow-lg shadow-sky-500/20 border border-sky-300/40 active:scale-95">
+                <Camera className="w-5 h-5 text-white" />
+                <span>التقاط أو اختيار صور من الهاتف / الحاسوب</span>
                 <input
                   type="file"
                   multiple
@@ -207,9 +240,9 @@ export default function WriterCollectorInspectionModal({
               </label>
 
               {isCompressing && (
-                <div className="flex items-center gap-2 text-xs text-sky-400 font-bold animate-pulse">
-                  <div className="w-4 h-4 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
-                  <span>جاري تحويل وضغط الصور بصيغة WebP خفيفة...</span>
+                <div className="flex items-center gap-2 text-xs text-amber-200 font-black bg-amber-950/60 px-3 py-2 rounded-xl border border-amber-400/40 animate-pulse">
+                  <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  <span>جاري تحويل وضغط الصور بصيغة WebP فائقة الخفة...</span>
                 </div>
               )}
             </div>
@@ -220,24 +253,24 @@ export default function WriterCollectorInspectionModal({
                 {images.map((img, idx) => (
                   <div
                     key={img.id || idx}
-                    className="relative group rounded-xl overflow-hidden border border-slate-700 bg-slate-950 aspect-video flex items-center justify-center shadow"
+                    className="relative group rounded-2xl overflow-hidden border-2 border-white/30 bg-slate-950/80 aspect-video flex items-center justify-center shadow-xl"
                   >
                     <img
                       src={img.dataUrl}
                       alt={`صورة ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(idx)}
-                        className="bg-rose-600 text-white p-1.5 rounded-lg text-xs font-bold hover:bg-rose-700 transition"
+                        className="bg-rose-600 text-white p-2 rounded-xl text-xs font-bold hover:bg-rose-700 transition shadow-lg"
                         title="حذف الصورة"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <span className="absolute bottom-1 right-1 bg-black/70 text-[10px] text-white px-1.5 py-0.5 rounded font-mono">
+                    <span className="absolute bottom-1 right-1 bg-black/85 text-[10px] text-sky-300 font-mono px-2 py-0.5 rounded-lg border border-white/20">
                       WebP {Math.round((img.sizeBytes || 0) / 1024)} KB
                     </span>
                   </div>
@@ -246,29 +279,36 @@ export default function WriterCollectorInspectionModal({
             )}
           </div>
 
-          {/* أزرار الإجراءات */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+          {/* أزرار الإجراءات - ألوان فائقة الوضوح والتباين والجمال */}
+          <div
+            className="pt-5 border-t border-white/20 flex flex-wrap items-center justify-between gap-4"
+            style={{ background: 'rgba(15, 23, 42, 0.3)', margin: '-0.5rem -1.25rem -1.25rem', padding: '1.25rem 1.5rem' }}
+          >
+            {/* زر الإلغاء الواضح والصريح */}
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-sm font-bold transition"
+              className="flex items-center gap-2 bg-rose-600/90 hover:bg-rose-600 text-white font-black px-6 py-3 rounded-2xl text-sm shadow-lg shadow-rose-950/40 border border-rose-400/50 hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
-              إلغاء
+              <XCircle className="w-5 h-5 text-white" />
+              <span>إلغاء وتراجع</span>
             </button>
+
+            {/* زر رفع التقرير للمدير البارز والمضيء */}
             <button
               type="submit"
               disabled={isSubmitting || isCompressing}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-black shadow-lg shadow-blue-900/30 transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-black px-8 py-3 rounded-2xl text-sm sm:text-base shadow-xl shadow-emerald-900/50 border border-emerald-300/60 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>جاري رفع الكشف...</span>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>جاري رفع التقرير الآن...</span>
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4" />
+                  <Send className="w-5 h-5 text-white" />
                   <span>رفع التقرير للمدير</span>
                 </>
               )}

@@ -227,8 +227,23 @@ export default function ManagerInspectionDashboardModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto" dir="rtl">
-      <div className="bg-slate-900 border border-blue-900/60 rounded-3xl w-full max-w-7xl max-h-[94vh] shadow-2xl flex flex-col overflow-hidden my-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      style={{
+        backgroundColor: 'rgba(5, 10, 25, 0.5)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)'
+      }}
+      dir="rtl"
+    >
+      <div
+        className="relative w-full max-w-7xl max-h-[94vh] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden my-auto border border-white/20"
+        style={{
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.85) 100%)',
+          backdropFilter: 'blur(30px)',
+          WebkitBackdropFilter: 'blur(30px)'
+        }}
+      >
         {/* شريط العنوان العلوي */}
         <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-900 p-4 sm:p-5 border-b border-blue-900/40 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
