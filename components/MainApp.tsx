@@ -3672,12 +3672,12 @@ export default function MainApp({
           <div>
             {/* بلوك الكاتب البارز والأنيق قبل قائمة المشتركين */}
             {userRole === 'writer' && (
-              <div className="bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-white border border-blue-200/80 rounded-2xl p-3 sm:p-3.5 mb-3 shadow-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
-                    <User className="w-5 h-5" />
+              <div className="bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-white border border-blue-200/80 rounded-xl px-2.5 py-1.5 mb-2 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+                    <User className="w-3.5 h-3.5" />
                   </div>
-                  <h2 className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
+                  <h2 className="text-[14px] sm:text-[15px] font-black text-slate-900 leading-none">
                     {writerName || 'الكاتب المعتمد'}
                   </h2>
                 </div>
