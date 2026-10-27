@@ -3879,7 +3879,7 @@ export default function MainApp({
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     </button>
-                    <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5 overflow-x-auto pb-1" aria-label="أرقام صفحات المشتركين">
+                    <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="أرقام صفحات المشتركين">
                     {Array.from({ length: totalSubscriberPages }, (_, index) => index).map((page) => (
                       <button
                         key={page}
