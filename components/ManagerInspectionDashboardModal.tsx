@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { InspectionRecord } from '@/lib/inspectionTypes'
 import { loadInspectionsFromCloud, updateInspectionRecord, deleteInspectionRecord } from '@/lib/inspectionStore'
 import { processInspectionReportWithAI } from '@/lib/aiInspectionProcessor'
+import {
+  InspectionLayoutConfig,
+  DEFAULT_LAYOUT_CONFIG,
+  loadSavedLayoutConfig,
+  saveLayoutConfigToStorage
+} from '@/lib/inspectionLayoutStore'
 import InspectionPrintableA4 from './InspectionPrintableA4'
 import {
   FileText,
@@ -18,7 +24,10 @@ import {
   Info,
   ZoomIn,
   ZoomOut,
-  Maximize2
+  Maximize2,
+  Move,
+  Save,
+  RotateCcw
 } from 'lucide-react'
 
 interface ManagerInspectionDashboardModalProps {
@@ -50,7 +59,12 @@ export default function ManagerInspectionDashboardModal({
   const [copiedLink, setCopiedLink] = useState(false)
   const [zoomLevel, setZoomLevel] = useState<number>(100) // نسبة التكبير 100%
 
-  // تحميل الكشوفات
+  // حالة محرر التصميم التفاعلي
+  const [isDesignMode, setIsDesignMode] = useState<boolean>(false)
+  const [layoutConfig, setLayoutConfig] = useState<InspectionLayoutConfig>(DEFAULT_LAYOUT_CONFIG)
+  const [layoutSavedNotice, setLayoutSavedNotice] = useState<string | null>(null)
+
+  // تحميل الكشوفات وإعدادات التصميم
   const loadData = async () => {
     setLoading(true)
     const list = await loadInspectionsFromCloud()
@@ -59,6 +73,7 @@ export default function ManagerInspectionDashboardModal({
       setCurrentInspection(list[0])
       setSelectedIndex(0)
     }
+    setLayoutConfig(loadSavedLayoutConfig())
     setLoading(false)
   }
 
@@ -147,6 +162,27 @@ export default function ManagerInspectionDashboardModal({
     }
   }
 
+  // حفظ إعدادات التصميم (مواضع وأحجام العناصر)
+  const handleSaveLayout = async () => {
+    const success = await saveLayoutConfigToStorage(layoutConfig)
+    if (success) {
+      setLayoutSavedNotice('✅ تم حفظ تصميم ومواضع عناصر الورقة بنجاح! سيتم تطبيقها دائماً عند الفتح والطباعة.')
+      setTimeout(() => setLayoutSavedNotice(null), 6000)
+    } else {
+      alert('تعذر حفظ إعدادات التصميم')
+    }
+  }
+
+  // استعادة التصميم الافتراضي
+  const handleResetLayout = () => {
+    if (confirm('هل ترغب في إعادة جميع العناصر إلى مواضعها وأحجامها الافتراضية؟')) {
+      setLayoutConfig(DEFAULT_LAYOUT_CONFIG)
+      saveLayoutConfigToStorage(DEFAULT_LAYOUT_CONFIG)
+      setLayoutSavedNotice('↺ تمت استعادة التصميم الأصلي الافتراضي.')
+      setTimeout(() => setLayoutSavedNotice(null), 4000)
+    }
+  }
+
   // نسخ رابط المواطن
   const handleCopyLink = () => {
     if (!currentInspection) return
@@ -156,9 +192,15 @@ export default function ManagerInspectionDashboardModal({
     setTimeout(() => setCopiedLink(false), 2500)
   }
 
-  // طباعة الورقة فقط مع ضمان إخفاء النوافذ الخارجية
+  // طباعة الورقة فقط
   const handlePrint = () => {
-    window.print()
+    // إيقاف وضع التصميم مؤقتاً لضمان طباعة نقية
+    const wasInDesign = isDesignMode
+    if (wasInDesign) setIsDesignMode(false)
+    setTimeout(() => {
+      window.print()
+      if (wasInDesign) setIsDesignMode(true)
+    }, 100)
   }
 
   if (!isOpen) return null
@@ -168,7 +210,7 @@ export default function ManagerInspectionDashboardModal({
       className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-md print:bg-white print:p-0"
       dir="rtl"
     >
-      {/* شريط الأدوات العلوي الثابت - يختفي تلقائياً عند الطباعة print-hide */}
+      {/* شريط الأدوات العلوي الثابت - يختفي تلقائياً عند الطباعة */}
       <header className="print-hide bg-white border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md shrink-0 z-20">
         {/* القسم الأيمن: عنوان الكشف وبياناته */}
         <div className="flex items-center gap-3">
@@ -187,13 +229,53 @@ export default function ManagerInspectionDashboardModal({
               )}
             </div>
             <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-              تعديل مباشر على الورقة + طباعة فورية رسمية للورقة فقط
+              تعديل مباشر على الورقة + تحريك وتكبير وتخصيص أي عنصر بالماوس والكيبورد
             </p>
           </div>
         </div>
 
         {/* القسم الأوسط/الأيسر: أزرار العمليات الرئيسية مرتبة وواضحة جداً */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* زر تفعيل/إلغاء وضع تصميم وتخصيص العناصر المباشر */}
+          <button
+            type="button"
+            onClick={() => setIsDesignMode(!isDesignMode)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer border ${
+              isDesignMode
+                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-600 ring-2 ring-amber-300 animate-pulse'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+            }`}
+            title="انقر لتفعيل إمكانية النقر على أي عنصر بالورقة لتحريكه وتكبيره وتصغيره"
+          >
+            <Move className="w-4 h-4 text-indigo-700" />
+            <span>{isDesignMode ? '🎨 إيقاف تعديل المظهر' : '🎨 تعديل مكان وحجم العناصر'}</span>
+          </button>
+
+          {/* في حال تفعيل وضع التصميم: أزرار حفظ التصميم واستعادته */}
+          {isDesignMode && (
+            <>
+              <button
+                type="button"
+                onClick={handleSaveLayout}
+                className="flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-sm transition active:scale-95 cursor-pointer"
+                title="حفظ موضع وحجم العناصر الحالي كافتراضي دائم"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>حفظ التصميم</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetLayout}
+                className="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-300 cursor-pointer transition"
+                title="استعادة المواضع الافتراضية للورقة"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                <span>الافتراضي</span>
+              </button>
+            </>
+          )}
+
           {/* التحكم في حجم الورقة وزووم الرؤية */}
           <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 text-slate-700 hidden md:flex">
             <button
@@ -235,7 +317,7 @@ export default function ManagerInspectionDashboardModal({
             <span>{isAiProcessing ? 'جاري التنسيق...' : 'ترتيب بالذكاء الاصطناعي'}</span>
           </button>
 
-          {/* زر حفظ التعديلات في السحابة */}
+          {/* زر حفظ تعديلات البيانات في السحابة */}
           <button
             type="button"
             onClick={handleSave}
@@ -259,7 +341,7 @@ export default function ManagerInspectionDashboardModal({
             ) : (
               <>
                 <CheckCircle className="w-3.5 h-3.5" />
-                <span>حفظ التعديلات</span>
+                <span>حفظ البيانات</span>
               </>
             )}
           </button>
@@ -316,6 +398,23 @@ export default function ManagerInspectionDashboardModal({
           </button>
         </div>
       </header>
+
+      {/* شريط إشعار حفظ التصميم بنجاح */}
+      {layoutSavedNotice && (
+        <div className="print-hide bg-emerald-50 border-b border-emerald-300 px-4 py-2 text-xs sm:text-sm font-bold text-emerald-900 flex items-center justify-between gap-3 shadow-xs shrink-0 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{layoutSavedNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLayoutSavedNotice(null)}
+            className="text-emerald-700 hover:text-emerald-900 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* شريط إشعار الذكاء الاصطناعي - يختفي عند الطباعة */}
       {aiNotice && (
@@ -409,6 +508,9 @@ export default function ManagerInspectionDashboardModal({
               <InspectionPrintableA4
                 inspection={currentInspection}
                 isEditable={true}
+                isDesignMode={isDesignMode}
+                layoutConfig={layoutConfig}
+                onUpdateLayout={(newLayout) => setLayoutConfig(newLayout)}
                 onUpdate={(updated) => setCurrentInspection(updated)}
                 branchManagerName={branchManagerName}
               />
