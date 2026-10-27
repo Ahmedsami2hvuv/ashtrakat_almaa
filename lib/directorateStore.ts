@@ -175,6 +175,28 @@ export async function loadBranchSubscribersAndBilling(
     return branchSubscribersCache[branchId]
   }
 
+  // الكاش الدائم له الأولوية: لا نعيد تنزيل قاعدة الفرع عند الرجوع إلى الصفحة.
+  // التحديث من السحابة يحصل عند طلب تحديث صريح (forceRefresh) أو عند عدم وجود نسخة محلية.
+  if (!forceRefresh && typeof window !== 'undefined') {
+    try {
+      const localRaw = localStorage.getItem(getBranchStorageKey(branchId))
+      if (localRaw) {
+        const localData = JSON.parse(localRaw)
+        if (Array.isArray(localData.subscribers)) {
+          const cachedData = { subscribers: localData.subscribers as Subscriber[], billing: (localData.billing || {}) as BillingRecords, timestamp: Number(localData.timestamp || Date.now()) }
+          branchSubscribersCache[branchId] = cachedData
+          return cachedData
+        }
+      }
+    } catch {}
+    const persistentData = await loadFromIndexedDB(branchId)
+    if (persistentData && Array.isArray(persistentData.subscribers)) {
+      const cachedData = { ...persistentData, timestamp: Date.now() }
+      branchSubscribersCache[branchId] = cachedData
+      return cachedData
+    }
+  }
+
   let subscribers: Subscriber[] = []
   let billing: BillingRecords = {}
   let loadedFromNetwork = false
