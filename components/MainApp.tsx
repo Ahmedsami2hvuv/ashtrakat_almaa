@@ -3877,7 +3877,7 @@ export default function MainApp({
                       onClick={() => setSubscriberPage((page) => Math.max(0, page - 1))}
                       className="shrink-0 w-11 h-10 rounded-xl border border-sky-200 bg-white text-slate-700 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                     </button>
                     <div dir="rtl" className="flex-1 min-w-0 flex items-center justify-start gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="أرقام صفحات المشتركين">
                     {Array.from({ length: totalSubscriberPages }, (_, index) => index).map((page) => (
@@ -3899,7 +3899,7 @@ export default function MainApp({
                       onClick={() => setSubscriberPage((page) => Math.min(totalSubscriberPages - 1, page + 1))}
                       className="shrink-0 w-11 h-10 rounded-xl border border-sky-200 bg-white text-slate-700 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     </button>
                   </div>
                 </div>
