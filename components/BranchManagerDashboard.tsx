@@ -1842,17 +1842,17 @@ export default function BranchManagerDashboard({
 
   const navItems = [
     { id: 'dashboard', label: 'الرئيسية والمؤشرات', icon: BarChart3 },
-    { id: 'subscribers', label: 'سجل المشتركين', icon: Users, count: stats.totalSubscribers },
-    { id: 'areas', label: 'المناطق المائية', icon: MapPin, count: stats.totalAreas },
-    { id: 'collectors', label: 'المحصلين (الجباة)', icon: Wallet, count: stats.totalCollectors },
-    { id: 'writers', label: 'كُتّاب الاشتراكات', icon: BookOpen, count: stats.totalWriters },
-    { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers, count: (branch.consignments || []).length },
+    { id: 'subscribers', label: 'سجل المشتركين', icon: Users },
+    { id: 'areas', label: 'المناطق المائية', icon: MapPin },
+    { id: 'collectors', label: 'المحصلين (الجباة)', icon: Wallet },
+    { id: 'writers', label: 'كُتّاب الاشتراكات', icon: BookOpen },
+    { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers },
     { id: 'inspections', label: 'الكشوفات الفنية', icon: FileText },
     { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', icon: Settings }
   ]
 
   return (
-    <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ backgroundColor: '#F4F6F9', color: '#1E293B' }} dir="rtl">
+    <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ background: 'linear-gradient(145deg, #f8fafc 0%, #eef2f7 48%, #f9fafb 100%)', color: '#1f2937' }} dir="rtl">
       {/* ستايل مخصص ومباشر 100% لضمان تطابق التصميم الحكومي الفخم ومؤشر قطرة الماء */}
       <style>{`
         .water-dashboard, .water-dashboard * {
@@ -1913,6 +1913,20 @@ export default function BranchManagerDashboard({
           backdrop-filter: blur(22px) saturate(150%) !important;
           -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
           box-shadow: 0 10px 36px rgba(31,41,55,.06), inset 0 1px 0 rgba(255,255,255,.8) !important;
+        }
+        .water-dashboard .bg-white,
+        .water-dashboard .bg-slate-50,
+        .water-dashboard .bg-slate-100,
+        .water-dashboard .bg-slate-200 {
+          background-color: rgba(255,255,255,.58) !important;
+          backdrop-filter: blur(16px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+        }
+        .water-dashboard .border-slate-100,
+        .water-dashboard .border-slate-200,
+        .water-dashboard .border-gray-100,
+        .water-dashboard .border-gray-200 {
+          border-color: rgba(255,255,255,.86) !important;
         }
       `}</style>
 
