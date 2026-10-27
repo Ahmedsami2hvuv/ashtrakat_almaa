@@ -92,8 +92,7 @@ export function extractWithBuiltinNLP(
     inspectorName = writerOrCollectorName || ''
   }
 
-  // 5. استخراج وصياغة نقاط تقرير الكشف بدقة
-  // تنظيف النص من الترويسة والتحيات وصيغ المخاطبة
+  // 5. استخراج وصياغة نقاط تقرير الكشف مع تلوين العبارات المعنية باللون الأحمر
   let cleanBody = text
     .replace(/السيد مسؤول واردات[^\n.]*(?:المحترم)?/gi, '')
     .replace(/م\/[^\n]*/gi, '')
@@ -109,22 +108,47 @@ export function extractWithBuiltinNLP(
 
   const rawSentences = cleanBody
     .split(/(?:\r?\n|;|\.|\s{2,}|،(?=\s*(?:كما|علما|علماً|وقد|وتبين|واتضح)))/)
-    .map(s => s.trim())
-    .filter(s => s.length > 15)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 15)
 
   let reportPoints: string[] = []
 
+  // دالة ذكية لإحاطة الكلام المعني الذي يلي عبارة (العقار عبارة) أو (تبين انه) بوسم <red>
+  const highlightKeyPhrase = (sentence: string): string => {
+    let result = sentence
+
+    // نمط 1: ما يلي (العقار عبارة عن) أو (العقار عبارة)
+    if (/عبارة(?:\s+عن)?\s+/i.test(result) && !result.includes('<red>')) {
+      result = result.replace(
+        /(عبارة(?:\s+عن)?\s+)([\wء-ي0-9\s]{4,45}?)(?=\s+(?:ضمن|وخالية|علما|علماً|كما|ولا|وليس|في|,|،|\.|$))/i,
+        '$1<red>$2</red>'
+      )
+    }
+
+    // نمط 2: ما يلي (تبين انه) أو (تبين أنها)
+    if (/تبين\s+أن(?:ه|ها)\s+/i.test(result) && !result.includes('<red>')) {
+      result = result.replace(
+        /(تبين\s+أن(?:ه|ها)\s+)([\wء-ي0-9\s]{3,35}?)(?=\s+(?:مشيدة|على|علما|علماً|كما|ولا|في|,|،|\.|$))/i,
+        '$1<red>$2</red>'
+      )
+    }
+
+    // نمط 3: ما بين الأقواس المعنية بوصف العقار
+    result = result.replace(/\((بناية|دار|دارين|قطعة ارض|بستان|محطة|محل|مكتب)\)/gi, '(<red>$1</red>)')
+
+    return result
+  }
+
   if (rawSentences.length > 0) {
-    reportPoints = rawSentences.map(s => {
-      // إزالة علامات الأرقام القديمة إن وجدت
+    reportPoints = rawSentences.map((s) => {
       let pt = s.replace(/^[0-9\-–\s\.\)]+/, '').trim()
       if (!pt.startsWith('تم ') && !pt.startsWith('تبين ') && !pt.startsWith('اتضح ') && !pt.startsWith('العقار ')) {
         pt = pt.charAt(0).toUpperCase() + pt.slice(1)
       }
-      return pt
+      return highlightKeyPhrase(pt)
     })
   } else {
-    reportPoints = [text.trim()]
+    reportPoints = [highlightKeyPhrase(text.trim())]
   }
 
   // دمج الجمل القصيرة جداً
@@ -150,13 +174,13 @@ export function extractWithBuiltinNLP(
       plotNumber: plotNumber || '',
       sectorNumber: sectorNumber || ''
     },
-    reportPoints: reportPoints.length > 0 ? reportPoints : [text.trim()],
+    reportPoints: reportPoints.length > 0 ? reportPoints : [highlightKeyPhrase(text.trim())],
     inspectorEmployeeName: inspectorName,
     networksManagerName: '',
     revenuesManagerName: 'حسين علي لفتة جابر',
-    typistName: writerOrCollectorName || '',
+    typistName: 'نور جبار',
     aiMethodUsed: 'builtin_nlp',
-    aiSummary: `تم استخلاص اسم المواطن (${citizen || 'غير محدد'}) والمنطقة (${neighborhood || 'البصرة'}) وصياغة (${reportPoints.length}) نقاط رسمية معتمدة.`
+    aiSummary: `تم استخلاص اسم المواطن (${citizen || 'غير محدد'}) والمنطقة (${neighborhood || 'البصرة'}) وصياغة (${reportPoints.length}) نقاط رسمية مع تلوين وصف العقار باللون الأحمر.`
   }
 }
 
@@ -169,13 +193,13 @@ export async function processInspectionReportWithAI(
 ): Promise<ExtractedInspectionData> {
   const validKeys = apiKeys.map((k) => k.trim()).filter((k) => k.length > 0)
 
-  // إذا لم يتوفر مفتاح API، نستخدم فوراً المحلل الذكي الداخلي بدون إيقاف المستخدم أبداً
+  // إذا لم يتوفر مفتاح API، نستخدم فوراً المحلل الذكي الداخلي
   if (validKeys.length === 0) {
     return extractWithBuiltinNLP(reportText, writerOrCollectorName, branchName)
   }
 
   const prompt = `
-أنت خبير إداري وفني ذكي متخصص في تنظيم وصياغة "استمارة الكشف الفني" الرسمية التابعة لـ (جمهورية العراق - محافظة البصرة - مديرية ماء البصرة - مركز جباية واردات أبي الخصيب).
+أنت خبير إداري وفني ذكي متخصص في تنظيم وصياغة "استمارة الكشف الفني" الرسمية التابعة لـ (مديرية ماء البصرة - مركز جباية واردات أبي الخصيب).
 
 المهمة:
 حلل بدقة نص تقرير الكشف الميداني التالي واستخرج ورتب البيانات وفق النموذج الحكومي الرسمي بدقة متناهية:
@@ -191,17 +215,17 @@ export async function processInspectionReportWithAI(
 - رقم القطعة: استخرج رقم القطعة إن وُجد (مثال: 80/185) أو اتركه فارغاً "" إذا لم يُذكر
 - رقم المقاطعة: استخرج رقم المقاطعة إن وُجد (مثال: 20) أو اتركه فارغاً "" إذا لم يُذكر
 
-3. فقرات "تقرير الكشف" (مرتبة بدقة متناهية كنقاط واضحة ومقتضبة ومطابقة للأسلوب الإداري الرسمي):
-- أعد صياغة نتائج الكشف الفني على شكل نقاط مرقمة بأسلوب إداري رصين ومختصر مثل:
-  نقطة 1: "تم اجراء الكشف على العقار وتبين انه (بناية / دار / قطعة ارض فارغة) مشيدة بمساحة ... ولا يوجد فيها ماء اسالة..."
-  نقطة 2: أي تفاصيل إضافية عن المشيدات أو الحصص أو مصادر المياه أو خطوط الأنابيب.
-- احذف صيغ المخاطبة مثل (السيد مسؤول واردات المحترم، ولكم الأمر، مع التقدير...) وضع جوهر الوقائع فقط داخل النقاط.
+3. فقرات "تقرير الكشف" وقاعدة اللون الأحمر الإلزامية:
+- أعد صياغة نتائج الكشف الفني على شكل نقاط مرقمة بأسلوب إداري رصين ومختصر.
+- شرط إلزامي ومهم جداً: قم بإحاطة الكلام المعني الذي يلي عبارة (العقار عبارة عن) أو (العقار عبارة) أو وصف حالة العقار (مثل: قطعة ارض فارغة بمساحة ١٥٠ متر، أو بناية، أو دار سكنية مهجورة) بوسم <red>...</red> ليتم تلوينها باللون الأحمر!
+  مثال: "تبين أن موقع العقار عبارة <red>قطعة ارض فارغة بمساحة ١٥٠ متر</red> وخالية من المشيدات تماماً."
+  مثال: "تم اجراء الكشف على العقار وتبين انه (<red>بناية</red>) مشيدة على عقارين..."
 
 4. التواقيع الإدارية:
-- موظف الكشف: استخرج اسم القائم بالكشف إذا ورد في النص، وإلا اعتمد اسم: "${writerOrCollectorName || ''}".
-- م. الشبكات: "" (تترك فارغة لتوقيع مسؤول الشبكات).
+- موظف الكشف: اسم القائم بالكشف إذا ورد، وإلا اعتمد اسم: "${writerOrCollectorName || ''}".
+- م. الشبكات: "".
 - م. الواردات: "حسين علي لفتة جابر".
-- منظم/طابع التقرير: "${writerOrCollectorName || ''}".
+- منظم/طابع التقرير: "نور جبار".
 
 النص المطلوب تحليله:
 """
@@ -218,15 +242,15 @@ ${reportText}
   "plot_number": "80/185",
   "sector_number": "20",
   "report_points": [
-    "تم اجراء الكشف على العقار وتبين انه بناية مشيدة على عقارين، وتحتوي على مكتب عقارات وصالون رجالي لا يتوفر فيه ماء اسالة.",
+    "تم اجراء الكشف على العقار وتبين انه (<red>بناية</red>) مشيدة على عقارين، وتحتوي على مكتب عقارات وصالون رجالي لا يتوفر فيه ماء اسالة.",
     "الطابق العلوي للبناية مشيد عليه قاعة وشقق سكنية."
   ],
   "inspector_name": "${writerOrCollectorName || ''}",
   "networks_manager": "",
   "revenues_manager": "حسين علي لفتة جابر",
-  "typist_name": "${writerOrCollectorName || ''}"
+  "typist_name": "نور جبار"
 }
-تنك أجب بكود JSON الخالص فقط بدون أي وسوم markdown.
+أجب بكود JSON الخالص فقط بدون أي نصوص تمهيدية.
 `
 
   const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
@@ -266,22 +290,20 @@ ${reportText}
             plotNumber: parsed.plot_number || '',
             sectorNumber: parsed.sector_number || ''
           },
-          reportPoints: Array.isArray(parsed.report_points) && parsed.report_points.length > 0
-            ? parsed.report_points
-            : [reportText.trim()],
+          reportPoints: Array.isArray(parsed.report_points) && parsed.report_points.length > 0 ? parsed.report_points : [reportText],
           inspectorEmployeeName: parsed.inspector_name || writerOrCollectorName || '',
           networksManagerName: parsed.networks_manager || '',
           revenuesManagerName: parsed.revenues_manager || 'حسين علي لفتة جابر',
-          typistName: parsed.typist_name || writerOrCollectorName || '',
+          typistName: parsed.typist_name || 'نور جبار',
           aiMethodUsed: 'gemini',
-          aiSummary: `تمت المعالجة عبر Gemini بنجاح: تم استخراج اسم المواطن (${parsed.citizen_name || 'غير محدد'}) والمنطقة (${parsed.neighborhood || ''}) وترتيب النقاط.`
+          aiSummary: `قام الذكاء الاصطناعي (Gemini) بصياغة التقرير وتلوين وصف العقار باللون الأحمر واستخراج اسم المواطن (${parsed.citizen_name || 'غير محدد'}).`
         }
       } catch (e) {
-        // تجربة النموذج التالي
+        continue
       }
     }
   }
 
-  // في حال فشل الاتصال بخوادم Gemini، نلجأ فوراً للمحلل الذكي الداخلي لضمان العمل دائماً
+  // في حال فشلت المفاتيح نعود للمحلل الداخلي المطور
   return extractWithBuiltinNLP(reportText, writerOrCollectorName, branchName)
 }

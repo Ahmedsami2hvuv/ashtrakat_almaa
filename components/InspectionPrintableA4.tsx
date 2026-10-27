@@ -50,6 +50,73 @@ const ELEMENT_LABELS: Record<keyof InspectionLayoutConfig, string> = {
   revenuesSign: 'خانة م. الواردات'
 }
 
+// دالة ذكية لتلوين الكلام المعني بوصف العقار باللون الأحمر
+function renderHighlightedPoint(text: string) {
+  if (!text) return null
+
+  // إذا كان النص يحتوي بالفعل على وسم <red>...</red>
+  if (text.includes('<red>')) {
+    const parts = text.split(/(<red>[\s\S]*?<\/red>)/gi)
+    return (
+      <>
+        {parts.map((part, i) => {
+          if (part.startsWith('<red>') && part.endsWith('</red>')) {
+            const inner = part.replace(/<\/?red>/gi, '')
+            return (
+              <span key={i} className="text-[#b91c1c] font-black underline decoration-red-300 decoration-1 underline-offset-2">
+                {inner}
+              </span>
+            )
+          }
+          return <span key={i}>{part}</span>
+        })}
+      </>
+    )
+  }
+
+  // إذا لم يكن الوسم موجوداً، نقوم بالبحث التلقائي عن (العقار عبارة ...) أو ما بين الأقواس
+  // نمط: "عبارة قطعة ارض فارغة بمساحة ١٥٠ متر" أو "عبارة عن ..."
+  const phraseRegex = /(عبارة(?:\s+عن)?\s+)([\wء-ي0-9\s]{4,45}?)(?=\s+(?:ضمن|وخالية|علما|علماً|كما|ولا|وليس|في|,|،|\.|$))/i
+  const match = text.match(phraseRegex)
+
+  if (match && match[2]) {
+    const before = text.substring(0, match.index! + match[1].length)
+    const highlighted = match[2]
+    const after = text.substring(match.index! + match[1].length + highlighted.length)
+    return (
+      <>
+        <span>{before}</span>
+        <span className="text-[#b91c1c] font-black underline decoration-red-300 decoration-1 underline-offset-2">
+          {highlighted}
+        </span>
+        <span>{after}</span>
+      </>
+    )
+  }
+
+  // نمط ما بين الأقواس المعنية بوصف العقار مثل (بناية) أو (دار سكنية) أو (قطعة ارض)
+  const parenRegex = /(\((?:بناية|دار|دارين|قطعة ارض[^\)]*|بستان[^\)]*|محل|مكتب)\))/gi
+  if (parenRegex.test(text)) {
+    const parts = text.split(/(\([^\)]+\))/gi)
+    return (
+      <>
+        {parts.map((part, i) => {
+          if (part.startsWith('(') && part.endsWith(')')) {
+            return (
+              <span key={i} className="text-[#b91c1c] font-black">
+                {part}
+              </span>
+            )
+          }
+          return <span key={i}>{part}</span>
+        })}
+      </>
+    )
+  }
+
+  return <span>{text}</span>
+}
+
 export default function InspectionPrintableA4({
   inspection,
   isEditable = false,
@@ -294,7 +361,7 @@ export default function InspectionPrintableA4({
             </span>
           </div>
 
-          {/* أزرار التحريك الأربعة - خلفية زجاجية مع أيقونات وخطوط سوداء واضحة جداً */}
+          {/* أزرار التحريك الأربعة */}
           <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200" dir="ltr">
             <button
               type="button"
@@ -330,7 +397,7 @@ export default function InspectionPrintableA4({
             </button>
           </div>
 
-          {/* أزرار التكبير والتصغير - زجاجي شفاف مع خط أسود عريض */}
+          {/* أزرار التكبير والتصغير */}
           <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
             <button
               type="button"
@@ -402,9 +469,9 @@ export default function InspectionPrintableA4({
           >
             {/* الجزء العلوي والبيانات والجدول والتقرير */}
             <div>
-              {/* الترويسة العليا: الشعار، الباركود، ونصوص الدائرة والفرع */}
+              {/* الترويسة العليا: الشعار، الباركود، ونصوص الدائرة والفرع باللون الأحمر */}
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-300">
-                {/* 1. نصوص الدائرة والفرع */}
+                {/* 1. نصوص الدائرة والفرع باللون الأحمر */}
                 <div
                   className={getElementWrapperClass('headerText')}
                   onClick={(e) => handleElementClick(e, 'headerText')}
@@ -414,7 +481,7 @@ export default function InspectionPrintableA4({
                   }}
                 >
                   <div className="text-right leading-tight flex flex-col justify-center">
-                    <h2 className="text-lg font-bold text-slate-900 whitespace-nowrap">
+                    <h2 className="text-lg font-black text-[#b91c1c] whitespace-nowrap">
                       مديرية ماء البصرة
                     </h2>
                     <h3 className="text-base font-bold text-[#b91c1c] whitespace-nowrap mt-1">
@@ -462,7 +529,7 @@ export default function InspectionPrintableA4({
                 </div>
               </div>
 
-              {/* بلوك الكشف الفني */}
+              {/* بلوك الكشف الفني باللون الأحمر */}
               <div className="flex justify-center my-3">
                 <div
                   className={getElementWrapperClass('titleBadge')}
@@ -690,7 +757,7 @@ export default function InspectionPrintableA4({
                 </div>
               </div>
 
-              {/* جملة تقرير الكشف في أقصى اليمين */}
+              {/* جملة تقرير الكشف في أقصى اليمين باللون الأحمر */}
               <div className="flex justify-start mt-3 mb-2.5">
                 <div
                   className={getElementWrapperClass('reportBadge')}
@@ -701,7 +768,7 @@ export default function InspectionPrintableA4({
                 >
                   <div className="border border-slate-800 rounded px-3 py-0.5 h-6 flex items-center justify-center bg-white shadow-2xs">
                     <h3
-                      className="text-xs sm:text-sm font-bold text-[#b91c1c] leading-none"
+                      className="text-xs sm:text-sm font-black text-[#b91c1c] leading-none"
                       style={{ fontSize: layout.reportBadge.fontSize ? `${layout.reportBadge.fontSize}px` : undefined }}
                     >
                       تقرير الكشف
@@ -710,7 +777,7 @@ export default function InspectionPrintableA4({
                 </div>
               </div>
 
-              {/* نقاط تقرير الكشف */}
+              {/* نقاط تقرير الكشف مع التلوين الأحمر للعبارات المعنية بوصف العقار */}
               <div
                 className={getElementWrapperClass('reportPoints')}
                 onClick={(e) => handleElementClick(e, 'reportPoints')}
@@ -730,33 +797,42 @@ export default function InspectionPrintableA4({
                         </span>
                         {isEditable ? (
                           <>
-                            <div className="screen-only-input flex-1 flex items-start gap-2">
-                              <textarea
-                                rows={2}
-                                value={point}
-                                onChange={(e) => handlePointChange(index, e.target.value)}
-                                className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded p-1 font-bold text-base sm:text-lg text-slate-950 outline-none leading-relaxed resize-y m-0"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemovePoint(index)}
-                                className="text-slate-300 hover:text-rose-600 p-1 transition"
-                                title="حذف هذا السطر"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            <div className="screen-only-input flex-1 flex flex-col gap-1">
+                              <div className="flex items-start gap-2">
+                                <textarea
+                                  rows={2}
+                                  value={point}
+                                  onChange={(e) => handlePointChange(index, e.target.value)}
+                                  className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded p-1 font-bold text-base sm:text-lg text-slate-950 outline-none leading-relaxed resize-y m-0"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePoint(index)}
+                                  className="text-slate-300 hover:text-rose-600 p-1 transition"
+                                  title="حذف هذا السطر"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              {/* معاينة تلوين الكلمة المعنية باللون الأحمر للمدير أثناء التحرير */}
+                              <div className="text-xs text-slate-500 bg-slate-50 p-1 rounded border border-slate-100 flex items-center gap-1">
+                                <span className="font-bold text-slate-600">معاينة الطباعة:</span>
+                                <span className="text-slate-900">{renderHighlightedPoint(point)}</span>
+                              </div>
                             </div>
                             <p className="print-only-text flex-1 text-justify font-bold leading-relaxed text-slate-950 m-0 p-0">
-                              {point}
+                              {renderHighlightedPoint(point)}
                             </p>
                           </>
                         ) : (
-                          <p className="flex-1 text-justify font-bold leading-relaxed m-0 p-0">{point}</p>
+                          <p className="flex-1 text-justify font-bold leading-relaxed m-0 p-0">
+                            {renderHighlightedPoint(point)}
+                          </p>
                         )}
                       </div>
                     ))
                   ) : (
-                    <p className="text-justify font-bold leading-relaxed">{inspection.rawReportText}</p>
+                    <p className="text-justify font-bold leading-relaxed">{renderHighlightedPoint(inspection.rawReportText)}</p>
                   )}
 
                   {isEditable && (
@@ -775,115 +851,128 @@ export default function InspectionPrintableA4({
               </div>
             </div>
 
-            {/* التواقيع الرسمية */}
-            <div
-              className={`mt-6 pt-2 ${getElementWrapperClass('signatures')}`}
-              onClick={(e) => handleElementClick(e, 'signatures')}
-              style={{
-                transform: `translate(${layout.signatures.x}px, ${layout.signatures.y}px)`
-              }}
-            >
+            {/* التواقيع الرسمية وتذييل الصفحة */}
+            <div>
+              {/* التواقيع الرسمية */}
               <div
-                className="grid grid-cols-3 text-center items-start text-slate-900"
-                style={{ fontSize: layout.signatures.fontSize ? `${layout.signatures.fontSize}px` : undefined }}
+                className={`mt-6 pt-2 ${getElementWrapperClass('signatures')}`}
+                onClick={(e) => handleElementClick(e, 'signatures')}
+                style={{
+                  transform: `translate(${layout.signatures.x}px, ${layout.signatures.y}px)`
+                }}
               >
-                {/* 1. موظف الكشف */}
                 <div
-                  className={getElementWrapperClass('inspectorSign')}
-                  onClick={(e) => handleElementClick(e, 'inspectorSign')}
-                  style={{
-                    transform: `translate(${layout.inspectorSign.x}px, ${layout.inspectorSign.y}px)`
-                  }}
+                  className="grid grid-cols-3 text-center items-start text-slate-900"
+                  style={{ fontSize: layout.signatures.fontSize ? `${layout.signatures.fontSize}px` : undefined }}
                 >
-                  <div className="flex flex-col items-center">
-                    <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-                      موظف الكشف
-                    </span>
-                    {isEditable ? (
-                      <>
-                        <input
-                          type="text"
-                          value={inspection.writerOrCollectorName || inspection.inspectorEmployeeName || ''}
-                          onChange={(e) => handleFieldChange('writerOrCollectorName', e.target.value)}
-                          placeholder="اسم موظف الكشف"
-                          className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-base"
-                        />
-                        <span className="print-only-text font-bold text-base">
+                  {/* 1. موظف الكشف */}
+                  <div
+                    className={getElementWrapperClass('inspectorSign')}
+                    onClick={(e) => handleElementClick(e, 'inspectorSign')}
+                    style={{
+                      transform: `translate(${layout.inspectorSign.x}px, ${layout.inspectorSign.y}px)`
+                    }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+                        موظف الكشف
+                      </span>
+                      {isEditable ? (
+                        <>
+                          <input
+                            type="text"
+                            value={inspection.writerOrCollectorName || inspection.inspectorEmployeeName || ''}
+                            onChange={(e) => handleFieldChange('writerOrCollectorName', e.target.value)}
+                            placeholder="اسم موظف الكشف"
+                            className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-base"
+                          />
+                          <span className="print-only-text font-bold text-base">
+                            {inspection.writerOrCollectorName || inspection.inspectorEmployeeName || '................................'}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-base font-bold">
                           {inspection.writerOrCollectorName || inspection.inspectorEmployeeName || '................................'}
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-base font-bold">
-                        {inspection.writerOrCollectorName || inspection.inspectorEmployeeName || '................................'}
-                      </span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* 2. م. الشبكات */}
-                <div
-                  className={getElementWrapperClass('networksSign')}
-                  onClick={(e) => handleElementClick(e, 'networksSign')}
-                  style={{
-                    transform: `translate(${layout.networksSign.x}px, ${layout.networksSign.y}px)`
-                  }}
-                >
-                  <div className="flex flex-col items-center">
-                    <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-                      م. الشبكات
-                    </span>
-                    {isEditable ? (
-                      <>
-                        <input
-                          type="text"
-                          value={inspection.networksManagerName || ''}
-                          onChange={(e) => handleFieldChange('networksManagerName', e.target.value)}
-                          placeholder="................................"
-                          className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-300 outline-none font-bold text-base"
-                        />
-                        <span className="print-only-text font-bold text-base">
+                  {/* 2. م. الشبكات */}
+                  <div
+                    className={getElementWrapperClass('networksSign')}
+                    onClick={(e) => handleElementClick(e, 'networksSign')}
+                    style={{
+                      transform: `translate(${layout.networksSign.x}px, ${layout.networksSign.y}px)`
+                    }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+                        م. الشبكات
+                      </span>
+                      {isEditable ? (
+                        <>
+                          <input
+                            type="text"
+                            value={inspection.networksManagerName || ''}
+                            onChange={(e) => handleFieldChange('networksManagerName', e.target.value)}
+                            placeholder="................................"
+                            className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-300 outline-none font-bold text-base"
+                          />
+                          <span className="print-only-text font-bold text-base">
+                            {inspection.networksManagerName || '................................'}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-base font-bold">
                           {inspection.networksManagerName || '................................'}
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-base font-bold">
-                        {inspection.networksManagerName || '................................'}
-                      </span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* 3. م. الواردات */}
-                <div
-                  className={getElementWrapperClass('revenuesSign')}
-                  onClick={(e) => handleElementClick(e, 'revenuesSign')}
-                  style={{
-                    transform: `translate(${layout.revenuesSign.x}px, ${layout.revenuesSign.y}px)`
-                  }}
-                >
-                  <div className="flex flex-col items-center">
-                    <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-                      م. الواردات
-                    </span>
-                    {isEditable ? (
-                      <>
-                        <input
-                          type="text"
-                          value={inspection.revenuesManagerName || defaultRevenuesManager}
-                          onChange={(e) => handleFieldChange('revenuesManagerName', e.target.value)}
-                          placeholder="مسؤول الواردات"
-                          className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-base"
-                        />
-                        <span className="print-only-text font-bold text-base">
+                  {/* 3. م. الواردات */}
+                  <div
+                    className={getElementWrapperClass('revenuesSign')}
+                    onClick={(e) => handleElementClick(e, 'revenuesSign')}
+                    style={{
+                      transform: `translate(${layout.revenuesSign.x}px, ${layout.revenuesSign.y}px)`
+                    }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+                        م. الواردات
+                      </span>
+                      {isEditable ? (
+                        <>
+                          <input
+                            type="text"
+                            value={inspection.revenuesManagerName || defaultRevenuesManager}
+                            onChange={(e) => handleFieldChange('revenuesManagerName', e.target.value)}
+                            placeholder="مسؤول الواردات"
+                            className="screen-only-input w-full text-center bg-transparent border-b border-dashed border-slate-400 outline-none font-bold text-base"
+                          />
+                          <span className="print-only-text font-bold text-base">
+                            {inspection.revenuesManagerName || defaultRevenuesManager}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-base font-bold">
                           {inspection.revenuesManagerName || defaultRevenuesManager}
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-base font-bold">
-                        {inspection.revenuesManagerName || defaultRevenuesManager}
-                      </span>
-                    )}
+                      )}
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              {/* تذييل الصفحة الرسمي: اسم نور جبار بالأسفل على اليمين */}
+              <div className="mt-8 pt-1.5 border-t border-slate-300 flex justify-between items-center text-xs font-bold text-slate-800">
+                <div className="text-right">
+                  <span className="text-xs sm:text-sm font-black text-slate-900">نور جبار</span>
+                </div>
+                <div className="text-left text-[11px] text-slate-400 font-mono">
+                  مديرية ماء محافظة البصرة
                 </div>
               </div>
             </div>
