@@ -3704,7 +3704,7 @@ export default function MainApp({
       </header>
 
       {/* المحتوى الرئيسي للتطبيق بحسب التبويب السفلي المختار */}
-      <main className={`max-w-[1100px] mx-auto px-3 sm:px-4 py-4 ${userRole === 'writer' ? 'pb-8' : 'pb-28'}`}>
+      <main className={`max-w-[1100px] mx-auto px-3 sm:px-4 py-4 ${userRole === 'writer' ? 'pb-8' : 'pb-40'}`}>
 
         {/* ========================================================= */}
         {/* التبويب 1: المشتركين */}
@@ -3955,7 +3955,7 @@ export default function MainApp({
                 )}
               </div>
               {displayedSubscribers.length > SUBSCRIBERS_PAGE_SIZE && (
-                <div className="flex items-center justify-between gap-3 border-t border-sky-100 bg-sky-50/40 px-4 py-3">
+                <div style={{ position: "sticky", bottom: "calc(58px + env(safe-area-inset-bottom, 0px))", zIndex: 30 }} className="flex items-center justify-between gap-3 border-t border-sky-100 bg-sky-50 px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.08)]">
                   <button
                     type="button"
                     disabled={subscriberPage === 0}
