@@ -1467,7 +1467,7 @@ export default function MainApp({
 
   // المشتركون ضمن نطاق الفرع والمناطق المخصصة
   const subscribersInRange = useMemo(() => {
-    // إذا كان كاتب ولديه نطاق محدد حصراً (مثلاً من 1 إلى 1000)
+    // الكاتب: يلتزم بالنطاق أو بقائمة الاشتراكات المخصصة حصراً.
     if (userRole === 'writer') {
       if (effectiveWriterRange) {
         return subscribers.filter((s) => s.id >= effectiveWriterRange.from && s.id <= effectiveWriterRange.to)
@@ -1478,13 +1478,32 @@ export default function MainApp({
       }
     }
 
+    // المحصل: لا نسمح بظهور اشتراكات خارج التخصيص.
+    // إذا عُيّنت أرقام اشتراكات، فهي المرجع الحصري ولا نضيف اشتراكات المنطقة إليها.
+    if (userRole === 'collector') {
+      if (assignedSubscriberIds && assignedSubscriberIds.length > 0) {
+        const allowedSet = new Set(assignedSubscriberIds)
+        return subscribers.filter((s) => allowedSet.has(s.id))
+      }
+
+      if (assignedAreaIds && assignedAreaIds.length > 0) {
+        return subscribers.filter((s) =>
+          (s.areaId && assignedAreaIds.includes(s.areaId)) ||
+          (s.areaIds && s.areaIds.some(aid => assignedAreaIds.includes(aid)))
+        )
+      }
+
+      // إذا لم يوجد تخصيص معروف، لا تعرض جميع اشتراكات الفرع بالخطأ.
+      return []
+    }
+
     let list = subscribers.filter((s) => 
       (s.id >= rangeFrom && s.id <= rangeTo) || 
       isRecentlyAddedSubscriber(s) || 
       (Boolean(s.name) && s.name.trim() !== '' && s.name !== 'رقم شاغر')
     )
 
-    // إذا كان للمستخدم مناطق أو مشتركون مخصصون حصراً
+    // للأدوار الأخرى: فلترة المناطق/الأرقام المخصصة
     const hasAssignedAreas = assignedAreaIds && assignedAreaIds.length > 0
     const hasAssignedSubs = assignedSubscriberIds && assignedSubscriberIds.length > 0
 
