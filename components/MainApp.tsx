@@ -3986,37 +3986,7 @@ export default function MainApp({
                   })
                 )}
               </div>
-              {displayedSubscribers.length > SUBSCRIBERS_PAGE_SIZE && (
-                <div className="border-b border-sky-100 bg-sky-50 px-3 py-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <button
-                      type="button"
-                      disabled={subscriberPage === 0}
-                      onClick={() => setSubscriberPage((page) => Math.max(0, page - 1))}
-                      className="shrink-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >السابق</button>
-                    <span className="text-xs font-bold text-slate-700">صفحة {formatNumber(subscriberPage + 1)} من {formatNumber(totalSubscriberPages)}</span>
-                    <button
-                      type="button"
-                      disabled={subscriberPage >= totalSubscriberPages - 1}
-                      onClick={() => setSubscriberPage((page) => Math.min(totalSubscriberPages - 1, page + 1))}
-                      className="shrink-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >التالي</button>
-                  </div>
-                  <div className="flex items-center justify-center gap-1.5 overflow-x-auto pb-1" aria-label="أرقام صفحات المشتركين">
-                    {Array.from({ length: totalSubscriberPages }, (_, index) => index).map((page) => (
-                      <button
-                        key={page}
-                        type="button"
-                        aria-label={`الانتقال إلى الصفحة ${page + 1}`}
-                        aria-current={subscriberPage === page ? "page" : undefined}
-                        onClick={() => setSubscriberPage(page)}
-                        className={`min-w-9 h-9 px-3 rounded-lg border text-sm font-bold transition-colors shrink-0 ${subscriberPage === page ? "bg-slate-900 text-white border-slate-900 shadow-sm" : "bg-white text-slate-700 border-sky-200 hover:bg-sky-100"}`}
-                      >{formatNumber(page + 1)}</button>
-                    ))}
-                  </div>
-                </div>
-              )}
+             )}
             </div>
           </div>
         )}
