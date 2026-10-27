@@ -5112,6 +5112,8 @@ export default function MainApp({
                     </div>
 
                     {activeBilling.rows.map((row, idx) => {
+                      // مفتاح مستقل لكل مشترك وسنة وفترة لمنع انتقال حالة الإدخال المحلية إلى المشترك التالي.
+                      const inputKey = `${activeSubscriber.id}-${selectedYear}-${row.periodLabel}`
                       // الشهر الحالي يبين بحد أحمر فقط، لا تكتب كلمة "الحالي"
                       const isCurrentPeriod = selectedYear === 2026 && idx === currentPeriodIndex
 
@@ -5130,6 +5132,7 @@ export default function MainApp({
                           {/* 1. الديون السابقة */}
                           <div className="px-0.5 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <DebtCellInput
+                              key={`${inputKey}-old`}
                               id={idx === 0 ? 'first-old-debt-input' : undefined}
                               initialValue={row.old}
                               placeholder="0"
@@ -5147,6 +5150,7 @@ export default function MainApp({
                           {/* 2. المجموع */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <DebtCellInput
+                              key={`${inputKey}-total`}
                               initialValue={row.total}
                               placeholder="0"
                               readOnly={userRole === 'collector'}
@@ -5165,6 +5169,7 @@ export default function MainApp({
                           {/* 3. المدفوع */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <DebtCellInput
+                              key={`${inputKey}-paid`}
                               initialValue={row.paid}
                               isZeroEmpty={true}
                               placeholder="0"
@@ -5182,6 +5187,7 @@ export default function MainApp({
                           {/* 4. المجموع الكلي */}
                           <div className="px-0.5 border-r border-sky-50 flex items-center justify-center" style={{ minHeight: '38px' }}>
                             <DebtCellInput
+                              key={`${inputKey}-remaining`}
                               initialValue={row.remaining}
                               placeholder="0"
                               readOnly={userRole === 'collector'}
