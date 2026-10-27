@@ -309,7 +309,7 @@ export default function DirectorateRootApp() {
 
               setSubscriberAppProps({
                 role: 'writer',
-                userTitle: 'نظام الاشتراكات',
+                userTitle: 'الاشتراكات',
                 canEdit: true,
                 assignedAreaIds: matchedWriter.assignedAreaIds,
                 assignedSubscriberIds: matchedWriter.assignedSubscriberIds,
@@ -543,7 +543,7 @@ export default function DirectorateRootApp() {
         writerRangeTo={subscriberAppProps?.writerRangeTo}
         collectorId={subscriberAppProps?.collectorId}
         collectorName={subscriberAppProps?.collectorName}
-        customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}
+        customHeaderTitle={subscriberAppProps?.userTitle || 'الاشتراكات'}
         bypassAuth={true}
         onBack={
           subscriberAppProps?.role === 'manager'

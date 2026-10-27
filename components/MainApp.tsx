@@ -2965,7 +2965,7 @@ export default function MainApp({
             </div>
             <div className="flex flex-col">
               <h1 className="text-[13px] sm:text-[14px] font-bold tracking-tight text-slate-900 truncate whitespace-nowrap">
-                {userRole === 'writer' ? 'نظام الاشتراكات' : (customHeaderTitle || 'نظام الاشتراكات')}
+                {userRole === 'writer' ? 'الاشتراكات' : (customHeaderTitle || 'الاشتراكات')}
               </h1>
             </div>
 
@@ -3672,38 +3672,14 @@ export default function MainApp({
           <div>
             {/* بلوك الكاتب البارز والأنيق قبل قائمة المشتركين */}
             {userRole === 'writer' && (
-              <div className="bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-white border border-blue-200/80 rounded-2xl p-3.5 sm:p-4 mb-3 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] font-bold text-blue-600 leading-none mb-1">حساب كاتب الاشتراكات</div>
-                      <h2 className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
-                        {writerName || 'الكاتب المعتمد'}
-                      </h2>
-                    </div>
+              <div className="bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-white border border-blue-200/80 rounded-2xl p-3 sm:p-3.5 mb-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+                    <User className="w-5 h-5" />
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-2 pt-1 sm:pt-0">
-                    <div className="bg-white border border-blue-200 px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 text-xs">
-                      <span className="text-[11px] font-bold text-slate-500">الاشتراكات المخصصة:</span>
-                      {effectiveWriterRange ? (
-                        <span className="font-mono font-black text-blue-900 text-[12px] dir-ltr">
-                          من #{formatNumber(effectiveWriterRange.from)} إلى #{formatNumber(effectiveWriterRange.to)}
-                        </span>
-                      ) : (
-                        <span className="font-bold text-slate-700 text-[11px]">كافة اشتراكات الفرع</span>
-                      )}
-                    </div>
-
-                    <div className="bg-blue-600 text-white px-2.5 py-1.5 rounded-xl shadow-2xs text-[11px] font-bold flex items-center gap-1">
-                      <span>العدد:</span>
-                      <span className="font-mono font-black">{formatNumber(subscribersInRange.length)}</span>
-                      <span>مشترك</span>
-                    </div>
-                  </div>
+                  <h2 className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
+                    {writerName || 'الكاتب المعتمد'}
+                  </h2>
                 </div>
               </div>
             )}
