@@ -1842,17 +1842,17 @@ export default function BranchManagerDashboard({
 
   const navItems = [
     { id: 'dashboard', label: 'الرئيسية والمؤشرات', icon: BarChart3 },
-    { id: 'subscribers', label: 'سجل المشتركين', icon: Users, count: stats.totalSubscribers },
-    { id: 'areas', label: 'المناطق المائية', icon: MapPin, count: stats.totalAreas },
-    { id: 'collectors', label: 'المحصلين (الجباة)', icon: Wallet, count: stats.totalCollectors },
-    { id: 'writers', label: 'كُتّاب الاشتراكات', icon: BookOpen, count: stats.totalWriters },
-    { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers, count: (branch.consignments || []).length },
+    { id: 'subscribers', label: 'سجل المشتركين', icon: Users },
+    { id: 'areas', label: 'المناطق المائية', icon: MapPin },
+    { id: 'collectors', label: 'المحصلين (الجباة)', icon: Wallet },
+    { id: 'writers', label: 'كُتّاب الاشتراكات', icon: BookOpen },
+    { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers },
     { id: 'inspections', label: 'الكشوفات الفنية', icon: FileText },
     { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', icon: Settings }
   ]
 
   return (
-    <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ backgroundColor: '#F4F6F9', color: '#1E293B' }} dir="rtl">
+    <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ background: 'linear-gradient(145deg, #f8fafc 0%, #eef2f7 48%, #f9fafb 100%)', color: '#1f2937' }} dir="rtl">
       {/* ستايل مخصص ومباشر 100% لضمان تطابق التصميم الحكومي الفخم ومؤشر قطرة الماء */}
       <style>{`
         .water-dashboard, .water-dashboard * {
@@ -1862,39 +1862,71 @@ export default function BranchManagerDashboard({
           cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%2338bdf8' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23ffffff'/%3E%3C/svg%3E") 12 2, pointer !important;
         }
         .gov-header {
-          background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
-          border-bottom: 2px solid #0284c7 !important;
-          color: #ffffff !important;
+          background: rgba(255, 255, 255, 0.72) !important;
+          backdrop-filter: blur(24px) saturate(160%) !important;
+          -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.9) !important;
+          color: #1f2937 !important;
+          box-shadow: 0 8px 32px rgba(31, 41, 55, 0.06) !important;
         }
+        .gov-header h1, .gov-header h3, .gov-header span { color: #1f2937 !important; }
+        .gov-header button { color: #374151 !important; }
         .gov-nav {
-          background-color: #0F172A !important;
-          border-bottom: 1px solid #334155 !important;
+          background: rgba(255, 255, 255, 0.58) !important;
+          backdrop-filter: blur(24px) !important;
+          -webkit-backdrop-filter: blur(24px) !important;
+          border-bottom: 1px solid rgba(255,255,255,.8) !important;
         }
         .gov-nav-btn {
-          color: #cbd5e1 !important;
-          background-color: transparent !important;
-          border: 1px solid transparent !important;
+          color: #4b5563 !important;
+          background-color: rgba(255,255,255,.42) !important;
+          border: 1px solid rgba(255,255,255,.75) !important;
           transition: all 0.2s ease !important;
         }
         .gov-nav-btn:hover {
-          color: #ffffff !important;
-          background-color: #1E293B !important;
+          color: #111827 !important;
+          background-color: rgba(255,255,255,.8) !important;
         }
         .gov-nav-btn-active {
-          background-color: #0284c7 !important;
-          color: #ffffff !important;
+          background: rgba(255,255,255,.9) !important;
+          color: #111827 !important;
           font-weight: 800 !important;
-          border: 1px solid #38bdf8 !important;
-          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4) !important;
+          border: 1px solid rgba(209,213,219,.8) !important;
+          box-shadow: 0 6px 24px rgba(31,41,55,.08) !important;
         }
         .gov-card {
-          background: #FFFFFF !important;
-          border: 1px solid #E2E8F0 !important;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+          background: rgba(255, 255, 255, 0.62) !important;
+          backdrop-filter: blur(18px) saturate(145%) !important;
+          -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
+          border: 1px solid rgba(255,255,255,.92) !important;
+          box-shadow: 0 8px 32px rgba(31,41,55,.055), inset 0 1px 0 rgba(255,255,255,.85) !important;
           transition: all 0.2s ease !important;
         }
         .gov-card:hover {
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08) !important;
+          background: rgba(255,255,255,.78) !important;
+          box-shadow: 0 12px 36px rgba(31,41,55,.08), inset 0 1px 0 rgba(255,255,255,.95) !important;
+          transform: translateY(-1px);
+        }
+        .manager-glass-surface {
+          background: rgba(255,255,255,.58) !important;
+          border: 1px solid rgba(255,255,255,.88) !important;
+          backdrop-filter: blur(22px) saturate(150%) !important;
+          -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
+          box-shadow: 0 10px 36px rgba(31,41,55,.06), inset 0 1px 0 rgba(255,255,255,.8) !important;
+        }
+        .water-dashboard .bg-white,
+        .water-dashboard .bg-slate-50,
+        .water-dashboard .bg-slate-100,
+        .water-dashboard .bg-slate-200 {
+          background-color: rgba(255,255,255,.58) !important;
+          backdrop-filter: blur(16px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+        }
+        .water-dashboard .border-slate-100,
+        .water-dashboard .border-slate-200,
+        .water-dashboard .border-gray-100,
+        .water-dashboard .border-gray-200 {
+          border-color: rgba(255,255,255,.86) !important;
         }
       `}</style>
 
@@ -1969,29 +2001,29 @@ export default function BranchManagerDashboard({
 
       {/* قائمة جانبية حديثة: كل قسم له مسار مستقل ويحافظ على رابط دخول المسؤول */}
       <button type="button" onClick={() => setSidebarOpen(true)} aria-label="فتح القائمة الجانبية"
-        className="fixed z-40 right-4 top-4 md:top-5 flex items-center gap-2 rounded-2xl px-4 py-3 text-white shadow-xl border border-white/15"
-        style={{background:'linear-gradient(135deg,#0284c7,#1e3a8a)', boxShadow:'0 12px 30px rgba(2,132,199,.3)'}}>
+        className="fixed z-40 right-4 top-4 md:top-5 flex items-center gap-2 rounded-2xl px-4 py-3 text-slate-800 manager-glass-surface shadow-lg"
+        style={{boxShadow:'0 8px 28px rgba(31,41,55,.08)'}}>
         <Menu className="w-5 h-5"/><span className="text-sm font-black">القائمة</span>
       </button>
       {sidebarOpen && <div className="fixed inset-0 z-50" dir="rtl">
-        <button className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" aria-label="إغلاق القائمة" onClick={() => setSidebarOpen(false)} />
-        <aside className="absolute right-0 top-0 h-full w-[min(88vw,340px)] overflow-y-auto text-white p-5 shadow-2xl"
-          style={{background:'linear-gradient(165deg,#0f172a 0%,#102a43 55%,#075985 100%)'}}>
-          <div className="flex items-center justify-between border-b border-white/15 pb-5 mb-5">
-            <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-2xl bg-cyan-400/15 border border-cyan-300/30 grid place-items-center text-cyan-200"><Droplets className="w-7 h-7"/></div>
-              <div><div className="font-black text-lg">إدارة الفرع</div><div className="text-xs text-slate-300 mt-1">{branch.name}</div></div></div>
-            <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl bg-white/10 hover:bg-white/20" aria-label="إغلاق"><X className="w-5 h-5"/></button>
+        <button className="absolute inset-0 bg-slate-900/15 backdrop-blur-[3px]" aria-label="إغلاق القائمة" onClick={() => setSidebarOpen(false)} />
+        <aside className="absolute right-0 top-0 h-full w-[min(88vw,340px)] overflow-y-auto text-slate-800 p-5 manager-glass-surface rounded-l-[28px]"
+          style={{background:'rgba(255,255,255,.78)',boxShadow:'-12px 0 40px rgba(31,41,55,.10)'}}>
+          <div className="flex items-center justify-between border-b border-slate-200/70 pb-5 mb-5">
+            <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-2xl border border-white/90 bg-white/70 shadow-sm grid place-items-center text-slate-700"><Droplets className="w-7 h-7"/></div>
+              <div><div className="font-black text-lg text-slate-900">إدارة الفرع</div><div className="text-xs text-slate-500 mt-1">{branch.name}</div></div></div>
+            <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl bg-white/65 border border-white hover:bg-white" aria-label="إغلاق"><X className="w-5 h-5"/></button>
           </div>
-          <div className="text-[10px] font-black tracking-widest text-cyan-200/80 mb-3 px-2">أقسام النظام</div>
+          <div className="text-[10px] font-black tracking-widest text-slate-500 mb-3 px-2">أقسام النظام</div>
           <div className="space-y-2">{navItems.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return (
             <button key={item.id} onClick={() => navigateTab(item.id as TabType)}
-              className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-right transition-all"
-              style={{background:active?'linear-gradient(110deg,#0284c7,#2563eb)':'rgba(255,255,255,.055)',border:active?'1px solid rgba(125,211,252,.55)':'1px solid rgba(255,255,255,.07)',boxShadow:active?'0 8px 22px rgba(2,132,199,.22)':'none'}}>
-              <span className="w-10 h-10 shrink-0 rounded-xl grid place-items-center" style={{background:active?'rgba(255,255,255,.18)':'rgba(34,211,238,.10)',color:'#a5f3fc'}}><Icon className="w-5 h-5"/></span>
-              <span className="flex-1"><span className="block text-sm font-extrabold">{item.label}</span>{item.count !== undefined && <span className="block text-[11px] mt-1 text-slate-300">{item.count.toLocaleString('en-US')} عنصر</span>}</span>
-              <ChevronLeft className="w-4 h-4 opacity-60"/>
+              className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-right transition-all border"
+              style={{background:active?'rgba(255,255,255,.94)':'rgba(255,255,255,.48)',borderColor:active?'rgba(156,163,175,.65)':'rgba(255,255,255,.92)',boxShadow:active?'0 5px 18px rgba(31,41,55,.075), inset 0 1px 0 rgba(255,255,255,.95)':'inset 0 1px 0 rgba(255,255,255,.8)'}}>
+              <span className="w-10 h-10 shrink-0 rounded-xl border border-white/90 bg-white/70 grid place-items-center text-slate-600"><Icon className="w-5 h-5"/></span>
+              <span className="flex-1"><span className="block text-sm font-extrabold text-slate-800">{item.label}</span></span>
+              <ChevronLeft className="w-4 h-4 text-slate-400"/>
             </button> )})}</div>
-          <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4"><div className="text-xs font-bold text-cyan-100">حفظ محلي ذكي</div><p className="text-[11px] leading-6 text-slate-300 mt-1">الأقسام تُفتح بروابط مستقلة، وتبقى بيانات الفرع المحفوظة على هذا الجهاز متاحة عند الرجوع إليها.</p></div>
+          <div className="mt-6 rounded-2xl border border-white/90 bg-white/45 p-4 shadow-sm"><div className="text-xs font-bold text-slate-700">حفظ محلي ذكي</div><p className="text-[11px] leading-6 text-slate-500 mt-1">الأقسام تُفتح بروابط مستقلة، وتبقى بيانات الفرع المحفوظة على هذا الجهاز متاحة عند الرجوع إليها.</p></div>
         </aside>
       </div>}
       <div className="h-14 md:h-16" />
@@ -2042,7 +2074,7 @@ export default function BranchManagerDashboard({
               {/* Card 1: إجمالي المشتركين */}
               <div 
                 className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '4px solid #0F172A' }}
+                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -2070,7 +2102,7 @@ export default function BranchManagerDashboard({
               {/* Card 2: المناطق المائية المعتمدة */}
               <div 
                 className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '4px solid #0284c7' }}
+                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -2098,7 +2130,7 @@ export default function BranchManagerDashboard({
               {/* Card 3: كادر المحصلين والكتّاب */}
               <div 
                 className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '4px solid #0F172A' }}
+                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -2126,7 +2158,7 @@ export default function BranchManagerDashboard({
               {/* Card 4: الإرساليات المعتمدة */}
               <div 
                 className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '4px solid #0284c7' }}
+                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
               >
                 <div className="flex justify-between items-start">
                   <div>
