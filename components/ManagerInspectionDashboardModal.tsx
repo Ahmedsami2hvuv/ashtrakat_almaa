@@ -16,6 +16,7 @@ import {
   Copy,
   Plus,
   X,
+  XCircle,
   Search,
   Key,
   Calendar,
@@ -56,6 +57,8 @@ export default function ManagerInspectionDashboardModal({
 
   // الطباعة
   const [showPrintPreview, setShowPrintPreview] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
 
   // تحميل الكشوفات ومفتاح الـ API
@@ -164,13 +167,23 @@ export default function ManagerInspectionDashboardModal({
     }
   }
 
-  // حفظ التعديلات اليدوية للمدير
+  // حفظ التعديلات اليدوية للمدير مع مؤشر التحميل ورسالة التأكيد الصريحة
   const handleSaveEdits = async () => {
     if (!editedRecord) return
-    await updateInspectionRecord(editedRecord)
-    setSelectedInspection(editedRecord)
-    setInspections((prev) => prev.map((item) => (item.id === editedRecord.id ? editedRecord : item)))
-    setIsEditing(false)
+    setIsSaving(true)
+    setSaveSuccess(false)
+    try {
+      await updateInspectionRecord(editedRecord)
+      setSelectedInspection(editedRecord)
+      setInspections((prev) => prev.map((item) => (item.id === editedRecord.id ? editedRecord : item)))
+      setIsEditing(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3500)
+    } catch (e) {
+      alert('حدث خطأ أثناء حفظ التعديلات في السحابة')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // حذف الكشف
@@ -263,10 +276,13 @@ export default function ManagerInspectionDashboardModal({
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors shadow-md"
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-black shadow-lg transition-all active:scale-95 cursor-pointer border border-rose-400/50"
+              title="إغلاق النافذة والعودة"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
+              <span>إغلاق النافذة</span>
             </button>
           </div>
         </div>
@@ -413,15 +429,33 @@ export default function ManagerInspectionDashboardModal({
                 {/* عرض معاينة الورقة الرسمية A4 للطباعة المباشرة */}
                 {showPrintPreview ? (
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center bg-blue-950/40 border border-blue-800/40 p-4 rounded-2xl text-xs sm:text-sm text-blue-300">
+                    <div className="flex flex-wrap justify-between items-center gap-3 bg-blue-950/40 border border-blue-800/40 p-4 rounded-2xl text-xs sm:text-sm text-blue-300">
                       <span>📄 ورقة الكشف الفني الرسمية جاهزة ومطابقة لنموذج مديرية ماء البصرة.</span>
-                      <button
-                        onClick={() => window.print()}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl font-black shadow-lg"
-                      >
-                        <Printer className="w-4 h-4" />
-                        <span>طباعة فورية</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowPrintPreview(false)}
+                          className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold cursor-pointer transition border border-slate-700"
+                        >
+                          <span>العودة للتعديل</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => window.print()}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl font-black shadow-lg cursor-pointer transition"
+                        >
+                          <Printer className="w-4 h-4" />
+                          <span>طباعة فورية</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={onClose}
+                          className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl font-bold cursor-pointer transition shadow"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>إغلاق النافذة</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="overflow-x-auto p-4 bg-slate-950 rounded-2xl flex justify-center border border-slate-800">
@@ -774,15 +808,51 @@ export default function ManagerInspectionDashboardModal({
                         </div>
                       </div>
 
-                      {/* زر الحفظ السفلي */}
-                      <div className="pt-2 flex justify-end">
+                      {/* رسالة التأكيد عند نجاح الحفظ في السحابة */}
+                      {saveSuccess && (
+                        <div className="bg-emerald-500/25 border-2 border-emerald-400 text-emerald-200 p-3.5 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-black animate-bounce shadow-lg">
+                          <CheckCircle className="w-5 h-5 text-emerald-300 shrink-0" />
+                          <span>تم حفظ وتحديث بيانات الكشف في السحابة بنجاح تام!</span>
+                        </div>
+                      )}
+
+                      {/* أزرار الحفظ والإغلاق السفلية البارزة */}
+                      <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={onClose}
+                          className="flex items-center gap-2 bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all active:scale-95 cursor-pointer border border-slate-700 shadow-md"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          <span>إغلاق النافذة</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={handleSaveEdits}
-                          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-xs font-black shadow-lg transition active:scale-95"
+                          disabled={isSaving}
+                          className={`flex items-center gap-2.5 text-white px-7 py-2.5 rounded-xl text-xs sm:text-sm font-black shadow-xl transition-all active:scale-95 cursor-pointer disabled:opacity-60 ${
+                            saveSuccess
+                              ? 'bg-emerald-500 border-2 border-emerald-300 scale-105'
+                              : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400'
+                          }`}
                         >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>حفظ جميع التعديلات في السحابة</span>
+                          {isSaving ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                              <span>جاري الحفظ في السحابة...</span>
+                            </>
+                          ) : saveSuccess ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-white" />
+                              <span>تم الحفظ في السحابة بنجاح ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-white" />
+                              <span>حفظ جميع التعديلات في السحابة</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
