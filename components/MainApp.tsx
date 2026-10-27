@@ -259,9 +259,11 @@ export function calculateBilling(
   year: number,
   billingRecords: BillingRecords,
   subscribers: Subscriber[],
-  pricing: Pricing
+  pricing: Pricing,
+  knownSubscriber?: Subscriber
 ) {
-  const sub = subscribers.find((s) => s.id === subId)
+  // إذا كان سجل المشترك معروفاً مسبقاً، نتجنب البحث الخطي المتكرر داخل آلاف المشتركين.
+  const sub = knownSubscriber || subscribers.find((s) => s.id === subId)
   const emptyRes = {
     rows: [] as Array<{
       periodLabel: string
@@ -313,7 +315,7 @@ export function calculateBilling(
   // الدين السابق من السنة السابقة (لـ 2027 و 2028 من السنة السابقة، ولـ 2026 من الديون السابقة)
   let prevRemaining = 0
   if (year > 2026) {
-    const prevBilling = calculateBilling(subId, year - 1, billingRecords, subscribers, pricing)
+    const prevBilling = calculateBilling(subId, year - 1, billingRecords, subscribers, pricing, sub)
     if (prevBilling.rows.length > 0) {
       prevRemaining = prevBilling.rows[prevBilling.rows.length - 1].remaining
     }
@@ -394,7 +396,8 @@ export function computeSubscriberStatuses(
   sub: Subscriber,
   billingRecords: BillingRecords,
   allSubs: Subscriber[],
-  pricing: Pricing
+  pricing: Pricing,
+  subscriberIndex?: Map<number, Subscriber>
 ): string[] {
   let statuses = Array.isArray(sub.statuses) ? [...sub.statuses] : []
 
@@ -420,7 +423,7 @@ export function computeSubscriberStatuses(
   const pIdx = Math.floor(new Date().getMonth() / 2)
   let currentDue = 0
   try {
-    const b = calculateBilling(sub.id, 2026, billingRecords, allSubs, pricing)
+    const b = calculateBilling(sub.id, 2026, billingRecords, allSubs, pricing, subscriberIndex?.get(sub.id) || sub)
     currentDue = b.rows.length > pIdx ? b.rows[pIdx].remaining : b.totalRemaining
   } catch {
     currentDue = sub.remainingPrev ?? 0
@@ -446,10 +449,14 @@ export function applyAutoStatuses(
   pricing: Pricing
 ): { updatedSubscribers: Subscriber[]; hasChanges: boolean } {
   let hasChanges = false
+  // فهرس سريع لتجنب البحث عن كل مشترك داخل القائمة الكاملة أثناء تحديث الحالات التلقائية.
+  // بدون هذا الفهرس تتحول المعالجة إلى O(n²) مع الفروع الكبيرة.
+  const subscriberIndex = new Map<number, Subscriber>()
+  for (const sub of subs) subscriberIndex.set(sub.id, sub)
 
   const updatedSubscribers = subs.map((sub) => {
     const originalStatuses = Array.isArray(sub.statuses) ? sub.statuses : []
-    const newStatuses = computeSubscriberStatuses(sub, billingRecords, subs, pricing)
+    const newStatuses = computeSubscriberStatuses(sub, billingRecords, subs, pricing, subscriberIndex)
 
     const changed =
       originalStatuses.length !== newStatuses.length ||
