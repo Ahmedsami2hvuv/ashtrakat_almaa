@@ -12,7 +12,7 @@ import { syncPendingOfflineData, getPendingSyncCount } from '../lib/directorateS
 import { logWriterActivity } from '../lib/writerActivityStore'
 import { logCollectorActivity } from '../lib/collectorActivityStore'
 import type { Consignment, ConsignmentItem } from '../lib/directorateTypes'
-import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell, FileText } from 'lucide-react'
+import { BookOpen, Check, RefreshCw, Printer, X, CheckCheck, Bell, FileText, User } from 'lucide-react'
 
 // أنواع البيانات
 export type PropertyType = 'سكني' | 'تجاري'
@@ -674,6 +674,8 @@ export interface MainAppProps {
   canEdit?: boolean
   assignedAreaIds?: string[]
   assignedSubscriberIds?: number[]
+  writerRangeFrom?: number
+  writerRangeTo?: number
   customHeaderTitle?: string
   writerId?: string
   writerName?: string
@@ -703,6 +705,8 @@ export default function MainApp({
   canEdit = true,
   assignedAreaIds,
   assignedSubscriberIds,
+  writerRangeFrom,
+  writerRangeTo,
   customHeaderTitle,
   writerId,
   writerName,
@@ -841,6 +845,28 @@ export default function MainApp({
   const [collectorPhone, setCollectorPhone] = useState<string>('07801234567')
   const [rangeFrom, setRangeFrom] = useState<number>(1)
   const [rangeTo, setRangeTo] = useState<number>(999999)
+
+  // حساب النطاق الحصري المخصص للكاتب إذا وجد
+  const effectiveWriterRange = useMemo(() => {
+    if (userRole !== 'writer') return null
+    let from = writerRangeFrom
+    let to = writerRangeTo
+    if ((from === undefined || to === undefined) && assignedSubscriberIds && assignedSubscriberIds.length > 0) {
+      const sorted = [...assignedSubscriberIds].sort((a, b) => a - b)
+      from = sorted[0]
+      to = sorted[sorted.length - 1]
+    }
+    if (from !== undefined && to !== undefined && from > 0 && to > 0) {
+      return {
+        from: Math.min(from, to),
+        to: Math.max(from, to)
+      }
+    }
+    return null
+  }, [userRole, writerRangeFrom, writerRangeTo, assignedSubscriberIds])
+
+  const displayedRangeFrom = effectiveWriterRange ? effectiveWriterRange.from : rangeFrom
+  const displayedRangeTo = effectiveWriterRange ? effectiveWriterRange.to : rangeTo
 
 
   // البحث والفلترة
@@ -1431,6 +1457,17 @@ export default function MainApp({
 
   // المشتركون ضمن نطاق الفرع والمناطق المخصصة
   const subscribersInRange = useMemo(() => {
+    // إذا كان كاتب ولديه نطاق محدد حصراً (مثلاً من 1 إلى 1000)
+    if (userRole === 'writer') {
+      if (effectiveWriterRange) {
+        return subscribers.filter((s) => s.id >= effectiveWriterRange.from && s.id <= effectiveWriterRange.to)
+      }
+      if (assignedSubscriberIds && assignedSubscriberIds.length > 0) {
+        const allowedSet = new Set(assignedSubscriberIds)
+        return subscribers.filter((s) => allowedSet.has(s.id))
+      }
+    }
+
     let list = subscribers.filter((s) => 
       (s.id >= rangeFrom && s.id <= rangeTo) || 
       isRecentlyAddedSubscriber(s) || 
@@ -1453,7 +1490,7 @@ export default function MainApp({
     }
 
     return list
-  }, [subscribers, rangeFrom, rangeTo, assignedAreaIds, assignedSubscriberIds])
+  }, [subscribers, rangeFrom, rangeTo, assignedAreaIds, assignedSubscriberIds, userRole, effectiveWriterRange])
 
   // فلترة المشتركين حسب النوع
   const typeFiltered = useMemo(() => {
@@ -1599,7 +1636,7 @@ export default function MainApp({
   const displayedSubscribers = useMemo(() => {
     const q = searchQuery.trim()
     // إذا كان هناك بحث نشط، نبحث في كل المشتركين بلا استثناء لضمان إيجاد أي مشترك مسجل
-    let list = q ? subscribers : subscribersInRange
+    let list = (q && userRole !== 'writer') ? subscribers : subscribersInRange
 
     if (q) {
       list = list.filter(
@@ -2927,8 +2964,8 @@ export default function MainApp({
               </svg>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-[14px] font-bold tracking-tight text-slate-900">
-                {customHeaderTitle || 'نظام الاشتراكات'}
+              <h1 className="text-[13px] sm:text-[14px] font-bold tracking-tight text-slate-900 truncate whitespace-nowrap">
+                {userRole === 'writer' ? 'نظام الاشتراكات' : (customHeaderTitle || 'نظام الاشتراكات')}
               </h1>
             </div>
 
@@ -3633,6 +3670,43 @@ export default function MainApp({
         {/* ========================================================= */}
         {bottomNavTab === 'subscribers' && (
           <div>
+            {/* بلوك الكاتب البارز والأنيق قبل قائمة المشتركين */}
+            {userRole === 'writer' && (
+              <div className="bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-white border border-blue-200/80 rounded-2xl p-3.5 sm:p-4 mb-3 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-[10.5px] font-bold text-blue-600 leading-none mb-1">حساب كاتب الاشتراكات</div>
+                      <h2 className="text-[15px] sm:text-[16px] font-black text-slate-900 leading-tight">
+                        {writerName || 'الكاتب المعتمد'}
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1 sm:pt-0">
+                    <div className="bg-white border border-blue-200 px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 text-xs">
+                      <span className="text-[11px] font-bold text-slate-500">الاشتراكات المخصصة:</span>
+                      {effectiveWriterRange ? (
+                        <span className="font-mono font-black text-blue-900 text-[12px] dir-ltr">
+                          من #{formatNumber(effectiveWriterRange.from)} إلى #{formatNumber(effectiveWriterRange.to)}
+                        </span>
+                      ) : (
+                        <span className="font-bold text-slate-700 text-[11px]">كافة اشتراكات الفرع</span>
+                      )}
+                    </div>
+
+                    <div className="bg-blue-600 text-white px-2.5 py-1.5 rounded-xl shadow-2xs text-[11px] font-bold flex items-center gap-1">
+                      <span>العدد:</span>
+                      <span className="font-mono font-black">{formatNumber(subscribersInRange.length)}</span>
+                      <span>مشترك</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* شريط المناطق الرئيسي للأفرع والتنقل السريع - لا يظهر للكاتب */}
             {userRole !== 'writer' && (
               <div className="bg-white rounded-2xl border border-[#e0f2fe] shadow-sm mb-4 overflow-hidden">
@@ -3768,7 +3842,7 @@ export default function MainApp({
               <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center gap-2 bg-sky-50/40">
                 <div className="text-[11px] text-slate-600">
                   <span className="font-bold text-slate-900">{formatNumber(displayedSubscribers.length)}</span> من{' '}
-                  {formatNumber(subscribersInRange.length)} • {formatNumber(rangeFrom)} - {formatNumber(rangeTo)}
+                  {formatNumber(subscribersInRange.length)} • {formatNumber(displayedRangeFrom)} - {formatNumber(displayedRangeTo)}
                 </div>
                 <div className="text-[11px] text-slate-400">
                   اسحب المشترك لليسار للتعديل السريع

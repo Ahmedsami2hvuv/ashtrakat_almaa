@@ -76,6 +76,8 @@ export default function DirectorateRootApp() {
     assignedSubscriberIds?: number[]
     writerId?: string
     writerName?: string
+    writerRangeFrom?: number
+    writerRangeTo?: number
     collectorId?: string
     collectorName?: string
   } | null>(null)
@@ -297,12 +299,22 @@ export default function DirectorateRootApp() {
                 details: 'تسجيل دخول وفتح النظام'
               })
 
+              let wRangeFrom = matchedWriter.rangeFrom
+              let wRangeTo = matchedWriter.rangeTo
+              if ((wRangeFrom === undefined || wRangeTo === undefined) && matchedWriter.assignedSubscriberIds && matchedWriter.assignedSubscriberIds.length > 0) {
+                const sorted = [...matchedWriter.assignedSubscriberIds].sort((a, b) => a - b)
+                wRangeFrom = sorted[0]
+                wRangeTo = sorted[sorted.length - 1]
+              }
+
               setSubscriberAppProps({
                 role: 'writer',
-                userTitle: `كاتب: ${matchedWriter.name}`,
+                userTitle: 'نظام الاشتراكات',
                 canEdit: true,
                 assignedAreaIds: matchedWriter.assignedAreaIds,
                 assignedSubscriberIds: matchedWriter.assignedSubscriberIds,
+                writerRangeFrom: wRangeFrom,
+                writerRangeTo: wRangeTo,
                 writerId: matchedWriter.id,
                 writerName: matchedWriter.name
               })
@@ -527,6 +539,8 @@ export default function DirectorateRootApp() {
         assignedSubscriberIds={subscriberAppProps?.assignedSubscriberIds}
         writerId={subscriberAppProps?.writerId}
         writerName={subscriberAppProps?.writerName}
+        writerRangeFrom={subscriberAppProps?.writerRangeFrom}
+        writerRangeTo={subscriberAppProps?.writerRangeTo}
         collectorId={subscriberAppProps?.collectorId}
         collectorName={subscriberAppProps?.collectorName}
         customHeaderTitle={subscriberAppProps?.userTitle || 'نظام الاشتراكات'}

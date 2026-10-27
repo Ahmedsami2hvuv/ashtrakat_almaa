@@ -1540,6 +1540,8 @@ export default function BranchManagerDashboard({
     }
 
     let assignedSubs: number[] = editingCollector?.assignedSubscriberIds || []
+    let savedRangeFrom: number | undefined = undefined
+    let savedRangeTo: number | undefined = undefined
     const cFrom = collectorRangeFrom.trim()
     const cTo = collectorRangeTo.trim()
 
@@ -1551,6 +1553,8 @@ export default function BranchManagerDashboard({
       if (!isNaN(fromNum) && !isNaN(toNum) && fromNum > 0 && toNum > 0) {
         const start = Math.min(fromNum, toNum)
         const end = Math.max(fromNum, toNum)
+        savedRangeFrom = start
+        savedRangeTo = end
         const generated: number[] = []
         for (let id = start; id <= end; id++) {
           generated.push(id)
@@ -1644,6 +1648,8 @@ export default function BranchManagerDashboard({
     let assignedSubs: number[] = editingWriter?.assignedSubscriberIds || []
     const wFrom = writerRangeFrom.trim()
     const wTo = writerRangeTo.trim()
+    let savedRangeFrom: number | undefined = undefined
+    let savedRangeTo: number | undefined = undefined
 
     if (wFrom === '' && wTo === '') {
       assignedSubs = []
@@ -1671,6 +1677,8 @@ export default function BranchManagerDashboard({
               phone: writerPhone.trim(),
               assignedAreaIds: w.assignedAreaIds || [],
               assignedSubscriberIds: assignedSubs,
+              rangeFrom: savedRangeFrom,
+              rangeTo: savedRangeTo,
               workHoursEnabled: writerWorkHoursEnabled,
               workHourStart: writerWorkHoursEnabled ? writerWorkHourStart : undefined,
               workHourEnd: writerWorkHoursEnabled ? writerWorkHourEnd : undefined
@@ -1685,6 +1693,8 @@ export default function BranchManagerDashboard({
         token: generateSecureToken('wri'),
         assignedAreaIds: [],
         assignedSubscriberIds: assignedSubs,
+        rangeFrom: savedRangeFrom,
+        rangeTo: savedRangeTo,
         workHoursEnabled: writerWorkHoursEnabled,
         workHourStart: writerWorkHoursEnabled ? writerWorkHourStart : undefined,
         workHourEnd: writerWorkHoursEnabled ? writerWorkHourEnd : undefined,
@@ -3577,7 +3587,10 @@ export default function BranchManagerDashboard({
                                 setWriterWorkHoursEnabled(!!writer.workHoursEnabled)
                                 setWriterWorkHourStart(writer.workHourStart || '08:00')
                                 setWriterWorkHourEnd(writer.workHourEnd || '14:00')
-                                if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
+                                if (writer.rangeFrom !== undefined && writer.rangeTo !== undefined) {
+                                  setWriterRangeFrom(writer.rangeFrom.toString())
+                                  setWriterRangeTo(writer.rangeTo.toString())
+                                } else if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
                                   const sorted = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
                                   setWriterRangeFrom(sorted[0].toString())
                                   setWriterRangeTo(sorted[sorted.length - 1].toString())

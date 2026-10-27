@@ -87,7 +87,7 @@ export default function WriterCollectorInspectionModal({
       const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX
       const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
 
-      const deltaX = dragStartRef.current.startX - curX
+      const deltaX = curX - dragStartRef.current.startX
       const deltaY = dragStartRef.current.startY - curY
 
       if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
@@ -95,7 +95,7 @@ export default function WriterCollectorInspectionModal({
       }
 
       setFabPosition({
-        x: Math.max(12, Math.min(window.innerWidth - 180, dragStartRef.current.initialX + deltaX)),
+        x: Math.max(12, Math.min(window.innerWidth - 200, dragStartRef.current.initialX + deltaX)),
         y: Math.max(12, Math.min(window.innerHeight - 80, dragStartRef.current.initialY + deltaY))
       })
     }
@@ -381,7 +381,8 @@ export default function WriterCollectorInspectionModal({
               }
             }}
             disabled={isSubmitting || isCompressing}
-            className="flex items-center gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black px-7 py-4 rounded-full shadow-[0_15px_40px_rgba(16,185,129,0.5)] border-2 border-white ring-4 ring-emerald-200 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black px-7 py-4 rounded-full shadow-[0_15px_40px_rgba(16,185,129,0.5)] border-2 border-white ring-4 ring-emerald-300/70 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50 animate-pulse"
+            style={{ animationDuration: '3s' }}
             title="انقر لرفع التقرير، أو اسحب الزر لتغيير مكانه"
           >
             {isSubmitting ? (
