@@ -48,6 +48,7 @@ import {
   Layers,
   Archive,
   X,
+  Menu,
   RefreshCw,
   Zap,
   Phone,
@@ -92,7 +93,31 @@ export default function BranchManagerDashboard({
   onOpenSubscriberApp
 }: BranchManagerDashboardProps) {
   // التبويب الافتراضي يبدأ بلوحة المؤشرات الرئيسية الرسمية
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard')
+  const tabFromPath = (): TabType => {
+    if (typeof window === 'undefined') return 'dashboard'
+    const slug = window.location.pathname.split('/').filter(Boolean).pop()
+    const valid: TabType[] = ['dashboard', 'subscribers', 'areas', 'consignments', 'inspections', 'collectors', 'writers', 'settings']
+    return valid.includes(slug as TabType) ? slug as TabType : 'dashboard'
+  }
+  const [activeTab, setActiveTab] = useState<TabType>(tabFromPath)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navigateTab = (tab: TabType) => {
+    setActiveTab(tab)
+    setSidebarOpen(false)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const query = params.toString()
+      const nextUrl = `/manager/${tab}${query ? `?${query}` : ''}`
+      if (window.location.pathname + window.location.search !== nextUrl) {
+        window.history.pushState({ managerTab: tab }, '', nextUrl)
+      }
+    }
+  }
+  useEffect(() => {
+    const onPopState = () => setActiveTab(tabFromPath())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
   const [showInspectionDashboard, setShowInspectionDashboard] = useState(false)
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
   const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
@@ -1809,7 +1834,7 @@ export default function BranchManagerDashboard({
         onOpenArchive={() => {
           setIsConsignmentA4Open(false)
           setSelectedConsignmentForView(null)
-          setActiveTab('consignments')
+          navigateTab('consignments')
         }}
       />
     )
@@ -1942,39 +1967,34 @@ export default function BranchManagerDashboard({
         </div>
       </header>
 
-      {/* شريط التنقل والتبويبات المطابق للملف الأصلي (Enterprise Navigation Bar) */}
-      <nav className="gov-nav px-4 sm:px-6 py-2 shadow sticky top-0 md:top-[68px] z-30">
-        <div className="max-w-[1700px] mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = activeTab === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id as TabType)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                  isActive ? 'gov-nav-btn-active' : 'gov-nav-btn'
-                }`}
-              >
-                <Icon className="w-4 h-4" style={{ color: isActive ? '#ffffff' : '#38bdf8' }} />
-                <span>{item.label}</span>
-                {item.count !== undefined && (
-                  <span 
-                    className="text-[10px] px-2 py-0.5 rounded font-bold"
-                    style={{
-                      backgroundColor: isActive ? 'rgba(15, 23, 42, 0.3)' : 'rgba(2, 132, 199, 0.2)',
-                      color: isActive ? '#ffffff' : '#38bdf8',
-                      border: '1px solid rgba(56, 189, 248, 0.3)'
-                    }}
-                  >
-                    {item.count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </nav>
+      {/* قائمة جانبية حديثة: كل قسم له مسار مستقل ويحافظ على رابط دخول المسؤول */}
+      <button type="button" onClick={() => setSidebarOpen(true)} aria-label="فتح القائمة الجانبية"
+        className="fixed z-40 right-4 top-4 md:top-5 flex items-center gap-2 rounded-2xl px-4 py-3 text-white shadow-xl border border-white/15"
+        style={{background:'linear-gradient(135deg,#0284c7,#1e3a8a)', boxShadow:'0 12px 30px rgba(2,132,199,.3)'}}>
+        <Menu className="w-5 h-5"/><span className="text-sm font-black">القائمة</span>
+      </button>
+      {sidebarOpen && <div className="fixed inset-0 z-50" dir="rtl">
+        <button className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" aria-label="إغلاق القائمة" onClick={() => setSidebarOpen(false)} />
+        <aside className="absolute right-0 top-0 h-full w-[min(88vw,340px)] overflow-y-auto text-white p-5 shadow-2xl"
+          style={{background:'linear-gradient(165deg,#0f172a 0%,#102a43 55%,#075985 100%)'}}>
+          <div className="flex items-center justify-between border-b border-white/15 pb-5 mb-5">
+            <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-2xl bg-cyan-400/15 border border-cyan-300/30 grid place-items-center text-cyan-200"><Droplets className="w-7 h-7"/></div>
+              <div><div className="font-black text-lg">إدارة الفرع</div><div className="text-xs text-slate-300 mt-1">{branch.name}</div></div></div>
+            <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl bg-white/10 hover:bg-white/20" aria-label="إغلاق"><X className="w-5 h-5"/></button>
+          </div>
+          <div className="text-[10px] font-black tracking-widest text-cyan-200/80 mb-3 px-2">أقسام النظام</div>
+          <div className="space-y-2">{navItems.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return (
+            <button key={item.id} onClick={() => navigateTab(item.id as TabType)}
+              className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-right transition-all"
+              style={{background:active?'linear-gradient(110deg,#0284c7,#2563eb)':'rgba(255,255,255,.055)',border:active?'1px solid rgba(125,211,252,.55)':'1px solid rgba(255,255,255,.07)',boxShadow:active?'0 8px 22px rgba(2,132,199,.22)':'none'}}>
+              <span className="w-10 h-10 shrink-0 rounded-xl grid place-items-center" style={{background:active?'rgba(255,255,255,.18)':'rgba(34,211,238,.10)',color:'#a5f3fc'}}><Icon className="w-5 h-5"/></span>
+              <span className="flex-1"><span className="block text-sm font-extrabold">{item.label}</span>{item.count !== undefined && <span className="block text-[11px] mt-1 text-slate-300">{item.count.toLocaleString('en-US')} عنصر</span>}</span>
+              <ChevronLeft className="w-4 h-4 opacity-60"/>
+            </button> )})}</div>
+          <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4"><div className="text-xs font-bold text-cyan-100">حفظ محلي ذكي</div><p className="text-[11px] leading-6 text-slate-300 mt-1">الأقسام تُفتح بروابط مستقلة، وتبقى بيانات الفرع المحفوظة على هذا الجهاز متاحة عند الرجوع إليها.</p></div>
+        </aside>
+      </div>}
+      <div className="h-14 md:h-16" />
 
       {/* المحتوى الرئيسي */}
       <div className="flex-1 max-w-[1700px] mx-auto w-full p-4 sm:p-6 md:p-8 space-y-8">
@@ -2157,7 +2177,7 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
               <button 
-                onClick={() => setActiveTab('consignments')}
+                onClick={() => navigateTab('consignments')}
                 className="px-4 py-2 rounded-xl font-bold text-xs transition whitespace-nowrap cursor-pointer shadow"
                 style={{
                   backgroundColor: '#0F172A',
@@ -2211,7 +2231,7 @@ export default function BranchManagerDashboard({
                   </button>
 
                   <button
-                    onClick={() => setActiveTab('settings')}
+                    onClick={() => navigateTab('settings')}
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-500" />
@@ -2822,7 +2842,7 @@ export default function BranchManagerDashboard({
                   {/* زر التوجيه لخيارات الاستيراد في الإعدادات */}
                   <button
                     type="button"
-                    onClick={() => setActiveTab('settings')}
+                    onClick={() => navigateTab('settings')}
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-500" />
