@@ -48,6 +48,7 @@ import {
   Layers,
   Archive,
   X,
+  Menu,
   RefreshCw,
   Zap,
   Phone,
@@ -83,22 +84,7 @@ interface BranchManagerDashboardProps {
 type TabType = 'dashboard' | 'subscribers' | 'areas' | 'consignments' | 'inspections' | 'collectors' | 'writers' | 'settings'
 
 function HamburgerIcon({ open }: { open: boolean }) {
-  return (
-    <div className="relative w-[18px] h-[14px] flex flex-col justify-between">
-      <span
-        className="block h-[2px] w-full rounded-full bg-slate-800 origin-center transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={{ transform: open ? 'translateY(6px) rotate(45deg)' : 'translateY(0) rotate(0)' }}
-      />
-      <span
-        className="block h-[2px] w-full rounded-full bg-slate-800 transition-all duration-200 ease-out"
-        style={{ opacity: open ? 0 : 1, transform: open ? 'scaleX(0)' : 'scaleX(1)' }}
-      />
-      <span
-        className="block h-[2px] w-full rounded-full bg-slate-800 origin-center transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={{ transform: open ? 'translateY(-6px) rotate(-45deg)' : 'translateY(0) rotate(0)' }}
-      />
-    </div>
-  )
+  return open ? <X size={20} color="#0f172a" /> : <Menu size={20} color="#0f172a" strokeWidth={2.2} />
 }
 
 export default function BranchManagerDashboard({
@@ -115,8 +101,8 @@ export default function BranchManagerDashboard({
     return valid.includes(slug as TabType) ? slug as TabType : 'dashboard'
   }
   const [activeTab, setActiveTab] = useState<TabType>(tabFromPath)
-  // افتراضياً: مفتوحة في الديسكتوب، مغلقة في الموبايل
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // القائمة الجانبية تفتح كمركبة (Overlay) فوق الصفحة
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [navToast, setNavToast] = useState<string | null>(null)
   // رابط حقيقي لكل قسم حتى يعمل كلك يمين → فتح في نافذة جديدة
   const tabHref = (tab: TabType) => {
@@ -127,10 +113,7 @@ export default function BranchManagerDashboard({
   }
   const navigateTab = (tab: TabType) => {
     setActiveTab(tab)
-    // إغلاق القائمة الجانبية فقط على الموبايل
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setSidebarOpen(false)
-    }
+    setSidebarOpen(false)
     if (typeof window !== 'undefined') {
       const nextUrl = tabHref(tab)
       if (window.location.pathname + window.location.search !== nextUrl) {
@@ -2008,9 +1991,13 @@ export default function BranchManagerDashboard({
         .mgr-header-right { display: flex; align-items: center; gap: 12px; min-width: 0; }
         .mgr-header-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .mgr-ham {
-          width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.8);
-          background: rgba(255,255,255,.8); display: grid; place-items: center; cursor: pointer;
-          box-shadow: 0 4px 16px rgba(14,165,233,.12), inset 0 1px 0 #fff;
+          width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(14,165,233,.3);
+          background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+          box-shadow: 0 4px 14px rgba(14,165,233,.15); transition: all .2s ease;
+        }
+        .mgr-ham:hover {
+          background: #f0f9ff; border-color: #0ea5e9;
+          box-shadow: 0 6px 18px rgba(14,165,233,.25);
         }
         .mgr-brand { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; }
         .mgr-logo {
@@ -2039,19 +2026,7 @@ export default function BranchManagerDashboard({
         }
 
         .mgr-layout { max-width: 1600px; margin: 0 auto; display: flex; min-height: calc(100vh - 65px); }
-        .mgr-side-wrap {
-          display: none; flex-shrink: 0; overflow: hidden;
-          transition: width .3s cubic-bezier(.22,1,.36,1);
-        }
-        .mgr-side {
-          width: 270px; display: flex; flex-direction: column;
-          position: sticky; top: calc(var(--safe-area-inset-top, 0px) + 65px);
-          height: calc(100vh - 65px - var(--safe-area-inset-top, 0px));
-          background: rgba(255,255,255,.75); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-          border-left: 1px solid rgba(255,255,255,.8);
-          box-shadow: 4px 0 24px rgba(14,165,233,.06);
-          transition: transform .3s cubic-bezier(.22,1,.36,1);
-        }
+
         .mgr-side-brand { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.4); }
         .mgr-side-brand-row { display: flex; align-items: center; gap: 10px; }
         .mgr-side-brand .mgr-logo { width: 36px; height: 36px; border-radius: 10px; }
@@ -2081,7 +2056,7 @@ export default function BranchManagerDashboard({
           box-shadow: 0 8px 20px rgba(14,165,233,.28);
         }
         .mgr-side-ico {
-          width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+          width: 32px; height: 32px; border-radius: 99px; display: grid; place-items: center; flex-shrink: 0;
           background: #fff; border: 1px solid #f1f5f9; color: #0284c7;
         }
         .mgr-side-link:hover .mgr-side-ico { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
@@ -2162,17 +2137,21 @@ export default function BranchManagerDashboard({
         }
 
         .mgr-drawer {
-          position: fixed; inset: 0; z-index: 45; display: flex;
-          top: var(--safe-area-inset-top, 0px);
+          position: fixed; inset: 0; z-index: 50; display: flex;
+          top: calc(var(--safe-area-inset-top, 0px) + 65px);
           transition: opacity .3s cubic-bezier(.22,1,.36,1);
         }
-        .mgr-drawer-bg { position: absolute; inset: 0; background: rgba(15,23,42,.3); backdrop-filter: blur(8px); }
+        .mgr-drawer-bg {
+          position: absolute; inset: 0; background: rgba(15,23,42,.25);
+          backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
         .mgr-drawer-panel {
-          position: relative; width: 270px; display: flex; flex-direction: column;
-          background: rgba(255,255,255,.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+          position: relative; width: 290px; max-width: 85vw; display: flex; flex-direction: column;
+          background: rgba(255,255,255,.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
           border-left: 1px solid rgba(255,255,255,.9);
-          box-shadow: 12px 0 40px rgba(15,23,42,.18);
+          box-shadow: -12px 0 40px rgba(15,23,42,.18);
           transition: transform .3s cubic-bezier(.22,1,.36,1);
+          margin-inline-start: auto;
         }
         .mgr-toast-wrap { pointer-events: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60; width: 92%; max-width: 380px; }
         .mgr-toast {
@@ -2193,9 +2172,7 @@ export default function BranchManagerDashboard({
         }
         @media (min-width: 768px) {
           .mgr-header-inner { padding: 0 24px; }
-          .mgr-side-wrap { display: block; }
           .mgr-home-hint { display: none; }
-          .mgr-drawer { display: none !important; }
           .mgr-main { padding: 24px; }
           .mgr-brand { font-size: 22px; }
           .mgr-logo { width: 28px; height: 28px; }
@@ -2248,12 +2225,6 @@ export default function BranchManagerDashboard({
       </header>
 
       <div className="mgr-layout">
-        <div className="mgr-side-wrap" style={{ width: sidebarOpen ? 270 : 0 }}>
-          <aside className="mgr-side" style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)' }}>
-            <SidebarContent onClose={() => setSidebarOpen(false)} />
-          </aside>
-        </div>
-
         <main className="mgr-main">
         {activeTab === 'dashboard' && (
           <section>
