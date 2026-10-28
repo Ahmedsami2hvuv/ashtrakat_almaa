@@ -1960,8 +1960,21 @@ export default function BranchManagerDashboard({
 
         .glass { background: rgba(255,255,255,0.78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 32px rgba(15,23,42,0.06), inset 0 1px 0 #fff; }
         .glass-strong { background: rgba(255,255,255,0.92); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border:1px solid rgba(255,255,255,0.95); }
-        .writer-card { border-radius:22px; padding:18px; transition:all 0.25s ease; background: rgba(255,255,255,0.78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 32px rgba(15,23,42,0.06); }
-        .writer-card:hover { transform:translateY(-2px); box-shadow:0 16px 40px rgba(15,23,42,0.08); }
+        .writer-card {
+          border-radius: 28px;
+          padding: 24px;
+          transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+          background: rgba(255, 255, 255, 0.88);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.95);
+          box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08), inset 0 1px 0 #ffffff;
+        }
+        .writer-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 20px 50px rgba(14, 165, 233, 0.14), inset 0 1px 0 #ffffff;
+          border-color: rgba(125, 211, 252, 0.7);
+        }
         .badge-green { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; height:28px; padding:0 10px; border-radius:999px; font-size:11px; font-weight:900; display:inline-flex; align-items:center; }
         .badge-phone { background:#fff; border:1px solid #e2e8f0; height:28px; padding:0 12px; border-radius:999px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:6px; color:#334155; }
         .btn-big { height:44px; border-radius:999px; font-size:13px; font-weight:900; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:1px solid; cursor:pointer; transition:all 0.2s ease; }
@@ -1971,7 +1984,7 @@ export default function BranchManagerDashboard({
         .btn-empty:hover { background:#fee2e2; border-color:#fca5a5; }
         .circle-btn { width:40px; height:40px; border-radius:999px; display:grid; place-items:center; color:#fff; cursor:pointer; border:none; transition:all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.08); flex-shrink: 0; }
         .circle-btn:hover { transform:scale(1.05); }
-        .c-red{ background:#ef4444; } .c-blue{ background:#0ea5e9; } .c-green{ background:#10b981; } .c-white{ background:#fff; color:#334155; border:1px solid #e2e8f0; }
+        .c-red{ background:#ef4444; } .c-blue{ background:#0ea5e9; } .c-purple{ background:#8b5cf6; } .c-green{ background:#10b981; } .c-white{ background:#fff; color:#334155; border:1px solid #e2e8f0; }
         .writer-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
         @media(max-width:900px){ .writer-grid{grid-template-columns:1fr} }
 
@@ -2435,8 +2448,8 @@ export default function BranchManagerDashboard({
                         <CheckSquare className="w-4 h-4 text-white" />
                         <span>
                           {rangeMode === 'id'
-                            ? `تحديد المشتركين من #${rangeFrom || 0} ⬅ #${rangeTo || 0}`
-                            : `تحديد حسب التسلسل (${rangeFrom || 0} ⬅ ${rangeTo || 0})`}
+                            ? `تحديد المشتركين من #${rangeFrom || 0} إلى #${rangeTo || 0}`
+                            : `تحديد حسب التسلسل (${rangeFrom || 0} إلى ${rangeTo || 0})`}
                         </span>
                       </button>
 
@@ -2508,7 +2521,7 @@ export default function BranchManagerDashboard({
                         className="px-3.5 py-1 hover:bg-emerald-100 border rounded-lg font-black text-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                         title="تحديد الدفعة التالية تلقائياً بنفس المقدار"
                       >
-                        <span>الدفعة التالية ⏭</span>
+                        <span>الدفعة التالية</span>
                       </button>
                     </div>
                   </div>
@@ -2516,8 +2529,10 @@ export default function BranchManagerDashboard({
               )}
 
               {isLoadingSubscribers ? (
-                <div className="py-12 text-center text-blue-600 font-bold bg-blue-50/50 rounded-xl">
-                  <div className="text-xl mb-2">⏳</div>
+                <div className="py-12 text-center text-blue-600 font-bold bg-blue-50/50 rounded-xl flex flex-col items-center justify-center gap-2">
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  <p className="text-xs">جارِ تحميل قاعدة بيانات مشتركي الفرع من السحابة...</p>
+                </div>
                   <p className="text-xs">جارِ تحميل قاعدة بيانات مشتركي الفرع من السحابة...</p>
                 </div>
               ) : (
@@ -3379,7 +3394,8 @@ export default function BranchManagerDashboard({
                     onClick={(e) => handleTabLinkClick(e, 'dashboard', 'الرئيسية')}
                     className="px-4 py-2 rounded-full bg-white/80 hover:bg-white border border-sky-100 text-slate-700 text-xs font-black transition flex items-center gap-1.5 shadow-sm no-underline"
                   >
-                    <span>← رجوع للرئيسية</span>
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>رجوع للرئيسية</span>
                   </a>
                 </div>
 
@@ -3456,54 +3472,18 @@ export default function BranchManagerDashboard({
                     return (
                       <div
                         key={writer.id}
-                        className="glass-card p-6 space-y-5 transition-all duration-300"
+                        className="writer-card space-y-5"
                       >
-                        {/* 1. رأس البطاقة: الزر الدائري البرتقالي للتعديل يميناً/يساراً والاسم والبادجات */}
-                        <div className="flex items-start justify-between gap-3">
-                          {/* زر تعديل سريع بقلم دائر بني/برتقالي على اليسار */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingWriter(writer)
-                              setWriterName(writer.name)
-                              setWriterPhone(writer.phone)
-                              setSelectedWriterAreas(writer.assignedAreaIds || [])
-                              setWriterWorkHoursEnabled(!!writer.workHoursEnabled)
-                              setWriterWorkHourStart(writer.workHourStart || '08:00')
-                              setWriterWorkHourEnd(writer.workHourEnd || '14:00')
-                              if (writer.rangeFrom !== undefined && writer.rangeTo !== undefined) {
-                                setWriterRangeFrom(writer.rangeFrom.toString())
-                                setWriterRangeTo(writer.rangeTo.toString())
-                              } else if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
-                                const sorted = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
-                                setWriterRangeFrom(sorted[0].toString())
-                                setWriterRangeTo(sorted[sorted.length - 1].toString())
-                              } else {
-                                setWriterRangeFrom('')
-                                setWriterRangeTo('')
-                              }
-                              setShowWriterModal(true)
-                            }}
-                            className="w-9 h-9 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 border border-rose-200/80 flex items-center justify-center transition shadow-2xs shrink-0 cursor-pointer"
-                            title="تعديل بيانات الكاتب"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-
-                          <div className="space-y-1.5 text-right min-w-0">
-                            <h3 className="text-xl font-black text-slate-900 truncate">{writer.name}</h3>
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              {writer.phone && (
-                                <span className="badge-phone">
-                                  <Phone className="w-3 h-3 text-slate-400" />
-                                  <span className="font-mono dir-ltr">{writer.phone}</span>
-                                </span>
-                              )}
-                              <span className="badge-green">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 me-1.5"></span>
-                                كاتب معتمد
+                        {/* 1. رأس البطاقة: الاسم الكبير للهوية ورقم الهاتف بجانبه */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-right">
+                          <div className="flex flex-wrap items-center gap-3 min-w-0">
+                            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 truncate">{writer.name}</h3>
+                            {writer.phone && (
+                              <span className="badge-phone shrink-0">
+                                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                <span className="font-mono dir-ltr">{writer.phone}</span>
                               </span>
-                            </div>
+                            )}
                           </div>
                         </div>
 
@@ -3581,13 +3561,13 @@ export default function BranchManagerDashboard({
                           </div>
                         </div>
 
-                        {/* 4. إجراءات وروابط: 4 أزرار دائرية ملونة */}
+                        {/* 4. إجراءات وروابط: الأزرار الدائرية (حذف، تعديل، سجل النشاط والعمليات، واتساب، رابط مباشر) */}
                         <div className="pt-3 border-t border-slate-100 space-y-2">
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2 text-slate-400 font-bold">
                               <span>ID: #{writerCodeId}</span>
                               <span>•</span>
-                              <span>4 إجراءات سريعة</span>
+                              <span>5 إجراءات سريعة</span>
                             </div>
                             <span className="font-bold text-slate-600">إجراءات وروابط</span>
                           </div>
@@ -3633,7 +3613,17 @@ export default function BranchManagerDashboard({
                               <Edit3 className="w-4 h-4" />
                             </button>
 
-                            {/* 3. واتساب أخضر (c-green) */}
+                            {/* 3. زر سجل النشاط والعمليات (c-purple) */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenWriterStats(writer)}
+                              className="circle-btn c-purple"
+                              title="سجل النشاط والعمليات"
+                            >
+                              <Activity className="w-4 h-4" />
+                            </button>
+
+                            {/* 4. واتساب أخضر (c-green) */}
                             <button
                               type="button"
                               onClick={() => handleShareWriterWhatsApp(writer)}
@@ -3643,7 +3633,7 @@ export default function BranchManagerDashboard({
                               <Share2 className="w-4 h-4" />
                             </button>
 
-                            {/* 4. رابط مباشر أبيض/زهري (c-white) */}
+                            {/* 5. رابط مباشر أبيض (c-white) */}
                             <button
                               type="button"
                               onClick={() => {
@@ -3656,48 +3646,6 @@ export default function BranchManagerDashboard({
                             >
                               <ExternalLink className="w-4 h-4 text-slate-700" />
                             </button>
-                          </div>
-                        </div>
-
-                        {/* 5. قسم سجل النشاط والعمليات المدمج مع تبويبات اليوم/الشهر/السنة */}
-                        <div className="pt-4 border-t border-slate-100 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-full text-[11px] font-bold">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenWriterStats(writer)}
-                                className="px-3 py-0.5 rounded-full bg-slate-900 text-white shadow-xs cursor-pointer"
-                              >
-                                اليوم
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenWriterStats(writer)}
-                                className="px-3 py-0.5 rounded-full text-slate-500 hover:text-slate-900 cursor-pointer"
-                              >
-                                الشهر
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenWriterStats(writer)}
-                                className="px-3 py-0.5 rounded-full text-slate-500 hover:text-slate-900 cursor-pointer"
-                              >
-                                السنة
-                              </button>
-                            </div>
-                            <span className="font-extrabold text-xs text-slate-900">سجل النشاط والعمليات</span>
-                          </div>
-
-                          <div className="space-y-1.5 text-[11px] text-slate-500 font-medium text-right pt-0.5">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <span>• تم إضافة 5 اشتراكات - اليوم 10:30 ص</span>
-                            </div>
-                            <div className="flex items-center justify-end gap-1.5">
-                              <span>• تحصيل 250,000 د.ع - اليوم 09:15 ص</span>
-                            </div>
-                            <div className="flex items-center justify-end gap-1.5">
-                              <span>• إفراغ قائمة #45-60 - أمس 04:20 م</span>
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -4440,7 +4388,7 @@ export default function BranchManagerDashboard({
                         : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800'
                     }`}
                   >
-                    <span>{showSelectedOnlyCollector ? '✓ إظهار جميع المناطق' : 'المناطق المختارة فقط'}</span>
+                    <span>{showSelectedOnlyCollector ? 'إظهار جميع المناطق' : 'المناطق المختارة فقط'}</span>
                     <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
                       showSelectedOnlyCollector ? 'bg-white text-blue-700' : 'bg-blue-200 text-blue-900'
                     }`}>
@@ -5063,7 +5011,7 @@ export default function BranchManagerDashboard({
                         className="text-xs font-black pt-1.5 border-t flex items-center justify-between disabled:opacity-40 cursor-pointer hover:underline"
                       >
                         <span>عرض قائمة الأسماء</span>
-                        <span>←</span>
+                        <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
@@ -5104,7 +5052,7 @@ export default function BranchManagerDashboard({
                         className="text-xs font-black pt-1.5 border-t flex items-center justify-between disabled:opacity-40 cursor-pointer hover:underline"
                       >
                         <span>عرض قائمة المشتركين</span>
-                        <span>←</span>
+                        <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
@@ -5143,7 +5091,7 @@ export default function BranchManagerDashboard({
                         className="text-xs font-black pt-1.5 border-t flex items-center justify-between disabled:opacity-40 cursor-pointer hover:underline"
                       >
                         <span>عرض قائمة المشتركين</span>
-                        <span>←</span>
+                        <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { InspectionRecord } from '@/lib/inspectionTypes'
 import { generateInspectionQRDataUrl } from '@/lib/inspectionStore'
 import {
@@ -19,7 +20,8 @@ import {
   Minimize2,
   RotateCcw,
   X,
-  Sliders
+  Sliders,
+  GripHorizontal
 } from 'lucide-react'
 
 interface InspectionPrintableA4Props {
@@ -131,6 +133,64 @@ export default function InspectionPrintableA4({
   const [layout, setLayout] = useState<InspectionLayoutConfig>(
     propLayoutConfig || DEFAULT_LAYOUT_CONFIG
   )
+  // موضع لوحة أزرار التحريك (قابلة للسحب لأي مكان في الشاشة)
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null)
+  const [isDraggingToolbar, setIsDraggingToolbar] = useState(false)
+  const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [portalReady, setPortalReady] = useState(false)
+
+  useEffect(() => {
+    setPortalReady(true)
+  }, [])
+
+  // عند اختيار عنصر: ضع اللوحة أسفل وسط الشاشة (وتبقى حيث يسحبها المستخدم)
+  useEffect(() => {
+    if (!activeElementId) {
+      setToolbarPos(null)
+      return
+    }
+    setToolbarPos((prev) =>
+      prev ?? {
+        x: Math.max(16, window.innerWidth / 2 - 220),
+        y: Math.max(16, window.innerHeight - 90)
+      }
+    )
+  }, [activeElementId])
+
+  // سحب لوحة التحريك بالماوس أو اللمس
+  useEffect(() => {
+    if (!isDraggingToolbar) return
+
+    const onMove = (clientX: number, clientY: number) => {
+      setToolbarPos({
+        x: Math.max(8, Math.min(window.innerWidth - 80, clientX - dragOffsetRef.current.x)),
+        y: Math.max(8, Math.min(window.innerHeight - 48, clientY - dragOffsetRef.current.y))
+      })
+    }
+
+    const handleMouseMove = (e: MouseEvent) => onMove(e.clientX, e.clientY)
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY)
+    }
+    const stopDrag = () => setIsDraggingToolbar(false)
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', stopDrag)
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', stopDrag)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', stopDrag)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', stopDrag)
+    }
+  }, [isDraggingToolbar])
+
+  const startToolbarDrag = (clientX: number, clientY: number) => {
+    if (!toolbarPos) return
+    dragOffsetRef.current = { x: clientX - toolbarPos.x, y: clientY - toolbarPos.y }
+    setIsDraggingToolbar(true)
+  }
 
   useEffect(() => {
     if (propLayoutConfig) {
@@ -316,6 +376,8 @@ export default function InspectionPrintableA4({
             color: #000000 !important;
             margin: 0 !important;
             padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           header, nav, aside, footer, button, .print-hide, [role="dialog"] > div:not(.print-allow) {
             display: none !important;
@@ -331,6 +393,8 @@ export default function InspectionPrintableA4({
             position: relative !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .screen-only-input {
             display: none !important;
@@ -346,101 +410,123 @@ export default function InspectionPrintableA4({
         }
       `}</style>
 
-      {/* لوحة تحكم سفلية بتصميم زجاجي شفاف فاخر مع خطوط وأيقونات سوداء نقية */}
-      {isDesignMode && activeElementId && (
-        <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/85 backdrop-blur-2xl text-slate-900 px-4 py-2.5 rounded-2xl shadow-[0_15px_45px_rgba(0,0,0,0.18)] border border-white/80 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-3 select-none print:hidden"
-          dir="rtl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* اسم العنصر المحدد حالياً باللون الأسود */}
-          <div className="flex items-center gap-1.5 pl-3 border-l border-slate-300">
-            <Sliders className="w-4 h-4 text-slate-900 shrink-0" />
-            <span className="text-xs font-black text-slate-950 whitespace-nowrap">
-              {ELEMENT_LABELS[activeElementId] || 'العنصر المحدد'}
-            </span>
-          </div>
-
-          {/* أزرار التحريك الأربعة */}
-          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200" dir="ltr">
-            <button
-              type="button"
-              onClick={() => updateElementLayout(activeElementId, { dy: -3 })}
-              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
-              title="تحريك لأعلى ⬆️"
-            >
-              <ArrowUp className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => updateElementLayout(activeElementId, { dy: 3 })}
-              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
-              title="تحريك لأسفل ⬇️"
-            >
-              <ArrowDown className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => updateElementLayout(activeElementId, { dx: 3 })}
-              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
-              title="تحريك لليمين ➡️"
-            >
-              <ArrowRight className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => updateElementLayout(activeElementId, { dx: -3 })}
-              className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center shadow-2xs hover:shadow-xs"
-              title="تحريك لليسار ⬅️"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-            </button>
-          </div>
-
-          {/* أزرار التكبير والتصغير */}
-          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
-            <button
-              type="button"
-              onClick={() => updateElementLayout(activeElementId, { dScale: 0.08, dFont: 1 })}
-              className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1 shadow-2xs hover:shadow-xs"
-              title="تكبير الحجم والخط ➕"
-            >
-              <Maximize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-              <span>تكبير</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => updateElementLayout(activeElementId, { dScale: -0.08, dFont: -1 })}
-              className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1 shadow-2xs hover:shadow-xs"
-              title="تصغير الحجم والخط ➖"
-            >
-              <Minimize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-              <span>تصغير</span>
-            </button>
-          </div>
-
-          {/* استعادة الوضع الافتراضي للعنصر */}
-          <button
-            type="button"
-            onClick={() => resetElementLayout(activeElementId)}
-            className="p-2 hover:bg-slate-100 active:scale-95 text-slate-900 rounded-xl transition cursor-pointer border border-slate-200 flex items-center gap-1 text-xs font-bold"
-            title="استعادة الموضع الأصلي الافتراضي لهذا العنصر"
+      {/* لوحة تحكم قابلة للسحب — تُعرض فوق الشاشة (خارج الورقة) حتى تعمل مع العناصر في أسفل الصفحة */}
+      {portalReady &&
+        isDesignMode &&
+        activeElementId &&
+        toolbarPos &&
+        createPortal(
+          <div
+            className="fixed z-[9999] bg-white/95 backdrop-blur-2xl text-slate-900 px-3 py-2.5 rounded-2xl shadow-[0_15px_45px_rgba(0,0,0,0.22)] border border-white/90 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-2 select-none print:hidden max-w-[95vw]"
+            dir="rtl"
+            style={{
+              left: toolbarPos.x,
+              top: toolbarPos.y,
+              cursor: isDraggingToolbar ? 'grabbing' : 'default'
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-950 stroke-[2]" />
-            <span className="hidden sm:inline">استعادة</span>
-          </button>
+            {/* مقبض السحب — اسحب اللوحة لأي مكان قريب من العنصر */}
+            <div
+              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-slate-100 border border-slate-200 cursor-grab active:cursor-grabbing touch-none"
+              title="اسحب اللوحة لأي مكان في الشاشة"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                startToolbarDrag(e.clientX, e.clientY)
+              }}
+              onTouchStart={(e) => {
+                const t = e.touches[0]
+                if (t) startToolbarDrag(t.clientX, t.clientY)
+              }}
+            >
+              <GripHorizontal className="w-4 h-4 text-slate-700 stroke-[2.5]" />
+              <span className="text-[10px] font-black text-slate-600 hidden sm:inline">اسحب</span>
+            </div>
 
-          {/* زر إغلاق التحديد */}
-          <button
-            type="button"
-            onClick={() => setActiveElementId(null)}
-            className="p-1.5 hover:bg-rose-100 text-slate-800 hover:text-rose-700 rounded-xl transition cursor-pointer"
-            title="إلغاء التحديد"
-          >
-            <X className="w-4 h-4 stroke-[2.5]" />
-          </button>
-        </div>
-      )}
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-300">
+              <Sliders className="w-4 h-4 text-slate-900 shrink-0" />
+              <span className="text-xs font-black text-slate-950 whitespace-nowrap">
+                {ELEMENT_LABELS[activeElementId] || 'العنصر المحدد'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200" dir="ltr">
+              <button
+                type="button"
+                onClick={() => updateElementLayout(activeElementId, { dy: -3 })}
+                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
+                title="تحريك لأعلى"
+              >
+                <ArrowUp className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => updateElementLayout(activeElementId, { dy: 3 })}
+                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
+                title="تحريك لأسفل"
+              >
+                <ArrowDown className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => updateElementLayout(activeElementId, { dx: 3 })}
+                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
+                title="تحريك لليمين"
+              >
+                <ArrowRight className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => updateElementLayout(activeElementId, { dx: -3 })}
+                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
+                title="تحريك لليسار"
+              >
+                <ArrowLeft className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => updateElementLayout(activeElementId, { dScale: 0.08, dFont: 1 })}
+                className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1"
+                title="تكبير"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                <span>تكبير</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateElementLayout(activeElementId, { dScale: -0.08, dFont: -1 })}
+                className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1"
+                title="تصغير"
+              >
+                <Minimize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                <span>تصغير</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => resetElementLayout(activeElementId)}
+              className="p-2 hover:bg-slate-100 active:scale-95 text-slate-900 rounded-xl transition cursor-pointer border border-slate-200 flex items-center gap-1 text-xs font-bold"
+              title="استعادة الموضع الأصلي"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-950 stroke-[2]" />
+              <span className="hidden sm:inline">استعادة</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveElementId(null)}
+              className="p-1.5 hover:bg-rose-100 text-slate-800 hover:text-rose-700 rounded-xl transition cursor-pointer"
+              title="إلغاء التحديد"
+            >
+              <X className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </div>,
+          document.body
+        )}
 
       <div
         className="inspection-print-container bg-white text-black mx-auto shadow-xl print:shadow-none print:m-0 relative select-none"
@@ -481,10 +567,16 @@ export default function InspectionPrintableA4({
                   }}
                 >
                   <div className="text-right leading-tight flex flex-col justify-center">
-                    <h2 className="text-lg font-black text-[#b91c1c] whitespace-nowrap">
+                    <h2
+                      className="text-lg font-black whitespace-nowrap"
+                      style={{ color: '#b91c1c' }}
+                    >
                       مديرية ماء البصرة
                     </h2>
-                    <h3 className="text-base font-bold text-[#b91c1c] whitespace-nowrap mt-1">
+                    <h3
+                      className="text-base font-bold whitespace-nowrap mt-1"
+                      style={{ color: '#b91c1c' }}
+                    >
                       مركز جباية واردات {cleanBranch}
                     </h3>
                   </div>
@@ -540,10 +632,13 @@ export default function InspectionPrintableA4({
                 >
                   <div className="border border-slate-800 rounded px-6 py-0.5 h-7 flex items-center justify-center bg-white shadow-2xs">
                     <h1
-                      className="text-base font-black text-[#b91c1c] tracking-wide leading-none"
-                      style={{ fontSize: layout.titleBadge.fontSize ? `${layout.titleBadge.fontSize}px` : undefined }}
+                      className="text-base font-black tracking-wide leading-none"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: layout.titleBadge.fontSize ? `${layout.titleBadge.fontSize}px` : undefined
+                      }}
                     >
-                      الكشف الفـني
+                      الكشف الفني
                     </h1>
                   </div>
                 </div>
@@ -768,8 +863,11 @@ export default function InspectionPrintableA4({
                 >
                   <div className="border border-slate-800 rounded px-3 py-0.5 h-6 flex items-center justify-center bg-white shadow-2xs">
                     <h3
-                      className="text-xs sm:text-sm font-black text-[#b91c1c] leading-none"
-                      style={{ fontSize: layout.reportBadge.fontSize ? `${layout.reportBadge.fontSize}px` : undefined }}
+                      className="text-xs sm:text-sm font-black leading-none"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: layout.reportBadge.fontSize ? `${layout.reportBadge.fontSize}px` : undefined
+                      }}
                     >
                       تقرير الكشف
                     </h3>
