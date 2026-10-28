@@ -3,26 +3,41 @@ import { InspectionRecord } from './inspectionTypes'
 import QRCode from 'qrcode'
 
 const LOCAL_STORAGE_KEY = 'ashtrakat_inspections_cache'
+const LOCAL_META_KEY = 'ashtrakat_inspections_cache_meta'
+let inspectionsMemoryCache: InspectionRecord[] | null = null
+let inspectionsSessionLoaded = false
 
-// جلب الكشوفات من السحابة عبر API السيرفر الآمن
-export async function loadInspectionsFromCloud(): Promise<InspectionRecord[]> {
-  // 1. محاولة القراءة من الكاش المحلي أولاً للسرعة القصوى
+// جلب الكشوفات: كاش أولاً — السحابة فقط عند أول فتح أو تحديث صريح
+export async function loadInspectionsFromCloud(forceRefresh = false): Promise<InspectionRecord[]> {
+  if (!forceRefresh && inspectionsSessionLoaded && inspectionsMemoryCache) {
+    return inspectionsMemoryCache
+  }
+
   let localCache: InspectionRecord[] = []
+  let hasLocalMeta = false
   if (typeof window !== 'undefined') {
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
       if (cached) {
         localCache = JSON.parse(cached)
       }
+      hasLocalMeta = !!localStorage.getItem(LOCAL_META_KEY)
     } catch {}
   }
 
-  // إذا كنا غير متصلين بالإنترنت، نكتفي بالكاش المحلي
-  if (typeof window !== 'undefined' && !navigator.onLine) {
+  // نسخة محلية مؤكدة (حتى لو فارغة) = لا نستهلك السحابة إلا بتحديث صريح
+  if (!forceRefresh && (localCache.length > 0 || hasLocalMeta)) {
+    inspectionsMemoryCache = localCache
+    inspectionsSessionLoaded = true
     return localCache
   }
 
-  // 2. الجلب السحابي الموثوق من السيرفر
+  if (typeof window !== 'undefined' && !navigator.onLine) {
+    inspectionsMemoryCache = localCache
+    inspectionsSessionLoaded = true
+    return localCache
+  }
+
   try {
     const res = await fetch('/api/inspections', {
       cache: 'no-store',
@@ -33,9 +48,12 @@ export async function loadInspectionsFromCloud(): Promise<InspectionRecord[]> {
       const json = await res.json()
       if (json.success && Array.isArray(json.data)) {
         const cloudData: InspectionRecord[] = json.data
+        inspectionsMemoryCache = cloudData
+        inspectionsSessionLoaded = true
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData))
+            localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ timestamp: Date.now() }))
           } catch (e) {
             console.warn('LocalStorage limit reached for inspections, continuing in memory', e)
           }
@@ -47,15 +65,20 @@ export async function loadInspectionsFromCloud(): Promise<InspectionRecord[]> {
     console.error('Failed to load inspections from cloud API:', err)
   }
 
+  inspectionsMemoryCache = localCache
+  inspectionsSessionLoaded = true
   return localCache
 }
 
 // حفظ وتحديث الكشوفات في السحابة والكاش المحلي
 export async function saveInspectionsToCloud(inspections: InspectionRecord[]): Promise<void> {
+  inspectionsMemoryCache = inspections
+  inspectionsSessionLoaded = true
   // حفظ في الكاش المحلي أولاً
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(inspections))
+      localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ timestamp: Date.now() }))
     } catch (e) {
       console.warn('LocalStorage limit reached for inspections cache, skipping local storage', e)
     }

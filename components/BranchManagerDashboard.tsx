@@ -48,7 +48,6 @@ import {
   Layers,
   Archive,
   X,
-  Menu,
   RefreshCw,
   Zap,
   Phone,
@@ -61,8 +60,7 @@ import {
   DollarSign,
   Filter,
   Eye,
-  CreditCard,
-  Droplets
+  CreditCard
 } from 'lucide-react'
 import { checkWriterWorkHours, getIraqCurrentTime, formatTimeArabic, getIraqDateAndTimeString } from '@/lib/iraqTime'
 import { loadWriterActivities, computeWriterComprehensiveStats, WriterComprehensiveStats, PeriodStats } from '@/lib/writerActivityStore'
@@ -84,6 +82,25 @@ interface BranchManagerDashboardProps {
 
 type TabType = 'dashboard' | 'subscribers' | 'areas' | 'consignments' | 'inspections' | 'collectors' | 'writers' | 'settings'
 
+function HamburgerIcon({ open }: { open: boolean }) {
+  return (
+    <div className="relative w-[18px] h-[14px] flex flex-col justify-between">
+      <span
+        className="block h-[2px] w-full rounded-full bg-slate-800 origin-center transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{ transform: open ? 'translateY(6px) rotate(45deg)' : 'translateY(0) rotate(0)' }}
+      />
+      <span
+        className="block h-[2px] w-full rounded-full bg-slate-800 transition-all duration-200 ease-out"
+        style={{ opacity: open ? 0 : 1, transform: open ? 'scaleX(0)' : 'scaleX(1)' }}
+      />
+      <span
+        className="block h-[2px] w-full rounded-full bg-slate-800 origin-center transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{ transform: open ? 'translateY(-6px) rotate(-45deg)' : 'translateY(0) rotate(0)' }}
+      />
+    </div>
+  )
+}
+
 export default function BranchManagerDashboard({
   branch,
   currentManager,
@@ -98,7 +115,9 @@ export default function BranchManagerDashboard({
     return valid.includes(slug as TabType) ? slug as TabType : 'dashboard'
   }
   const [activeTab, setActiveTab] = useState<TabType>(tabFromPath)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  // افتراضياً: مفتوحة في الديسكتوب، مغلقة في الموبايل
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [navToast, setNavToast] = useState<string | null>(null)
   // رابط حقيقي لكل قسم حتى يعمل كلك يمين → فتح في نافذة جديدة
   const tabHref = (tab: TabType) => {
     if (typeof window === 'undefined') return `/manager/${tab}`
@@ -108,7 +127,10 @@ export default function BranchManagerDashboard({
   }
   const navigateTab = (tab: TabType) => {
     setActiveTab(tab)
-    setSidebarOpen(false)
+    // إغلاق القائمة الجانبية فقط على الموبايل
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false)
+    }
     if (typeof window !== 'undefined') {
       const nextUrl = tabHref(tab)
       if (window.location.pathname + window.location.search !== nextUrl) {
@@ -117,11 +139,14 @@ export default function BranchManagerDashboard({
     }
   }
   // نقرة عادية = نفس الصفحة؛ Ctrl/Cmd أو وسط الزر أو كلك يمين = سلوك المتصفح الطبيعي
-  const handleTabLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, tab: TabType) => {
+  const handleTabLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, tab: TabType, label?: string) => {
     if (e.defaultPrevented) return
     if (e.button !== 0) return
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
     e.preventDefault()
+    if (label && tab !== 'dashboard') {
+      setNavToast(`جاري فتح ${label}...`)
+    }
     navigateTab(tab)
   }
   useEffect(() => {
@@ -129,6 +154,17 @@ export default function BranchManagerDashboard({
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 768) setSidebarOpen(false)
+      else setSidebarOpen(true)
+    }
+  }, [])
+  useEffect(() => {
+    if (!navToast) return
+    const t = setTimeout(() => setNavToast(null), 1400)
+    return () => clearTimeout(t)
+  }, [navToast])
   const [showInspectionDashboard, setShowInspectionDashboard] = useState(false)
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
   const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
@@ -163,7 +199,8 @@ export default function BranchManagerDashboard({
 
   // دالة جلب المشتركين عند الطلب
   const fetchBranchSubscribers = async (force = false) => {
-    if (!force && hasLoadedSubscribers && loadedSubscribers.length > 0) return
+    // حتى لو الفرع فارغ (length === 0) لا نعيد الجلب إلى ما لا نهاية
+    if (!force && hasLoadedSubscribers) return
     setIsLoadingSubscribers(true)
     try {
       const data = await loadBranchSubscribersAndBilling(branch.id, force)
@@ -1849,234 +1886,295 @@ export default function BranchManagerDashboard({
   }
 
   const navItems: { id: TabType; label: string; description: string; icon: typeof Users }[] = [
-    { id: 'dashboard', label: 'الرئيسية', description: 'اختصارات الأقسام بدون سحب بيانات', icon: Building2 },
-    { id: 'subscribers', label: 'سجل المشتركين', description: 'عرض وإدارة المشتركين عند الحاجة', icon: Users },
-    { id: 'areas', label: 'المناطق المائية', description: 'إدارة المناطق وربط المشتركين', icon: MapPin },
-    { id: 'collectors', label: 'المحصلين (الجباة)', description: 'كادر المحصلين وصلاحياتهم', icon: Wallet },
-    { id: 'writers', label: 'كُتّاب الاشتراكات', description: 'كادر الكتّاب وساعات العمل', icon: BookOpen },
-    { id: 'consignments', label: 'مخزن الإرساليات', description: 'الإرساليات المعتمدة والطباعة', icon: Layers },
-    { id: 'inspections', label: 'الكشوفات الفنية', description: 'كشوفات المعاينة الميدانية', icon: FileText },
-    { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', description: 'الاستيراد والنسخ والإعدادات', icon: Settings }
+    { id: 'dashboard', label: 'الرئيسية', description: 'لوحة التحكم والوصول السريع للأقسام', icon: Building2 },
+    { id: 'subscribers', label: 'سجل المشتركين', description: 'إدارة بيانات المشتركين والاشتراكات', icon: Users },
+    { id: 'areas', label: 'المناطق المائية', description: 'تقسيم المناطق وشبكات المياه', icon: MapPin },
+    { id: 'collectors', label: 'المحصلين (الجباة)', description: 'متابعة الجباة والتحصيل اليومي', icon: Wallet },
+    { id: 'writers', label: 'كُتّاب الاشتراكات', description: 'إدارة كتاب الاشتراكات والمعاملات', icon: BookOpen },
+    { id: 'consignments', label: 'مخزن الإرساليات', description: 'متابعة الإرساليات والمخزون', icon: Layers },
+    { id: 'inspections', label: 'الكشوفات الفنية', description: 'الكشوفات والفحوصات الميدانية', icon: FileText },
+    { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', description: 'إعدادات النظام والنسخ الاحتياطي', icon: Settings }
   ]
 
   const homeQuickLinks = navItems.filter((item) => item.id !== 'dashboard')
 
+  // شارات القائمة: أرقام خفيفة من هيكل الفرع فقط — بدون سحب مشتركين حتى يُفتح القسم
+  const navBadge = (id: TabType): string | number => {
+    if (id === 'subscribers') {
+      if (hasLoadedSubscribers) return loadedSubscribers.length || '•'
+      return branch.subscribersCount || '•'
+    }
+    if (id === 'areas') return branch.areas?.length || '•'
+    if (id === 'collectors') return branch.collectors?.length || '•'
+    if (id === 'writers') return branch.writers?.length || '•'
+    if (id === 'consignments') return branch.consignments?.length || '•'
+    return '•'
+  }
+
+  const managerDisplayName = currentManager?.name || 'حسين علي لفته'
+
+  const openConsignmentA4 = () => {
+    if (!hasLoadedSubscribers) fetchBranchSubscribers()
+    setSelectedConsignmentForView(null)
+    setIsConsignmentA4Open(true)
+  }
+
+  const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
+    <>
+      <div className="px-5 py-[18px] border-b border-white/70 bg-white/40">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 shrink-0 rounded-[10px] bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white flex items-center justify-center font-black text-[13px] shadow-[0_4px_10px_rgba(14,165,233,0.25)]">و</div>
+          <div className="min-w-0 leading-tight">
+            <div className="text-[15px] font-[900] tracking-tight text-slate-900 truncate">
+              واردات <span className="bg-gradient-to-l from-[#0EA5E9] to-[#0284C7] bg-clip-text text-transparent">أبي الخصيب</span>
+            </div>
+            <div className="mt-[3px] text-[11px] font-bold text-slate-500 truncate">
+              {branch.name} • <span className="text-slate-800 font-black">{managerDisplayName}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => (onClose ? onClose() : setSidebarOpen(false))}
+            className="ms-auto h-8 w-8 rounded-[10px] bg-white/80 backdrop-blur-md border border-white/80 shadow-[0_2px_8px_rgba(15,23,42,0.06)] flex items-center justify-center text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all duration-300 group"
+            aria-label="إغلاق القائمة"
+            title="إغلاق القائمة"
+          >
+            <span className="relative w-[12px] h-[12px] block">
+              <span className="absolute top-1/2 left-0 w-full h-[2px] bg-current rounded-full rotate-45 -translate-y-1/2 transition-transform group-hover:rotate-90" />
+              <span className="absolute top-1/2 left-0 w-full h-[2px] bg-current rounded-full -rotate-45 -translate-y-1/2 transition-transform group-hover:-rotate-90" />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3">
+        <div className="mb-3 px-2 text-[10px] font-black tracking-[0.12em] text-slate-400">القائمة الرئيسية</div>
+        <div className="space-y-[6px]">
+          {navItems.map((sec) => {
+            const Icon = sec.icon
+            const isActive = activeTab === sec.id
+            return (
+              <a
+                key={sec.id}
+                href={tabHref(sec.id)}
+                onClick={(e) => handleTabLinkClick(e, sec.id, sec.label)}
+                className={`group w-full h-[48px] rounded-[12px] flex items-center gap-3 px-3 text-right transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 no-underline
+                  ${isActive
+                    ? 'bg-gradient-to-l from-sky-500 to-blue-600 text-white shadow-[0_8px_20px_rgba(14,165,233,0.28)] border border-sky-400/30'
+                    : 'bg-white/70 hover:bg-sky-50/90 text-slate-700 border border-white/80 hover:border-sky-100 shadow-[0_1px_0_white_inset] hover:shadow-[0_4px_12px_rgba(14,165,233,0.08)]'
+                  }`}
+              >
+                <div className={`h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0 transition-colors
+                  ${isActive ? 'bg-white/20 text-white' : 'bg-white border border-slate-100 text-[#0284C7] group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500'}`}>
+                  <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                </div>
+                <span className={`text-[13.5px] font-bold leading-none truncate ${isActive ? 'text-white' : 'text-slate-800'}`}>{sec.label}</span>
+                <span className={`ms-auto flex items-center justify-center h-5 min-w-[20px] rounded-full text-[10px] font-bold px-1.5 transition
+                  ${isActive ? 'bg-white/20 text-white' : 'bg-slate-900 text-white group-hover:bg-sky-500'}`}>
+                  {navBadge(sec.id)}
+                </span>
+              </a>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="p-3 border-t border-white/70 bg-white/30">
+        <div className="rounded-[12px] bg-gradient-to-br from-white to-sky-50/80 border border-white shadow-[inset_0_1px_0_white] px-3 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
+            <span className="text-[11px] font-black text-slate-700">النظام متصل</span>
+          </div>
+          <span className="rounded-full bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1">مديرية ماء البصرة</span>
+        </div>
+      </div>
+    </>
+  )
+
   return (
-    <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ background: 'linear-gradient(145deg, #f8fafc 0%, #eef2f7 48%, #f9fafb 100%)', color: '#1f2937' }} dir="rtl">
-      {/* ستايل مخصص ومباشر 100% لضمان تطابق التصميم الحكومي الفخم ومؤشر قطرة الماء */}
+    <div
+      dir="rtl"
+      data-safe-area-inset-root
+      style={{ boxSizing: 'border-box', paddingTop: 'var(--safe-area-inset-top, 0px)', minHeight: '100vh', background: '#f8fbff' }}
+      className="relative overflow-x-clip antialiased selection:bg-sky-200 water-dashboard"
+    >
       <style>{`
+        .glass {
+          background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%);
+          backdrop-filter: blur(18px) saturate(160%);
+          -webkit-backdrop-filter: blur(18px) saturate(160%);
+          border: 1px solid rgba(255,255,255,0.9);
+          box-shadow: 0 8px 32px rgba(2,132,199,0.07), 0 1px 2px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+        .glass-hover:hover {
+          background: linear-gradient(135deg, rgba(224,242,254,0.9) 0%, rgba(255,255,255,0.85) 100%);
+          border-color: rgba(125,211,252,0.6);
+          box-shadow: 0 20px 40px rgba(14,165,233,0.18), 0 0 0 1px rgba(125,211,252,0.4), inset 0 1px 0 rgba(255,255,255,1);
+          transform: translateY(-6px);
+        }
+        @keyframes float { 0%,100%{transform:translateY(0) translateX(0)} 50%{transform:translateY(-18px) translateX(10px)} }
+        @keyframes slideUp { from{transform:translateY(20px); opacity:0} to{transform:translateY(0); opacity:1} }
         .water-dashboard, .water-dashboard * {
           cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%230284c7' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3C/svg%3E") 12 2, auto !important;
         }
         .water-dashboard button, .water-dashboard a, .water-dashboard input, .water-dashboard select, .water-dashboard [role='button'], .water-dashboard .cursor-pointer {
           cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%2338bdf8' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23ffffff'/%3E%3C/svg%3E") 12 2, pointer !important;
         }
-        .gov-header {
-          background: rgba(255, 255, 255, 0.72) !important;
-          backdrop-filter: blur(24px) saturate(160%) !important;
-          -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.9) !important;
-          color: #1f2937 !important;
-          box-shadow: 0 8px 32px rgba(31, 41, 55, 0.06) !important;
-        }
-        .gov-header h1, .gov-header h3, .gov-header span { color: #1f2937 !important; }
-        .gov-header button { color: #374151 !important; }
-        .gov-nav {
-          background: rgba(255, 255, 255, 0.58) !important;
-          backdrop-filter: blur(24px) !important;
-          -webkit-backdrop-filter: blur(24px) !important;
-          border-bottom: 1px solid rgba(255,255,255,.8) !important;
-        }
-        .gov-nav-btn {
-          color: #4b5563 !important;
-          background-color: rgba(255,255,255,.42) !important;
-          border: 1px solid rgba(255,255,255,.75) !important;
-          transition: all 0.2s ease !important;
-        }
-        .gov-nav-btn:hover {
-          color: #111827 !important;
-          background-color: rgba(255,255,255,.8) !important;
-        }
-        .gov-nav-btn-active {
-          background: rgba(255,255,255,.9) !important;
-          color: #111827 !important;
-          font-weight: 800 !important;
-          border: 1px solid rgba(209,213,219,.8) !important;
-          box-shadow: 0 6px 24px rgba(31,41,55,.08) !important;
-        }
-        .gov-card {
-          background: rgba(255, 255, 255, 0.62) !important;
-          backdrop-filter: blur(18px) saturate(145%) !important;
-          -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
-          border: 1px solid rgba(255,255,255,.92) !important;
-          box-shadow: 0 8px 32px rgba(31,41,55,.055), inset 0 1px 0 rgba(255,255,255,.85) !important;
-          transition: all 0.2s ease !important;
-        }
-        .gov-card:hover {
-          background: rgba(255,255,255,.78) !important;
-          box-shadow: 0 12px 36px rgba(31,41,55,.08), inset 0 1px 0 rgba(255,255,255,.95) !important;
-          transform: translateY(-1px);
-        }
-        .manager-glass-surface {
-          background: rgba(255,255,255,.58) !important;
-          border: 1px solid rgba(255,255,255,.88) !important;
-          backdrop-filter: blur(22px) saturate(150%) !important;
-          -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
-          box-shadow: 0 10px 36px rgba(31,41,55,.06), inset 0 1px 0 rgba(255,255,255,.8) !important;
-        }
-        .water-dashboard .bg-white,
-        .water-dashboard .bg-slate-50,
-        .water-dashboard .bg-slate-100,
-        .water-dashboard .bg-slate-200 {
-          background-color: rgba(255,255,255,.58) !important;
-          backdrop-filter: blur(16px) saturate(140%) !important;
-          -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
-        }
-        .water-dashboard .border-slate-100,
-        .water-dashboard .border-slate-200,
-        .water-dashboard .border-gray-100,
-        .water-dashboard .border-gray-200 {
-          border-color: rgba(255,255,255,.86) !important;
-        }
       `}</style>
 
-      {/* الترويسة العلوية الرسمية الفخمة بسطر واحد (Single-row Enterprise Executive Header) */}
-      <header className="gov-header sticky top-0 z-40 shadow-md">
-        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
-          {/* الجانب الأيمن: شعار الماء واسم الفرع بسطر واحد نظيف */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div 
-              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: 'rgba(2, 132, 199, 0.2)', border: '1px solid #0284c7' }}
+      {/* Background blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-[30%] -right-[20%] h-[900px] w-[900px] rounded-full bg-[#E0F2FE] blur-[120px] opacity-70" style={{ animation: 'float 18s ease-in-out infinite' }} />
+        <div className="absolute top-[10%] -left-[15%] h-[700px] w-[700px] rounded-full bg-[#BAE6FD] blur-[110px] opacity-60" style={{ animation: 'float 22s ease-in-out infinite reverse' }} />
+        <div className="absolute bottom-[-20%] left-[20%] h-[800px] w-[800px] rounded-full bg-[#7DD3FC] blur-[130px] opacity-35" style={{ animation: 'float 25s ease-in-out infinite' }} />
+        <div className="absolute top-[42%] right-[30%] h-[520px] w-[520px] rounded-full bg-white blur-[90px] opacity-80" />
+      </div>
+
+      {/* Header 65px */}
+      <header
+        data-safe-area-sticky-top
+        style={{ top: 'var(--safe-area-inset-top, 0px)', height: '65px' }}
+        className="sticky z-30 border-b border-white/80 backdrop-blur-[20px] bg-white/75 shadow-[0_1px_20px_rgba(14,165,233,0.06)]"
+      >
+        <div className="mx-auto max-w-[1600px] px-4 md:px-6 h-full flex items-center justify-between gap-2 overflow-hidden">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="h-[40px] w-[40px] rounded-[10px] bg-white/80 backdrop-blur-xl border border-white/80 shadow-[0_4px_16px_rgba(14,165,233,0.12),inset_0_1px_0_white] flex items-center justify-center hover:bg-white hover:shadow-[0_6px_20px_rgba(14,165,233,0.18)] hover:border-sky-100 active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 shrink-0"
+              aria-label={sidebarOpen ? 'إغلاق القائمة الجانبية' : 'فتح القائمة الجانبية'}
+              title={sidebarOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
             >
-              <Droplets className="w-6 h-6" style={{ color: '#38bdf8' }} />
-            </div>
-            <h1 className="text-base sm:text-lg font-black tracking-wide text-white m-0">
-              {branch.name}
+              <HamburgerIcon open={sidebarOpen} />
+            </button>
+            <h1 className="text-[19px] md:text-[22px] font-[800] tracking-tight leading-none flex items-center gap-1.5 text-slate-900 min-w-0 shrink">
+              <span className="inline-flex h-6 w-6 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white text-[11px] md:text-[13px] font-black shadow-[0_4px_10px_rgba(14,165,233,0.25)]">و</span>
+              <span className="truncate whitespace-nowrap">
+                واردات <span className="bg-gradient-to-l from-[#0EA5E9] to-[#0284C7] bg-clip-text text-transparent">أبي الخصيب</span>
+              </span>
             </h1>
           </div>
 
-          {/* الجانب الأيسر: ساعة العراق، بطاقة مسؤول الفرع المباشر (حسين علي لفته)، وزر إنشاء إرسالية A4 بسطر واحد */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {iraqTime && (
-              <div 
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
-                style={{ backgroundColor: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#bae6fd' }}
+              <div
+                className="hidden lg:flex items-center gap-1.5 rounded-full bg-white border border-sky-100/80 shadow-[0_2px_10px_rgba(14,165,233,0.08)] px-2.5 py-[5px] text-[11px] font-bold text-slate-600"
                 title="توقيت بغداد الرسمي"
               >
-                <Clock className="w-3.5 h-3.5" style={{ color: '#38bdf8' }} />
-                <span>توقيت العراق: {iraqTime}</span>
+                <Clock className="w-3.5 h-3.5 text-sky-500" />
+                <span>{iraqTime}</span>
               </div>
             )}
-
-            {/* بطاقة مسؤول الفرع المباشر (حسين علي لفتة) */}
-            <div 
-              className="flex items-center px-3.5 py-1.5 rounded-xl shadow-inner text-right"
-              style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(2, 132, 199, 0.5)' }}
-            >
-              <div>
-                <span 
-                  className="text-[9px] font-bold uppercase tracking-widest block leading-tight"
-                  style={{ color: '#38bdf8' }}
-                >
-                  مسؤول الفرع المباشر
-                </span>
-                <h3 className="text-xs font-bold text-white leading-tight">
-                  {currentManager ? currentManager.name : 'الأستاذ / حسين علي لفته'}
-                </h3>
-              </div>
-            </div>
-
             <button
-              onClick={() => {
-                if (!hasLoadedSubscribers) {
-                  fetchBranchSubscribers()
-                }
-                setSelectedConsignmentForView(null)
-                setIsConsignmentA4Open(true)
-              }}
-              className="px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md shrink-0 cursor-pointer active:scale-95"
-              style={{
-                backgroundColor: '#0284c7',
-                color: '#ffffff',
-                border: '1px solid #38bdf8'
-              }}
+              type="button"
+              onClick={openConsignmentA4}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-black px-3 py-[6px] shadow-[0_4px_12px_rgba(14,165,233,0.3)] transition active:scale-[0.97]"
             >
-              <FileText className="w-3.5 h-3.5 text-white" />
-              <span>إنشاء إرسالية (A4)</span>
+              <FileText className="w-3.5 h-3.5" />
+              <span>إرسالية A4</span>
             </button>
+            <div className="flex items-center gap-1.5 rounded-full bg-white border border-sky-100/80 shadow-[0_2px_10px_rgba(14,165,233,0.08)] px-2.5 md:px-3 py-[5px] md:py-[6px] shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.6)] animate-pulse shrink-0" />
+              <span className="text-[10px] font-bold text-slate-400 hidden md:inline shrink-0">مسئول الفرع:</span>
+              <span className="text-[11px] md:text-[12px] font-black text-slate-800 tracking-tight truncate max-w-[90px] md:max-w-none">{managerDisplayName}</span>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* قائمة جانبية حديثة: كل قسم له مسار مستقل ويحافظ على رابط دخول المسؤول */}
-      <button type="button" onClick={() => setSidebarOpen(true)} aria-label="فتح القائمة الجانبية"
-        className="fixed z-40 right-4 top-4 md:top-5 flex items-center gap-2 rounded-2xl px-4 py-3 text-slate-800 manager-glass-surface shadow-lg"
-        style={{boxShadow:'0 8px 28px rgba(31,41,55,.08)'}}>
-        <Menu className="w-5 h-5"/><span className="text-sm font-black">القائمة</span>
-      </button>
-      {sidebarOpen && <div className="fixed inset-0 z-50" dir="rtl">
-        <button className="absolute inset-0 bg-slate-900/15 backdrop-blur-[3px]" aria-label="إغلاق القائمة" onClick={() => setSidebarOpen(false)} />
-        <aside className="absolute right-0 top-0 h-full w-[min(88vw,340px)] overflow-y-auto text-slate-800 p-5 manager-glass-surface rounded-l-[28px]"
-          style={{background:'rgba(255,255,255,.78)',boxShadow:'-12px 0 40px rgba(31,41,55,.10)'}}>
-          <div className="flex items-center justify-between border-b border-slate-200/70 pb-5 mb-5">
-            <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-2xl border border-white/90 bg-white/70 shadow-sm grid place-items-center text-slate-700"><Droplets className="w-7 h-7"/></div>
-              <div><div className="font-black text-lg text-slate-900">إدارة الفرع</div><div className="text-xs text-slate-500 mt-1">{branch.name}</div></div></div>
-            <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl bg-white/65 border border-white hover:bg-white" aria-label="إغلاق"><X className="w-5 h-5"/></button>
-          </div>
-          <div className="text-[10px] font-black tracking-widest text-slate-500 mb-3 px-2">أقسام النظام</div>
-          <div className="space-y-2">{navItems.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return (
-            <a key={item.id} href={tabHref(item.id)} onClick={(e) => handleTabLinkClick(e, item.id)}
-              className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-right transition-all border no-underline"
-              style={{background:active?'rgba(255,255,255,.94)':'rgba(255,255,255,.48)',borderColor:active?'rgba(156,163,175,.65)':'rgba(255,255,255,.92)',boxShadow:active?'0 5px 18px rgba(31,41,55,.075), inset 0 1px 0 rgba(255,255,255,.95)':'inset 0 1px 0 rgba(255,255,255,.8)'}}>
-              <span className="w-10 h-10 shrink-0 rounded-xl border border-white/90 bg-white/70 grid place-items-center text-slate-600"><Icon className="w-5 h-5"/></span>
-              <span className="flex-1"><span className="block text-sm font-extrabold text-slate-800">{item.label}</span></span>
-              <ChevronLeft className="w-4 h-4 text-slate-400"/>
-            </a> )})}</div>
-          <div className="mt-6 rounded-2xl border border-white/90 bg-white/45 p-4 shadow-sm"><div className="text-xs font-bold text-slate-700">توفير الاستهلاك</div><p className="text-[11px] leading-6 text-slate-500 mt-1">كل قسم يسحب بياناته عند فتحه فقط. الصفحة الرئيسية أزرار بلا قراءات من السحابة.</p></div>
-        </aside>
-      </div>}
-      <div className="h-14 md:h-16" />
+      {/* Layout: Sidebar + Main */}
+      <div className="mx-auto max-w-[1600px] flex min-h-[calc(100vh-65px)]">
+        {/* Desktop Sidebar */}
+        <div
+          className="hidden md:block shrink-0 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{ width: sidebarOpen ? '270px' : '0px' }}
+        >
+          <aside
+            className="w-[270px] flex flex-col border-l border-white/80 shadow-[4px_0_24px_rgba(14,165,233,0.06)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+            style={{
+              position: 'sticky',
+              top: 'calc(var(--safe-area-inset-top, 0px) + 65px)',
+              height: 'calc(100vh - 65px - var(--safe-area-inset-top, 0px))',
+              background: 'rgba(255,255,255,0.75)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)',
+            }}
+          >
+            <SidebarContent onClose={() => setSidebarOpen(false)} />
+          </aside>
+        </div>
 
-      {/* المحتوى الرئيسي */}
-      <div className="flex-1 max-w-[1700px] mx-auto w-full p-4 sm:p-6 md:p-8 space-y-8">
-        <main className="space-y-8">
-        {/* 1. الصفحة الرئيسية: أزرار أقسام فقط — بدون أي قراءات أو مؤشرات */}
+        <main className="flex-1 min-w-0 p-4 md:p-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] space-y-8">
         {activeTab === 'dashboard' && (
           <section className="space-y-6">
-            <div className="pb-3" style={{ borderBottom: '1px solid #cbd5e1' }}>
-              <h2 className="text-lg font-black flex items-center gap-2" style={{ color: '#0F172A' }}>
-                <Building2 className="w-5 h-5" style={{ color: '#0284c7' }} />
-                الرئيسية
-              </h2>
-              <p className="text-xs mt-1" style={{ color: '#64748B' }}>
-                اختر القسم المطلوب — البيانات تُجلب فقط عند فتح ذلك القسم، لتقليل استهلاك السحابة
-              </p>
+            <div className="md:hidden mb-2 flex items-center justify-between">
+              <div className="text-[11px] font-bold tracking-widest text-sky-600">لوحة التحكم • القائمة الرئيسية</div>
+              <div className="h-6 px-2.5 rounded-full bg-white border border-white shadow-sm text-[10px] font-bold text-slate-500">٧ أقسام</div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {homeQuickLinks.map((item) => {
                 const Icon = item.icon
                 return (
                   <a
                     key={item.id}
                     href={tabHref(item.id)}
-                    onClick={(e) => handleTabLinkClick(e, item.id)}
-                    className="gov-card group text-right p-5 rounded-2xl transition active:scale-[0.99] flex items-start gap-4 no-underline"
+                    onClick={(e) => handleTabLinkClick(e, item.id, item.label)}
+                    className="group relative text-right rounded-[24px] glass glass-hover p-[1px] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 no-underline"
                   >
-                    <span
-                      className="w-12 h-12 shrink-0 rounded-xl border border-white/90 bg-white/70 grid place-items-center text-slate-600 group-hover:text-sky-700 transition"
-                    >
-                      <Icon className="w-6 h-6" />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-extrabold text-slate-900">{item.label}</span>
-                      <span className="block text-[11px] text-slate-500 mt-1 leading-5">{item.description}</span>
-                    </span>
-                    <ChevronLeft className="w-4 h-4 text-slate-400 mt-1 shrink-0 group-hover:text-slate-600" />
+                    <div className="relative rounded-[23px] bg-gradient-to-br from-white/90 to-white/60 p-7 md:p-8 min-h-[200px] flex flex-col">
+                      <div className="flex items-start justify-between">
+                        <div className="relative">
+                          <div className="absolute -inset-4 rounded-2xl bg-sky-100/60 blur-xl opacity-0 group-hover:opacity-100 transition duration-500" />
+                          <div className="relative flex h-[60px] w-[60px] items-center justify-center rounded-[16px] bg-gradient-to-br from-white to-sky-50 border border-white shadow-[0_10px_24px_rgba(14,165,233,0.14),inset_0_1px_0_white] text-[#0284C7] group-hover:from-sky-500 group-hover:to-blue-600 group-hover:text-white transition-all duration-500">
+                            <Icon className="w-7 h-7" strokeWidth={1.8} />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                        </div>
+                      </div>
+
+                      <div className="mt-6">
+                        <h3 className="text-[22px] md:text-[24px] font-[800] text-slate-900 tracking-tight leading-[1.15]">{item.label}</h3>
+                        <p className="mt-2 text-[13px] leading-[1.5] text-slate-500 font-medium">{item.description}</p>
+                      </div>
+
+                      <div className="mt-auto flex items-center justify-between pt-6">
+                        <div className="flex items-center gap-2 text-[12px] font-bold text-sky-600">
+                          <span>فتح القسم</span>
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-50 border border-sky-100 group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500 transition-all duration-300">
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-medium">
+                          {navBadge(item.id) === '•' ? '—' : `${Number(navBadge(item.id)).toLocaleString('ar-EG')} سجل`}
+                        </div>
+                      </div>
+
+                      <div className="pointer-events-none absolute bottom-0 left-7 right-7 h-px bg-gradient-to-r from-transparent via-sky-200/70 to-transparent opacity-60" />
+                    </div>
                   </a>
                 )
               })}
+            </div>
+
+            <footer className="mt-4 flex justify-center">
+              <div className="rounded-full glass px-5 py-2 text-[11px] font-bold tracking-wide text-slate-500 border border-white/80">
+                مديرية ماء البصرة • نظام واردات أبي الخصيب • {branch.name}
+              </div>
+            </footer>
+
+            <div className="sm:hidden flex justify-center">
+              <button
+                type="button"
+                onClick={openConsignmentA4}
+                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 hover:bg-sky-600 text-white text-[12px] font-black px-4 py-2 shadow-[0_4px_12px_rgba(14,165,233,0.3)]"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>إنشاء إرسالية (A4)</span>
+              </button>
             </div>
           </section>
         )}
@@ -3738,6 +3836,50 @@ export default function BranchManagerDashboard({
             </div>
           )}
         </main>
+      </div>
+
+      {/* Mobile Drawer */}
+      <div
+        className="fixed inset-0 z-[45] md:hidden flex transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{
+          top: 'var(--safe-area-inset-top, 0px)',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          opacity: sidebarOpen ? 1 : 0,
+          pointerEvents: sidebarOpen ? 'auto' : 'none',
+        }}
+      >
+        <div
+          className="absolute inset-0 bg-[#0f172a]/30 backdrop-blur-[8px] transition-opacity duration-300"
+          style={{ opacity: sidebarOpen ? 1 : 0 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+        <div
+          className="relative w-[270px] shrink-0 flex flex-col shadow-[12px_0_40px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+          style={{
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderLeft: '1px solid rgba(255,255,255,0.9)',
+            transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)',
+          }}
+        >
+          <SidebarContent onClose={() => setSidebarOpen(false)} />
+        </div>
+      </div>
+
+      {/* Toast */}
+      <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 w-[92%] max-w-[380px]">
+        {navToast && (
+          <div className="animate-[slideUp_.4s_cubic-bezier(.22,1,.36,1)] rounded-full glass bg-white/90 px-5 py-3 shadow-[0_20px_40px_rgba(2,132,199,0.18)] border border-white flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            </div>
+            <span className="text-[13px] font-bold text-slate-800">{navToast}</span>
+            <span className="ms-auto h-1.5 w-1.5 animate-ping rounded-full bg-sky-500" />
+          </div>
+        )}
       </div>
 
       {/* النوافذ المنبثقة (Modals) */}

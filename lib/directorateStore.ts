@@ -170,8 +170,8 @@ export async function loadBranchSubscribersAndBilling(
   branchId: string,
   forceRefresh = false
 ): Promise<{ subscribers: Subscriber[]; billing: BillingRecords }> {
-  // 1. إذا كانت البيانات محملة مسبقاً في الجلسة ولم يُطلب تحديث قسري
-  if (!forceRefresh && branchSubscribersCache[branchId] && branchSubscribersCache[branchId].subscribers.length > 0) {
+  // 1. كاش الجلسة: لا نعيد الشبكة إذا سبق فتح هذا القسم في نفس الجلسة
+  if (!forceRefresh && branchSubscribersCache[branchId]) {
     return branchSubscribersCache[branchId]
   }
 
@@ -182,7 +182,8 @@ export async function loadBranchSubscribersAndBilling(
       const localRaw = localStorage.getItem(getBranchStorageKey(branchId))
       if (localRaw) {
         const localData = JSON.parse(localRaw)
-        if (Array.isArray(localData.subscribers)) {
+        // نقبل الكاش فقط إذا وُجدت بيانات فعلية أو ختم زمني يؤكد أنه تحميل سابق ناجح
+        if (Array.isArray(localData.subscribers) && (localData.subscribers.length > 0 || localData.timestamp)) {
           const cachedData = { subscribers: localData.subscribers as Subscriber[], billing: (localData.billing || {}) as BillingRecords, timestamp: Number(localData.timestamp || Date.now()) }
           branchSubscribersCache[branchId] = cachedData
           return cachedData
@@ -190,7 +191,7 @@ export async function loadBranchSubscribersAndBilling(
       }
     } catch {}
     const persistentData = await loadFromIndexedDB(branchId)
-    if (persistentData && Array.isArray(persistentData.subscribers)) {
+    if (persistentData && Array.isArray(persistentData.subscribers) && (persistentData.subscribers.length > 0 || (persistentData as any).timestamp)) {
       const cachedData = { ...persistentData, timestamp: Date.now() }
       branchSubscribersCache[branchId] = cachedData
       return cachedData

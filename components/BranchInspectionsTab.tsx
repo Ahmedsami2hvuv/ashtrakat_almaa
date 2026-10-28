@@ -36,11 +36,11 @@ export default function BranchInspectionsTab({
   const [searchQuery, setSearchQuery] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // تحميل الكشوفات
-  const fetchInspections = async () => {
+  // تحميل الكشوفات عند فتح التبويب فقط — من الكاش إن وُجد، والسحابة عند أول مرة أو تحديث صريح
+  const fetchInspections = async (force = false) => {
     setLoading(true)
     try {
-      const data = await loadInspectionsFromCloud()
+      const data = await loadInspectionsFromCloud(force)
       setInspections(data)
     } catch (err) {
       console.error('Failed to load inspections:', err)
@@ -50,7 +50,7 @@ export default function BranchInspectionsTab({
   }
 
   useEffect(() => {
-    fetchInspections()
+    fetchInspections(false)
   }, [branch.id])
 
   // فلترة الكشوفات للفرع أو البحث
@@ -101,7 +101,7 @@ export default function BranchInspectionsTab({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchInspections}
+              onClick={() => fetchInspections(true)}
               className="px-3.5 py-2 rounded-xl text-xs font-black text-slate-950 bg-white hover:bg-slate-50 border border-slate-300 shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               title="تحديث البيانات من السحابة"
             >
