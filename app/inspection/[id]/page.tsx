@@ -14,7 +14,6 @@ export default function InspectionCitizenViewPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isWindowBlurred, setIsWindowBlurred] = useState(false)
-  const [showSecurityToast, setShowSecurityToast] = useState(false)
 
   useEffect(() => {
     async function fetchInspection() {
@@ -40,8 +39,6 @@ export default function InspectionCitizenViewPage() {
   useEffect(() => {
     const onContext = (e: MouseEvent) => {
       e.preventDefault()
-      setShowSecurityToast(true)
-      setTimeout(() => setShowSecurityToast(false), 2000)
     }
     const onKey = (e: KeyboardEvent) => {
       if (
@@ -50,8 +47,6 @@ export default function InspectionCitizenViewPage() {
         (e.ctrlKey && ['p', 's', 'u'].includes(e.key.toLowerCase()))
       ) {
         e.preventDefault()
-        setShowSecurityToast(true)
-        setTimeout(() => setShowSecurityToast(false), 2500)
       }
     }
     window.addEventListener('contextmenu', onContext)
@@ -73,7 +68,7 @@ export default function InspectionCitizenViewPage() {
         dir="rtl"
         style={{ background: 'radial-gradient(800px 400px at 20% 0%, #e0f2fe, #fff 60%)' }}
       >
-        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border border-sky-100">
+        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border-2 border-sky-200">
           <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="font-black text-slate-800 text-base">جاري تحميل وثيقة الكشف...</p>
         </div>
@@ -88,7 +83,7 @@ export default function InspectionCitizenViewPage() {
         dir="rtl"
         style={{ background: 'radial-gradient(800px 400px at 20% 0%, #fef2f2, #fff 60%)' }}
       >
-        <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border border-rose-100 max-w-sm">
+        <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border-2 border-rose-200 max-w-sm">
           <AlertTriangle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
           <p className="font-black text-rose-700 text-lg mb-2">تعذر فتح الكشف</p>
           <p className="text-sm text-slate-600 mb-4">{error || 'الكشف غير متوفر'}</p>
@@ -108,22 +103,22 @@ export default function InspectionCitizenViewPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap');
         * { font-family: 'Tajawal', sans-serif; }
-        .glass {
-          background: rgba(255, 255, 255, 0.78);
+        .glass-container {
+          background: rgba(255, 255, 255, 0.82);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.9);
+          border: 1.5px solid rgba(255, 255, 255, 0.95);
           box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05);
         }
         .glass-block {
-          background: rgba(255, 255, 255, 0.85);
+          background: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 0 4px 16px rgba(14, 165, 233, 0.04);
+          border: 1.5px solid rgba(186, 230, 253, 0.8);
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.05);
         }
-        .glass-strong {
-          background: rgba(255, 255, 255, 0.92);
-          backdrop-filter: blur(22px);
-          border: 1px solid #ffffff;
+        .glass-header {
+          background: rgba(255, 255, 255, 0.94);
+          backdrop-filter: blur(24px);
+          border-bottom: 2px solid rgba(224, 242, 254, 0.9);
         }
       `}</style>
 
@@ -137,14 +132,8 @@ export default function InspectionCitizenViewPage() {
             'radial-gradient(1200px 600px at 15% -5%, #e0f2fe 0%, transparent 60%), radial-gradient(800px 400px at 85% 10%, #bae6fd 0%, transparent 55%), #ffffff'
         }}
       >
-        {showSecurityToast && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-black px-5 py-2.5 rounded-2xl shadow-2xl border border-slate-700 animate-fade-in">
-            محتوى الكشف محمي
-          </div>
-        )}
-
-        {/* هيدر بنصوص بسطر واحد بدون كشف معتمد وبدون تكرار الكاشف */}
-        <header className="sticky top-0 z-30 py-3 glass-strong border-b border-white/80 px-4 flex items-center justify-between shadow-xs">
+        {/* هيدر: مديرية ماء البصرة واسم الفرع تحته مباشرة */}
+        <header className="sticky top-0 z-30 py-3 glass-header px-4 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white border-2 border-sky-300 shadow-sm grid place-items-center shrink-0">
               <Droplets className="w-6 h-6 text-sky-600" />
@@ -153,27 +142,27 @@ export default function InspectionCitizenViewPage() {
               <h1 className="text-base sm:text-lg font-black text-[#0c4a8a] leading-tight whitespace-nowrap">
                 مديرية ماء البصرة
               </h1>
-              <p className="text-xs font-bold text-slate-500 whitespace-nowrap mt-0.5">
-                {inspection.branchName || 'مركز جباية واردات أبي الخصيب'}
+              <p className="text-xs font-black text-sky-700 whitespace-nowrap mt-0.5">
+                {inspection.branchName?.trim() || 'مركز جباية واردات أبي الخصيب'}
               </p>
             </div>
           </div>
         </header>
 
         <main className="max-w-2xl mx-auto px-4 mt-5 space-y-5">
-          {/* بيانات الكشف الفني الموقعي */}
-          <div className="glass rounded-3xl p-5 shadow-sm">
+          {/* بيانات الكشف */}
+          <div className="glass-container rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 mb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-[#0c4a8a]" />
-                <span>بيانات الكشف الفني الموقعي</span>
+                <span>بيانات الكشف</span>
               </h2>
               <span className="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full shrink-0">
                 سند الطابو
               </span>
             </div>
 
-            {/* البلوكات الزجاجية - الاسم والتاريخ بسطر واحد لكل منهما */}
+            {/* البلوكات الزجاجية مع حواف وبارزة بوضوح */}
             <div className="space-y-2.5">
               <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
                 <span className="text-xs font-bold text-slate-500 shrink-0">اسم المواطن:</span>
@@ -220,7 +209,7 @@ export default function InspectionCitizenViewPage() {
           </div>
 
           {/* تقرير الكشف */}
-          <div className="glass rounded-3xl p-5 shadow-sm">
+          <div className="glass-container rounded-3xl p-5 shadow-sm">
             <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-4 border-b border-slate-200/80 pb-3">
               <Shield className="w-5 h-5 text-sky-600" />
               <span>تقرير الكشف</span>
@@ -248,17 +237,18 @@ export default function InspectionCitizenViewPage() {
               )}
             </div>
 
-            {/* الكاشف والمسؤول بأسفل التقرير فقط وفي بلوك زجاجي موحد */}
-            <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-700 mt-4">
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">الكاشف:</span>
-                <span className="text-slate-900 font-black">
-                  {inspection.inspectorEmployeeName || inspection.writerOrCollectorName || 'غير محدد'}
+            {/* الكاشف والمسؤول في بلوكات زجاجية منفصلة */}
+            <div className="space-y-2.5 mt-4 pt-3 border-t border-slate-200/80">
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">الكاشف:</span>
+                <span className="text-sm font-black text-slate-900">
+                  {inspection.inspectorEmployeeName || inspection.writerOrCollectorName || 'ساره محمد جاسم'}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">المسؤول:</span>
-                <span className="text-slate-900 font-black">
+
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">المسؤول:</span>
+                <span className="text-sm font-black text-slate-900">
                   {inspection.revenuesManagerName || 'حسين علي لفتة جابر'}
                 </span>
               </div>
@@ -266,7 +256,7 @@ export default function InspectionCitizenViewPage() {
           </div>
 
           {/* صور الكشف */}
-          <div className="glass rounded-3xl p-5 shadow-sm">
+          <div className="glass-container rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/80">
               <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Camera className="w-5 h-5 text-emerald-600" />
@@ -282,7 +272,7 @@ export default function InspectionCitizenViewPage() {
                 {inspection.images.map((img, i) => (
                   <div
                     key={img.id || i}
-                    className="aspect-[4/3] rounded-2xl bg-slate-900 border border-slate-200 overflow-hidden relative group shadow-xs cursor-pointer active:scale-95 transition-transform"
+                    className="aspect-[4/3] rounded-2xl bg-slate-900 border-2 border-white/80 overflow-hidden relative group shadow-xs cursor-pointer active:scale-95 transition-transform"
                     onClick={() => setSelectedImage(img.dataUrl)}
                   >
                     <img
@@ -304,39 +294,47 @@ export default function InspectionCitizenViewPage() {
           </div>
         </main>
 
-        {/* نافذة معاينة الصور المحسنة للهواتف بشكل كامل وخالي من التعليق */}
+        {/* نافذة معاينة الصورة المضبوطة 100% للهواتف */}
         {selectedImage && (
           <div
-            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-2xl flex flex-col justify-between p-4 animate-fade-in"
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 overflow-y-auto"
             onClick={() => setSelectedImage(null)}
           >
-            <div className="w-full max-w-2xl mx-auto flex items-center justify-between pt-2 px-1">
-              <span className="text-xs font-bold text-slate-200 bg-white/10 px-3.5 py-1.5 rounded-full border border-white/10">
+            {/* شريط علوي يحتوي على زر إغلاق ناصع وبارز بوضوح */}
+            <div className="w-full max-w-lg flex items-center justify-between shrink-0 py-2 px-1">
+              <span className="text-xs font-black text-white bg-white/20 px-3.5 py-1.5 rounded-full border border-white/20">
                 معاينة الصورة
               </span>
               <button
+                type="button"
                 onClick={() => setSelectedImage(null)}
-                className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-4 py-2 rounded-full text-xs font-black shadow-lg transition"
+                className="bg-rose-600 hover:bg-rose-700 active:scale-90 text-white px-5 py-2 rounded-full text-xs font-black shadow-2xl border border-rose-400 cursor-pointer shrink-0"
               >
                 إغلاق ✕
               </button>
             </div>
 
+            {/* الحاوية المركزية للصورة المحصورة بارتفاع الشاشة لتناسب الموبايل دائماً */}
             <div
-              className="my-auto max-w-full max-h-[80vh] flex items-center justify-center p-2"
+              className="my-auto w-full max-w-lg flex items-center justify-center p-2 shrink-1"
               onClick={(e) => e.stopPropagation()}
             >
               <img
                 src={selectedImage}
-                alt="صورة مكبرة"
-                className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl border border-white/20 select-none"
+                alt="صورة الكشف المكبرة"
+                className="max-w-full max-h-[65vh] sm:max-h-[75vh] w-auto h-auto object-contain rounded-2xl shadow-2xl border-2 border-white/30 select-none"
               />
             </div>
 
-            <div className="pb-2 text-center">
-              <span className="text-[11px] text-slate-300 font-bold bg-white/10 px-4 py-1.5 rounded-full border border-white/10">
+            {/* زر سفلي للإغلاق بالنقر في أي مكان */}
+            <div className="shrink-0 pt-2 pb-1 text-center">
+              <button
+                type="button"
+                onClick={() => setSelectedImage(null)}
+                className="text-[11px] text-white/80 font-bold bg-white/10 px-4 py-1.5 rounded-full border border-white/15"
+              >
                 انقر في أي مكان للإغلاق
-              </span>
+              </button>
             </div>
           </div>
         )}
