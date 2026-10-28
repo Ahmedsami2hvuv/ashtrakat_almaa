@@ -1881,19 +1881,6 @@ export default function BranchManagerDashboard({
 
   const homeQuickLinks = navItems.filter((item) => item.id !== 'dashboard')
 
-  // شارات القائمة: أرقام خفيفة من هيكل الفرع فقط — بدون سحب مشتركين حتى يُفتح القسم
-  const navBadge = (id: TabType): string | number => {
-    if (id === 'subscribers') {
-      if (hasLoadedSubscribers) return loadedSubscribers.length || '•'
-      return branch.subscribersCount || '•'
-    }
-    if (id === 'areas') return branch.areas?.length || '•'
-    if (id === 'collectors') return branch.collectors?.length || '•'
-    if (id === 'writers') return branch.writers?.length || '•'
-    if (id === 'consignments') return branch.consignments?.length || '•'
-    return '•'
-  }
-
   const managerDisplayName = currentManager?.name || 'حسين علي لفته'
 
   const openConsignmentA4 = () => {
@@ -1932,7 +1919,6 @@ export default function BranchManagerDashboard({
               >
                 <span className="mgr-side-ico"><Icon size={18} strokeWidth={1.8} /></span>
                 <span className="mgr-side-link-text">{sec.label}</span>
-                <span className="mgr-side-badge">{navBadge(sec.id)}</span>
               </a>
             )
           })}
@@ -2146,12 +2132,12 @@ export default function BranchManagerDashboard({
           backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         }
         .mgr-drawer-panel {
-          position: relative; width: 290px; max-width: 85vw; display: flex; flex-direction: column;
+          position: absolute; top: 0; bottom: 0; left: 0; right: auto;
+          width: 290px; max-width: 85vw; display: flex; flex-direction: column;
           background: rgba(255,255,255,.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-          border-left: 1px solid rgba(255,255,255,.9);
-          box-shadow: -12px 0 40px rgba(15,23,42,.18);
+          border-right: 1px solid rgba(255,255,255,.9);
+          box-shadow: 12px 0 40px rgba(15,23,42,.18);
           transition: transform .3s cubic-bezier(.22,1,.36,1);
-          margin-inline-start: auto;
         }
         .mgr-toast-wrap { pointer-events: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60; width: 92%; max-width: 380px; }
         .mgr-toast {
@@ -2236,7 +2222,6 @@ export default function BranchManagerDashboard({
             <div className="mgr-grid">
               {homeQuickLinks.map((item) => {
                 const Icon = item.icon
-                const badge = navBadge(item.id)
                 return (
                   <a
                     key={item.id}
@@ -2255,9 +2240,6 @@ export default function BranchManagerDashboard({
                         <div className="mgr-card-cta">
                           <span>فتح القسم</span>
                           <span className="mgr-card-cta-btn"><ChevronLeft size={14} /></span>
-                        </div>
-                        <div className="mgr-card-meta">
-                          {badge === '•' ? '—' : `${Number(badge).toLocaleString('ar-EG')} سجل`}
                         </div>
                       </div>
                       <div className="mgr-card-line" />
@@ -3950,7 +3932,7 @@ export default function BranchManagerDashboard({
         <div className="mgr-drawer-bg" onClick={() => setSidebarOpen(false)} />
         <div
           className="mgr-drawer-panel"
-          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)' }}
+          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
         >
           <SidebarContent onClose={() => setSidebarOpen(false)} />
         </div>
