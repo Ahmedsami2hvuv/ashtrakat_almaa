@@ -2533,8 +2533,6 @@ export default function BranchManagerDashboard({
                   <RefreshCw className="w-5 h-5 animate-spin" />
                   <p className="text-xs">جارِ تحميل قاعدة بيانات مشتركي الفرع من السحابة...</p>
                 </div>
-                  <p className="text-xs">جارِ تحميل قاعدة بيانات مشتركي الفرع من السحابة...</p>
-                </div>
               ) : (
                 <>
                   {/* شريط البحث وخيارات العرض */}
