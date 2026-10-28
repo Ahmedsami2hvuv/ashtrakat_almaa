@@ -1958,6 +1958,23 @@ export default function BranchManagerDashboard({
         @keyframes mgrFloat { 0%,100%{transform:translate(0,0)} 50%{transform:translate(10px,-18px)} }
         @keyframes mgrSlideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
+        .glass { background: rgba(255,255,255,0.78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 32px rgba(15,23,42,0.06), inset 0 1px 0 #fff; }
+        .glass-strong { background: rgba(255,255,255,0.92); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border:1px solid rgba(255,255,255,0.95); }
+        .writer-card { border-radius:22px; padding:18px; transition:all 0.25s ease; background: rgba(255,255,255,0.78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 32px rgba(15,23,42,0.06); }
+        .writer-card:hover { transform:translateY(-2px); box-shadow:0 16px 40px rgba(15,23,42,0.08); }
+        .badge-green { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; height:28px; padding:0 10px; border-radius:999px; font-size:11px; font-weight:900; display:inline-flex; align-items:center; }
+        .badge-phone { background:#fff; border:1px solid #e2e8f0; height:28px; padding:0 12px; border-radius:999px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:6px; color:#334155; }
+        .btn-big { height:44px; border-radius:999px; font-size:13px; font-weight:900; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:1px solid; cursor:pointer; transition:all 0.2s ease; }
+        .btn-view { background:#f0f9ff; border-color:#bae6fd; color:#0369a1; }
+        .btn-view:hover { background:#e0f2fe; border-color:#7dd3fc; }
+        .btn-empty { background:#fef2f2; border-color:#fecaca; color:#dc2626; }
+        .btn-empty:hover { background:#fee2e2; border-color:#fca5a5; }
+        .circle-btn { width:40px; height:40px; border-radius:999px; display:grid; place-items:center; color:#fff; cursor:pointer; border:none; transition:all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.08); flex-shrink: 0; }
+        .circle-btn:hover { transform:scale(1.05); }
+        .c-red{ background:#ef4444; } .c-blue{ background:#0ea5e9; } .c-green{ background:#10b981; } .c-white{ background:#fff; color:#334155; border:1px solid #e2e8f0; }
+        .writer-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        @media(max-width:900px){ .writer-grid{grid-template-columns:1fr} }
+
         .mgr-header {
           position: sticky; z-index: 30; top: var(--safe-area-inset-top, 0px); height: 65px;
           display: flex; align-items: center;
@@ -3346,28 +3363,50 @@ export default function BranchManagerDashboard({
             </div>
           )}
 
-          {/* تبويب الكتّاب */}
+          {/* تبويب الكتّاب - ستايل Meta الفخم مع Glassmorphic Cards */}
           {activeTab === 'writers' && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm space-y-5">
-              {/* الرأسية مع شريط الإحصائيات وزر إضافة كاتب بنمط ستيتش */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs text-purple-700 font-black uppercase tracking-wider mb-1">
-                    <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
-                    <span>منظومة التحكم بالإسناد الميداني والفوترة الرقمية</span>
+            <div className="glass rounded-[24px] p-5 md:p-6 space-y-6">
+              {/* التولبار العلوي لصفحة الكتاب */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/80">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white flex items-center justify-center font-black text-lg shadow-[0_4px_10px_rgba(14,165,233,0.25)]">
+                    <BookOpen className="w-5 h-5" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-black text-[#00142f]">إدارة كادر كتّاب الإدخال المعتمدين</h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full font-black bg-purple-50 text-purple-700 border border-purple-200">
-                      {branch.writers?.length || 0} كاتب مرخص
-                    </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-900">كُتّاب الاشتراكات</h2>
+                      <span className="h-6 px-3 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center shadow-sm">
+                        {branch.writers?.length || 0}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      إدارة كادر كتاب الفوترة وتحديد الصلاحيات المكانية والاشتراكات المخصصة
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    إدارة الصلاحيات المكانية وتوزيع سلاسل أرقام الاشتراكات وتعيين فترات العمل المتوافقة مع أوقات التزامن
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* حقل البحث الدائري */}
+                  <div className="relative flex-1 sm:w-80">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="بحث باسم الكاتب أو الهاتف أو المنطقة..."
+                      value={writerSearch}
+                      onChange={(e) => setWriterSearch(e.target.value)}
+                      className="w-full h-11 pr-10 pl-4 bg-white/90 focus:bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-sky-300 shadow-sm transition"
+                    />
+                    {writerSearch && (
+                      <button
+                        onClick={() => setWriterSearch('')}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* زر إضافة كاتب جديد */}
                   <button
                     onClick={() => {
                       setEditingWriter(null)
@@ -3381,271 +3420,190 @@ export default function BranchManagerDashboard({
                       setWriterRangeTo('')
                       setShowWriterModal(true)
                     }}
-                    className="px-4 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-[0_4px_14px_rgba(126,58,237,0.3)] cursor-pointer"
+                    className="h-11 px-5 bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-95 text-white rounded-full text-xs font-black transition flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(14,165,233,0.35)] cursor-pointer shrink-0 border-none"
                   >
-                    <Plus className="w-4 h-4 text-white" />
-                    <span>+ إضافة كاتب جديد</span>
+                    <Plus className="w-4 h-4" />
+                    <span>إضافة كاتب جديد</span>
                   </button>
                 </div>
               </div>
 
-              {/* شريط البحث السريع في الكتّاب */}
-              {branch.writers && branch.writers.length > 0 && (
-                <div className="flex items-center justify-between gap-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="بحث باسم الكاتب أو رقم الهاتف أو المنطقة المسندة..."
-                      value={writerSearch}
-                      onChange={(e) => setWriterSearch(e.target.value)}
-                      className="w-full pr-9 pl-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
-                    />
-                  </div>
-                  {writerSearch && (
-                    <button
-                      onClick={() => setWriterSearch('')}
-                      className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-1"
-                    >
-                      إلغاء البحث
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* قائمة وجدول الكتّاب المرتب والمدمج */}
+              {/* قائمة وجدول الكتّاب */}
               {(!branch.writers || branch.writers.length === 0) ? (
-                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-slate-500">لا يوجد كتاب مسجلون حالياً</p>
+                <div className="text-center py-14 bg-white/60 rounded-3xl border border-dashed border-slate-200">
+                  <BookOpen className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-slate-600">لا يوجد كتاب مسجلون حالياً</p>
+                  <p className="text-xs text-slate-400 mt-1">اضغط على زر &quot;إضافة كاتب جديد&quot; في الأعلى للبدء</p>
                 </div>
               ) : filteredWriters.length === 0 ? (
-                <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200">
-                  <p className="text-xs font-bold text-slate-500">لا توجد نتائج مطابقة لبحثك</p>
+                <div className="text-center py-10 bg-white/60 rounded-3xl border border-slate-200">
+                  <p className="text-xs font-bold text-slate-500">لا توجد نتائج مطابقة لبحثك &quot;{writerSearch}&quot;</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div className="writer-grid">
                   {filteredWriters.map((writer) => {
                     const assignedAreas = (branch.areas || []).filter(a => (writer.assignedAreaIds || []).includes(a.id))
-                    const assignedCount = assignedAreas.length
+                    const assignedAreasCount = assignedAreas.length
+                    const sortedSubIds = Array.from(new Set(writer.assignedSubscriberIds || [])).sort((a, b) => a - b)
+                    const subCount = sortedSubIds.length
+                    const minId = sortedSubIds[0]
+                    const maxId = sortedSubIds[sortedSubIds.length - 1]
+                    const rangeText = subCount === 0 
+                      ? 'لا يوجد'
+                      : subCount === 1 
+                      ? `#${minId}` 
+                      : `#${minId} إلى #${maxId}`
+
+                    const workCheck = checkWriterWorkHours(writer)
 
                     return (
-                      <div 
-                        key={writer.id} 
-                        className="bg-white hover:bg-slate-50/50 rounded-2xl p-4 border border-slate-200/90 hover:border-purple-300 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-3 relative overflow-hidden"
+                      <div
+                        key={writer.id}
+                        className="writer-card space-y-4"
                       >
-                        {/* خط التدرج اللوني العلوي الرفيع لهوية الكاتب */}
-                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600"></div>
-                        {/* 1. رأس البطاقة: الاسم والهاتف */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 bg-purple-100 text-purple-700 rounded-lg">
-                                <BookOpen className="w-4 h-4" />
-                              </div>
-                              <h4 className="font-black text-slate-900 text-sm sm:text-base">{writer.name}</h4>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono dir-ltr justify-end pr-1">
-                              <span>{writer.phone}</span>
-                              <Phone className="w-3 h-3 text-slate-400" />
+                        {/* 1. رأس البطاقة: الاسم والهواتف والبادجات */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1.5 min-w-0">
+                            <h4 className="text-xl font-black text-slate-900 truncate">{writer.name}</h4>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {writer.phone && (
+                                <span className="badge-phone">
+                                  <Phone className="w-3 h-3 text-slate-400" />
+                                  <span className="font-mono dir-ltr">{writer.phone}</span>
+                                </span>
+                              )}
+                              <span className="badge-green">
+                                <Check className="w-3 h-3 me-1 text-emerald-600" />
+                                كاتب معتمد
+                              </span>
                             </div>
                           </div>
-
-                          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                            كاتب معتمد
-                          </span>
                         </div>
 
-                        {/* 2. المناطق المسندة (تظهر فقط إذا كان لديه مناطق مسندة) */}
-                        {assignedCount > 0 && (
-                          <div className="p-2.5 bg-white rounded-xl border border-slate-100 space-y-1.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-black text-slate-700 flex items-center gap-1 text-[11px]">
-                                <MapPin className="w-3.5 h-3.5 text-purple-600" />
-                                <span>المناطق المسندة:</span>
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-50 text-purple-700 border border-purple-200">
-                                {assignedCount} {assignedCount === 1 ? 'منطقة' : assignedCount === 2 ? 'منطقتان' : 'مناطق'}
-                              </span>
-                            </div>
+                        {/* 2. صندوق المشتركين المخصصين + الأزرار الكبيرة */}
+                        <div className="p-3.5 rounded-2xl bg-white/80 border border-slate-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                              <Users className="w-4 h-4 text-sky-600" />
+                              <span>المشتركون المخصصون:</span>
+                            </span>
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-sky-50 text-sky-700 border border-sky-200">
+                              {subCount} مشترك
+                            </span>
+                          </div>
 
-                            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
-                              {assignedAreas.slice(0, 4).map((a) => (
-                                <span
-                                  key={a.id}
-                                  className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/80"
-                                >
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (subCount === 0) return
+                                const allSubsPool = (loadedSubscribers && loadedSubscribers.length > 0) ? loadedSubscribers : (branch.subscribers || [])
+                                const writerSubs = sortedSubIds.map(id => {
+                                  const found = allSubsPool.find(s => s.id === id)
+                                  return {
+                                    id,
+                                    name: found?.name || `مشترك رقم #${id}`
+                                  }
+                                })
+                                setShowSubscribersListModal({
+                                  title: `المشتركون المخصصون للكاتب (${writer.name}) - ${rangeText} (العدد: ${subCount})`,
+                                  subscribers: writerSubs
+                                })
+                              }}
+                              disabled={subCount === 0}
+                              className="btn-big btn-view disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Eye className="w-4.5 h-4.5" />
+                              <span>عرض القائمة</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
+                              disabled={subCount === 0}
+                              className="btn-big btn-empty disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-4.5 h-4.5" />
+                              <span>إفراغ</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 3. صندوق معلومات النطاق وساعات العمل */}
+                        <div className="p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-600 flex items-center gap-1.5">
+                              <Hash className="w-3.5 h-3.5 text-slate-400" />
+                              <span>نطاق الاشتراكات:</span>
+                            </span>
+                            <span className="font-mono font-black text-sky-800 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 dir-ltr">
+                              {rangeText}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                            <span className="font-bold text-slate-600 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-slate-400" />
+                              <span>ساعات العمل:</span>
+                            </span>
+                            {writer.workHoursEnabled ? (
+                              workCheck.allowed ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                  من {formatTimeArabic(writer.workHourStart || '08:00')} إلى {formatTimeArabic(writer.workHourEnd || '14:00')}
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                  خارج وقت العمل ({formatTimeArabic(writer.workHourStart || '08:00')} - {formatTimeArabic(writer.workHourEnd || '14:00')})
+                                </span>
+                              )
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                متاح 24 ساعة
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* المناطق المسندة إن وجد */}
+                        {assignedAreasCount > 0 && (
+                          <div className="flex items-center justify-between text-xs text-slate-600 bg-white/70 p-2.5 rounded-xl border border-slate-100">
+                            <span className="font-bold flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-sky-600" />
+                              <span>المناطق المسندة:</span>
+                            </span>
+                            <div className="flex flex-wrap gap-1 max-w-[70%] justify-end">
+                              {assignedAreas.slice(0, 3).map(a => (
+                                <span key={a.id} className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">
                                   {a.name}
                                 </span>
                               ))}
-                              {assignedAreas.length > 4 && (
-                                <span className="text-[10px] font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-200">
-                                  +{assignedAreas.length - 4} أخرى
+                              {assignedAreas.length > 3 && (
+                                <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-200">
+                                  +{assignedAreas.length - 3}
                                 </span>
                               )}
                             </div>
                           </div>
                         )}
 
-                        {/* المشتركون المخصصون مباشرة للكاتب */}
-                        {writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0 && (() => {
-                          const sortedIds = Array.from(new Set(writer.assignedSubscriberIds)).sort((a, b) => a - b)
-                          const minId = sortedIds[0]
-                          const maxId = sortedIds[sortedIds.length - 1]
-                          const rangeText = sortedIds.length === 1 
-                            ? `اشتراك #${minId}` 
-                            : `من #${minId} إلى #${maxId}`
-
-                          return (
-                            <div className="p-2.5 bg-purple-50/80 rounded-xl border border-purple-200 space-y-1.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 text-xs">
-                                  <Users className="w-3.5 h-3.5 text-purple-700" />
-                                  <span className="font-black text-purple-950 text-[11px]">المشتركون المخصصون:</span>
-                                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-purple-100 text-purple-800 border border-purple-200">
-                                    {writer.assignedSubscriberIds.length} مشترك
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const allSubsPool = (loadedSubscribers && loadedSubscribers.length > 0) ? loadedSubscribers : (branch.subscribers || [])
-                                      const writerSubs = sortedIds.map(id => {
-                                        const found = allSubsPool.find(s => s.id === id)
-                                        return {
-                                          id,
-                                          name: found?.name || `مشترك رقم #${id}`
-                                        }
-                                      })
-                                      setShowSubscribersListModal({
-                                        title: `المشتركون المخصصون للكاتب (${writer.name}) - ${rangeText} (العدد: ${writer.assignedSubscriberIds?.length})`,
-                                        subscribers: writerSubs
-                                      })
-                                    }}
-                                    className="px-2 py-1 bg-white hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black transition border border-purple-300 flex items-center gap-1 cursor-pointer shadow-2xs"
-                                    title="عرض كشف بجميع أرقام وأسماء المشتركين المسندين لهذا الكاتب"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                    <span>عرض القائمة</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleClearWriterSubscribers(writer.id, writer.name)}
-                                    className="px-2.5 py-1 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white rounded-lg text-[10px] font-black transition flex items-center gap-1 cursor-pointer"
-                                    title="إزالة وتفريغ جميع المشتركين المخصصين لهذا الكاتب بنقرة واحدة"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                    <span>إفراغ</span>
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* سطر نطاق الاشتراكات (من وإلى) بخط واضح وشارة مميزة */}
-                              <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-purple-200/90 text-xs font-bold text-slate-700">
-                                <span className="text-[11px] font-black text-purple-900 flex items-center gap-1">
-                                  <Hash className="w-3.5 h-3.5 text-purple-600" />
-                                  <span>نطاق الاشتراكات:</span>
-                                </span>
-                                <span className="font-mono font-black text-purple-800 text-xs bg-purple-50 px-2 py-0.5 rounded border border-purple-300 dir-ltr">
-                                  {rangeText}
-                                </span>
-                              </div>
-                            </div>
-                          )
-                        })()}
-
-                        {/* حالة ساعات العمل بالتوقيت العراقي */}
-                        {(() => {
-                          const workCheck = checkWriterWorkHours(writer)
-                          return (
-                            <div className="p-2.5 rounded-xl border text-xs space-y-1 bg-slate-50 border-slate-200">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-slate-700 flex items-center gap-1.5 text-[11px]">
-                                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                                  <span>ساعات العمل (توقيت العراق):</span>
-                                </span>
-                                {writer.workHoursEnabled ? (
-                                  workCheck.allowed ? (
-                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                                      متاح للعمل الآن
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                                      خارج وقت العمل
-                                    </span>
-                                  )
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/80 text-slate-600">
-                                    متاح 24 ساعة
-                                  </span>
-                                )}
-                              </div>
-                              {writer.workHoursEnabled && (
-                                <div className="text-[11px] font-bold text-slate-600 flex items-center justify-between pt-0.5">
-                                  <span>
-                                    من <span className="text-purple-700 font-black">{formatTimeArabic(writer.workHourStart || '08:00')}</span> إلى <span className="text-purple-700 font-black">{formatTimeArabic(writer.workHourEnd || '14:00')}</span>
-                                  </span>
-                                  <span className="text-[10px] text-slate-400">Asia/Baghdad</span>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })()}
-
-                        {/* 3. شريط الأيقونات السريعة للأكشنز */}
-                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
-                          <span className="text-[10px] font-bold text-slate-400">إجراءات وروابط:</span>
-
-                          <div className="flex items-center gap-1.5">
-                            {/* زر فتح الحساب - أيقونة */}
+                        {/* 4. سطر الأزرار الدائرية (إجراءات وروابط) */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/70">
+                          <span className="text-xs font-bold text-slate-500">إجراءات وروابط:</span>
+                          <div className="flex items-center gap-2">
+                            {/* 1. سلة حذف أحمر (c-red) */}
                             <button
                               type="button"
-                              onClick={() => {
-                                const origin = typeof window !== 'undefined' ? window.location.origin : ''
-                                const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
-                                window.open(directLink, '_blank')
-                              }}
-                              className="p-2 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl transition border border-blue-200 shadow-2xs group"
-                              title="فتح حساب الكاتب في نافذة جديدة"
+                              onClick={() => handleDeleteWriter(writer.id, writer.name)}
+                              className="circle-btn c-red"
+                              title="حذف الكاتب"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
 
-                            {/* زر نسخ الرابط - أيقونة */}
-                            <button
-                              type="button"
-                              onClick={() => handleCopyWriterLink(writer)}
-                              className={`p-2 rounded-xl transition border shadow-2xs ${
-                                copiedWriterId === writer.id
-                                  ? 'bg-emerald-600 text-white border-emerald-600'
-                                  : 'bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border-indigo-200'
-                              }`}
-                              title={copiedWriterId === writer.id ? 'تم نسخ الرابط!' : 'نسخ رابط الدخول المباشر'}
-                            >
-                              {copiedWriterId === writer.id ? (
-                                <Check className="w-4 h-4" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
-
-                            {/* زر الواتساب - أيقونة */}
-                            <button
-                              type="button"
-                              onClick={() => handleShareWriterWhatsApp(writer)}
-                              className="p-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl transition border border-emerald-200 shadow-2xs"
-                              title="مشاركة رابط الدخول عبر واتساب"
-                            >
-                              <Share2 className="w-4 h-4" />
-                            </button>
-
-                            {/* زر التعديل - أيقونة */}
+                            {/* 2. قلم تعديل أزرق (c-blue) */}
                             <button
                               type="button"
                               onClick={() => {
@@ -3669,41 +3627,45 @@ export default function BranchManagerDashboard({
                                 }
                                 setShowWriterModal(true)
                               }}
-                              className="p-2 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded-xl transition border border-slate-200 shadow-2xs"
+                              className="circle-btn c-blue"
                               title="تعديل بيانات الكاتب ومناطقه واشتراكاته"
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
 
-                            {/* زر سجل النشاط والإحصائيات - أيقونة بارزة */}
+                            {/* 3. واتساب أخضر (c-green) */}
                             <button
                               type="button"
-                              onClick={() => handleOpenWriterStats(writer)}
-                              className="p-2 bg-purple-100 hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl transition border border-purple-300 shadow-2xs"
-                              title="عرض سجل نشاط وإحصائيات الكاتب (اليومي، الشهري، السنوي)"
+                              onClick={() => handleShareWriterWhatsApp(writer)}
+                              className="circle-btn c-green"
+                              title="مشاركة رابط الدخول عبر الواتساب"
                             >
-                              <Activity className="w-4 h-4" />
+                              <Share2 className="w-4 h-4" />
                             </button>
 
-                            {/* زر الحذف - أيقونة */}
+                            {/* 4. رابط مباشر أبيض (c-white) */}
                             <button
                               type="button"
-                              onClick={() => handleDeleteWriter(writer.id, writer.name)}
-                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl transition border border-rose-200 shadow-2xs"
-                              title="حذف الكاتب"
+                              onClick={() => {
+                                const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                                const directLink = `${origin}/?role=writer&token=${writer.token}&branch=${branch.id}`
+                                window.open(directLink, '_blank')
+                              }}
+                              className="circle-btn c-white"
+                              title="فتح رابط الحساب في نافذة جديدة"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <ExternalLink className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
 
-                        {/* زر فتح سجل نشاط وإحصائيات الكاتب بنقرة واحدة */}
+                        {/* 5. زر سجل النشاط والعمليات أسفل الكارت */}
                         <button
                           type="button"
                           onClick={() => handleOpenWriterStats(writer)}
-                          className="w-full py-2 px-3 bg-purple-50 hover:bg-purple-700 text-purple-800 hover:text-white rounded-xl text-xs font-black transition border border-purple-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer group"
+                          className="w-full h-11 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98"
                         >
-                          <BarChart3 className="w-4 h-4 text-purple-600 group-hover:text-white" />
+                          <Activity className="w-4 h-4 text-sky-400" />
                           <span>سجل النشاط والعمليات (اليوم / الشهر / السنة)</span>
                         </button>
                       </div>
