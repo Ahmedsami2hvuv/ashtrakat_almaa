@@ -138,12 +138,6 @@ export default function BranchManagerDashboard({
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth < 768) setSidebarOpen(false)
-      else setSidebarOpen(true)
-    }
-  }, [])
-  useEffect(() => {
     if (!navToast) return
     const t = setTimeout(() => setNavToast(null), 1400)
     return () => clearTimeout(t)
@@ -2132,11 +2126,11 @@ export default function BranchManagerDashboard({
           backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         }
         .mgr-drawer-panel {
-          position: absolute; top: 0; bottom: 0; left: 0; right: auto;
+          position: absolute; top: 0; bottom: 0; right: 0; left: auto;
           width: 290px; max-width: 85vw; display: flex; flex-direction: column;
           background: rgba(255,255,255,.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-          border-right: 1px solid rgba(255,255,255,.9);
-          box-shadow: 12px 0 40px rgba(15,23,42,.18);
+          border-left: 1px solid rgba(255,255,255,.9);
+          box-shadow: -12px 0 40px rgba(15,23,42,.18);
           transition: transform .3s cubic-bezier(.22,1,.36,1);
         }
         .mgr-toast-wrap { pointer-events: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60; width: 92%; max-width: 380px; }
@@ -3932,7 +3926,7 @@ export default function BranchManagerDashboard({
         <div className="mgr-drawer-bg" onClick={() => setSidebarOpen(false)} />
         <div
           className="mgr-drawer-panel"
-          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
+          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)' }}
         >
           <SidebarContent onClose={() => setSidebarOpen(false)} />
         </div>
