@@ -32,6 +32,8 @@ interface InspectionPrintableA4Props {
   onUpdateLayout?: (updated: InspectionLayoutConfig) => void
   onUpdate?: (updated: InspectionRecord) => void
   branchManagerName?: string
+  /** اسم الفرع الرسمي من لوحة المدير — يُفضَّل على القيمة المخزّنة إن كانت خاطئة */
+  branchNameOverride?: string
 }
 
 // أسماء العناصر بالعربي لسهولة الاختيار والتحكم
@@ -52,61 +54,75 @@ const ELEMENT_LABELS: Record<keyof InspectionLayoutConfig, string> = {
   revenuesSign: 'خانة م. الواردات'
 }
 
+/** قيم ليست أسماء فروع (دور الموظف / عناوين واجهة) */
+const INVALID_BRANCH_LABELS = /^(كاتب|محصل|الاشتراكات|مدير|مسؤول|writer|collector|guest)$/i
+
+function stripBranchPrefixes(raw: string): string {
+  return raw
+    .replace(/مديرية\s+ماء\s+البصرة/gi, '')
+    .replace(/مركز\s+جباية\s+واردات/gi, '')
+    .replace(/مركز\s+واردات/gi, '')
+    .replace(/فرع\s+واردات/gi, '')
+    .replace(/\bفرع\b/gi, '')
+    .replace(/^\s*واردات\s+/gi, '')
+    .trim()
+}
+
+/** يستخرج اسم الفرع النظيف فقط — مثال: أبي الخصيب */
+function resolveCleanBranchName(stored?: string, override?: string): string {
+  for (const candidate of [override, stored]) {
+    if (!candidate || !candidate.trim()) continue
+    const cleaned = stripBranchPrefixes(candidate.trim())
+    if (!cleaned || INVALID_BRANCH_LABELS.test(cleaned)) continue
+    // رفض أسماء قصيرة جداً أو التي تطابق أدواراً شائعة داخل النص
+    if (cleaned.length < 2) continue
+    return cleaned
+  }
+  return 'أبي الخصيب'
+}
+
+/** يحيط وصف العقار بعد «عبارة عن / عبارة» بوسم أحمر للعرض */
+function autoMarkPropertyRed(text: string): string {
+  if (!text || text.includes('<red>')) return text
+
+  let result = text
+
+  // مثال: تبين أن موقع العقار عبارة قطعة ارض فارغة بمساحة ١٥٠ متر
+  result = result.replace(
+    /(عبارة(?:\s*عن)?\s+)(.+?)(?=\s+(?:ضمن|وخالية|خالية|علماً|علما|كما|ولا|وليس|ويخلو|وتقع|وفي|في حي|في منطقة|حسب)|[.،,]|$)/u,
+    '$1<red>$2</red>'
+  )
+
+  if (!result.includes('<red>')) {
+    result = result.replace(
+      /\(([^)]*(?:بناية|دار|دارين|قطعة|ارض|أرض|بستان|محل|مكتب)[^)]*)\)/gi,
+      '(<red>$1</red>)'
+    )
+  }
+
+  return result
+}
+
 // دالة ذكية لتلوين الكلام المعني بوصف العقار باللون الأحمر
 function renderHighlightedPoint(text: string) {
   if (!text) return null
 
-  // إذا كان النص يحتوي بالفعل على وسم <red>...</red>
-  if (text.includes('<red>')) {
-    const parts = text.split(/(<red>[\s\S]*?<\/red>)/gi)
+  const marked = autoMarkPropertyRed(text)
+
+  if (marked.includes('<red>')) {
+    const parts = marked.split(/(<red>[\s\S]*?<\/red>)/gi)
     return (
       <>
         {parts.map((part, i) => {
           if (part.startsWith('<red>') && part.endsWith('</red>')) {
             const inner = part.replace(/<\/?red>/gi, '')
             return (
-              <span key={i} className="text-[#b91c1c] font-black underline decoration-red-300 decoration-1 underline-offset-2">
+              <span
+                key={i}
+                className="font-black underline decoration-red-300 decoration-1 underline-offset-2"
+                style={{ color: '#dc2626' }}
+              >
                 {inner}
-              </span>
-            )
-          }
-          return <span key={i}>{part}</span>
-        })}
-      </>
-    )
-  }
-
-  // إذا لم يكن الوسم موجوداً، نقوم بالبحث التلقائي عن (العقار عبارة ...) أو ما بين الأقواس
-  // نمط: "عبارة قطعة ارض فارغة بمساحة ١٥٠ متر" أو "عبارة عن ..."
-  const phraseRegex = /(عبارة(?:\s+عن)?\s+)([\wء-ي0-9\s]{4,45}?)(?=\s+(?:ضمن|وخالية|علما|علماً|كما|ولا|وليس|في|,|،|\.|$))/i
-  const match = text.match(phraseRegex)
-
-  if (match && match[2]) {
-    const before = text.substring(0, match.index! + match[1].length)
-    const highlighted = match[2]
-    const after = text.substring(match.index! + match[1].length + highlighted.length)
-    return (
-      <>
-        <span>{before}</span>
-        <span className="text-[#b91c1c] font-black underline decoration-red-300 decoration-1 underline-offset-2">
-          {highlighted}
-        </span>
-        <span>{after}</span>
-      </>
-    )
-  }
-
-  // نمط ما بين الأقواس المعنية بوصف العقار مثل (بناية) أو (دار سكنية) أو (قطعة ارض)
-  const parenRegex = /(\((?:بناية|دار|دارين|قطعة ارض[^\)]*|بستان[^\)]*|محل|مكتب)\))/gi
-  if (parenRegex.test(text)) {
-    const parts = text.split(/(\([^\)]+\))/gi)
-    return (
-      <>
-        {parts.map((part, i) => {
-          if (part.startsWith('(') && part.endsWith(')')) {
-            return (
-              <span key={i} className="text-[#b91c1c] font-black">
-                {part}
               </span>
             )
           }
@@ -126,7 +142,8 @@ export default function InspectionPrintableA4({
   layoutConfig: propLayoutConfig,
   onUpdateLayout,
   onUpdate,
-  branchManagerName
+  branchManagerName,
+  branchNameOverride
 }: InspectionPrintableA4Props) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [activeElementId, setActiveElementId] = useState<keyof InspectionLayoutConfig | null>(null)
@@ -210,15 +227,8 @@ export default function InspectionPrintableA4({
     }
   }, [inspection.id])
 
-  // استخلاص اسم الفرع النظيف
-  const rawBranch = inspection.branchName || 'أبي الخصيب'
-  const cleanBranch =
-    rawBranch
-      .replace(/مديرية\s+ماء\s+البصرة/gi, '')
-      .replace(/مركز\s+جباية\s+واردات/gi, '')
-      .replace(/مركز\s+واردات/gi, '')
-      .replace(/فرع/gi, '')
-      .trim() || 'أبي الخصيب'
+  // اسم الفرع فقط (مثل أبي الخصيب) — بدون كاتب أو اسم الموظف
+  const cleanBranch = resolveCleanBranchName(inspection.branchName, branchNameOverride)
 
   // اسم مسؤول الواردات للفرع المحدد
   const defaultRevenuesManager =

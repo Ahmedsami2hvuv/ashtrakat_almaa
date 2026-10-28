@@ -684,6 +684,8 @@ export interface MainAppProps {
   writerRangeFrom?: number
   writerRangeTo?: number
   customHeaderTitle?: string
+  /** اسم الفرع الحقيقي للترويسة والكشوفات (مثل: أبي الخصيب) — ليس عنوان الكاتب */
+  branchDisplayName?: string
   writerId?: string
   writerName?: string
   collectorId?: string
@@ -715,6 +717,7 @@ export default function MainApp({
   writerRangeFrom,
   writerRangeTo,
   customHeaderTitle,
+  branchDisplayName,
   writerId,
   writerName,
   collectorId: activeCollectorId,
@@ -7436,7 +7439,7 @@ export default function MainApp({
           userRole={userRole}
           userName={userRole === 'writer' ? (writerName || customHeaderTitle || 'كاتب') : (activeCollectorName || customHeaderTitle || 'محصل')}
           branchId={branchId}
-          branchName={customHeaderTitle || 'مركز جباية واردات أبي الخصيب'}
+          branchName={branchDisplayName || 'مركز جباية واردات أبي الخصيب'}
         />
       )}
 
@@ -7446,7 +7449,7 @@ export default function MainApp({
           isOpen={showInspectionModal}
           onClose={() => setShowInspectionModal(false)}
           branchId={branchId}
-          branchName={customHeaderTitle || 'مركز جباية واردات أبي الخصيب'}
+          branchName={branchDisplayName || 'مركز جباية واردات أبي الخصيب'}
         />
       )}
     </div>

@@ -544,6 +544,7 @@ export default function DirectorateRootApp() {
         collectorId={subscriberAppProps?.collectorId}
         collectorName={subscriberAppProps?.collectorName}
         customHeaderTitle={subscriberAppProps?.userTitle || 'الاشتراكات'}
+        branchDisplayName={selectedBranch?.name || 'مركز جباية واردات أبي الخصيب'}
         bypassAuth={true}
         onBack={
           subscriberAppProps?.role === 'manager'

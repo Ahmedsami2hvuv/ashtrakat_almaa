@@ -111,15 +111,18 @@ export default function ManagerInspectionDashboardModal({
           ? localStorage.getItem('gemini_api_key') || localStorage.getItem('ashtrakat_gemini_key') || ''
           : ''
 
+      const officialBranchName = branchName || currentInspection.branchName || 'مركز جباية واردات أبي الخصيب'
+
       const extracted = await processInspectionReportWithAI(
         currentInspection.rawReportText,
         storedKey ? [storedKey] : [],
         currentInspection.writerOrCollectorName,
-        currentInspection.branchName || branchName
+        officialBranchName
       )
 
       const updated: InspectionRecord = {
         ...currentInspection,
+        branchName: officialBranchName,
         citizenName: extracted.citizenName || currentInspection.citizenName,
         inspectionDate: extracted.inspectionDate || currentInspection.inspectionDate,
         tableData: {
