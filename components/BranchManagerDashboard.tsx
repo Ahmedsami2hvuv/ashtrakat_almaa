@@ -99,17 +99,30 @@ export default function BranchManagerDashboard({
   }
   const [activeTab, setActiveTab] = useState<TabType>(tabFromPath)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // رابط حقيقي لكل قسم حتى يعمل كلك يمين → فتح في نافذة جديدة
+  const tabHref = (tab: TabType) => {
+    if (typeof window === 'undefined') return `/manager/${tab}`
+    const params = new URLSearchParams(window.location.search)
+    const query = params.toString()
+    return `/manager/${tab}${query ? `?${query}` : ''}`
+  }
   const navigateTab = (tab: TabType) => {
     setActiveTab(tab)
     setSidebarOpen(false)
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const query = params.toString()
-      const nextUrl = `/manager/${tab}${query ? `?${query}` : ''}`
+      const nextUrl = tabHref(tab)
       if (window.location.pathname + window.location.search !== nextUrl) {
         window.history.pushState({ managerTab: tab }, '', nextUrl)
       }
     }
+  }
+  // نقرة عادية = نفس الصفحة؛ Ctrl/Cmd أو وسط الزر أو كلك يمين = سلوك المتصفح الطبيعي
+  const handleTabLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, tab: TabType) => {
+    if (e.defaultPrevented) return
+    if (e.button !== 0) return
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    e.preventDefault()
+    navigateTab(tab)
   }
   useEffect(() => {
     const onPopState = () => setActiveTab(tabFromPath())
@@ -2013,13 +2026,13 @@ export default function BranchManagerDashboard({
           </div>
           <div className="text-[10px] font-black tracking-widest text-slate-500 mb-3 px-2">أقسام النظام</div>
           <div className="space-y-2">{navItems.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return (
-            <button key={item.id} onClick={() => navigateTab(item.id as TabType)}
-              className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-right transition-all border"
+            <a key={item.id} href={tabHref(item.id)} onClick={(e) => handleTabLinkClick(e, item.id)}
+              className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-right transition-all border no-underline"
               style={{background:active?'rgba(255,255,255,.94)':'rgba(255,255,255,.48)',borderColor:active?'rgba(156,163,175,.65)':'rgba(255,255,255,.92)',boxShadow:active?'0 5px 18px rgba(31,41,55,.075), inset 0 1px 0 rgba(255,255,255,.95)':'inset 0 1px 0 rgba(255,255,255,.8)'}}>
               <span className="w-10 h-10 shrink-0 rounded-xl border border-white/90 bg-white/70 grid place-items-center text-slate-600"><Icon className="w-5 h-5"/></span>
               <span className="flex-1"><span className="block text-sm font-extrabold text-slate-800">{item.label}</span></span>
               <ChevronLeft className="w-4 h-4 text-slate-400"/>
-            </button> )})}</div>
+            </a> )})}</div>
           <div className="mt-6 rounded-2xl border border-white/90 bg-white/45 p-4 shadow-sm"><div className="text-xs font-bold text-slate-700">توفير الاستهلاك</div><p className="text-[11px] leading-6 text-slate-500 mt-1">كل قسم يسحب بياناته عند فتحه فقط. الصفحة الرئيسية أزرار بلا قراءات من السحابة.</p></div>
         </aside>
       </div>}
@@ -2045,11 +2058,11 @@ export default function BranchManagerDashboard({
               {homeQuickLinks.map((item) => {
                 const Icon = item.icon
                 return (
-                  <button
+                  <a
                     key={item.id}
-                    type="button"
-                    onClick={() => navigateTab(item.id)}
-                    className="gov-card group text-right p-5 rounded-2xl transition active:scale-[0.99] flex items-start gap-4"
+                    href={tabHref(item.id)}
+                    onClick={(e) => handleTabLinkClick(e, item.id)}
+                    className="gov-card group text-right p-5 rounded-2xl transition active:scale-[0.99] flex items-start gap-4 no-underline"
                   >
                     <span
                       className="w-12 h-12 shrink-0 rounded-xl border border-white/90 bg-white/70 grid place-items-center text-slate-600 group-hover:text-sky-700 transition"
@@ -2061,7 +2074,7 @@ export default function BranchManagerDashboard({
                       <span className="block text-[11px] text-slate-500 mt-1 leading-5">{item.description}</span>
                     </span>
                     <ChevronLeft className="w-4 h-4 text-slate-400 mt-1 shrink-0 group-hover:text-slate-600" />
-                  </button>
+                  </a>
                 )
               })}
             </div>
