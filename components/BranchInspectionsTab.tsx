@@ -36,8 +36,8 @@ export default function BranchInspectionsTab({
   const [searchQuery, setSearchQuery] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // تحميل الكشوفات عند فتح التبويب فقط — من الكاش إن وُجد، والسحابة عند أول مرة أو تحديث صريح
-  const fetchInspections = async (force = false) => {
+  // تحميل الكشوفات الحية دائمًا من السحابة لضمان ظهور تقارير الكُتّاب للمدير فوراً
+  const fetchInspections = async (force = true) => {
     setLoading(true)
     try {
       const data = await loadInspectionsFromCloud(force)
@@ -50,7 +50,14 @@ export default function BranchInspectionsTab({
   }
 
   useEffect(() => {
-    fetchInspections(false)
+    fetchInspections(true)
+    // تحديث تلقائي حيي كل 12 ثانية لجلب أي كشف جديد يرفعه الكاتب أو المحصل فوراً
+    const interval = setInterval(() => {
+      loadInspectionsFromCloud(true).then((latest) => {
+        setInspections(latest)
+      })
+    }, 12000)
+    return () => clearInterval(interval)
   }, [branch.id])
 
   // فلترة الكشوفات للفرع أو البحث

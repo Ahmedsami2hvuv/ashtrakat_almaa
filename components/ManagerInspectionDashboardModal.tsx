@@ -65,9 +65,9 @@ export default function ManagerInspectionDashboardModal({
   const [layoutSavedNotice, setLayoutSavedNotice] = useState<string | null>(null)
 
   // تحميل الكشوفات وإعدادات التصميم
-  const loadData = async () => {
+  const loadData = async (force = true) => {
     setLoading(true)
-    const list = await loadInspectionsFromCloud()
+    const list = await loadInspectionsFromCloud(force)
     setInspections(list)
     if (list.length > 0) {
       setCurrentInspection(list[0])
@@ -79,7 +79,14 @@ export default function ManagerInspectionDashboardModal({
 
   useEffect(() => {
     if (isOpen) {
-      loadData()
+      loadData(true)
+      // تحديث مستمر كل 12 ثانية لجلب الكشوفات الجديدة المرفوعة من الكُتّاب فوراً
+      const interval = setInterval(() => {
+        loadInspectionsFromCloud(true).then((latest) => {
+          setInspections(latest)
+        })
+      }, 12000)
+      return () => clearInterval(interval)
     }
   }, [isOpen])
 
@@ -513,6 +520,7 @@ export default function ManagerInspectionDashboardModal({
                 onUpdateLayout={(newLayout) => setLayoutConfig(newLayout)}
                 onUpdate={(updated) => setCurrentInspection(updated)}
                 branchManagerName={branchManagerName}
+                branchNameOverride={branchName}
               />
             </div>
           </div>

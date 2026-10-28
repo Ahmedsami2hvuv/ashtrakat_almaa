@@ -5,76 +5,57 @@ import QRCode from 'qrcode'
 const LOCAL_STORAGE_KEY = 'ashtrakat_inspections_cache'
 const LOCAL_META_KEY = 'ashtrakat_inspections_cache_meta'
 let inspectionsMemoryCache: InspectionRecord[] | null = null
-let inspectionsSessionLoaded = false
 
-// جلب الكشوفات: كاش أولاً — السحابة فقط عند أول فتح أو تحديث صريح
-export async function loadInspectionsFromCloud(forceRefresh = false): Promise<InspectionRecord[]> {
-  if (!forceRefresh && inspectionsSessionLoaded && inspectionsMemoryCache) {
-    return inspectionsMemoryCache
+// جلب الكشوفات المباشرة من السحابة دائمًا لضمان وصول تقارير الكُتّاب والمحصلين للمدير فوراً
+export async function loadInspectionsFromCloud(forceRefresh = true): Promise<InspectionRecord[]> {
+  if (typeof window !== 'undefined' && navigator.onLine) {
+    try {
+      const res = await fetch('/api/inspections', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+      })
+
+      if (res.ok) {
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) {
+          const cloudData: InspectionRecord[] = json.data
+          inspectionsMemoryCache = cloudData
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData))
+              localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ timestamp: Date.now() }))
+            } catch (e) {
+              console.warn('LocalStorage limit reached for inspections, continuing in memory', e)
+            }
+          }
+          return cloudData
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load inspections from cloud API:', err)
+    }
   }
 
+  // في حال انقطاع الإنترنت نلجأ للكاش المحلي
   let localCache: InspectionRecord[] = []
-  let hasLocalMeta = false
   if (typeof window !== 'undefined') {
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
       if (cached) {
         localCache = JSON.parse(cached)
       }
-      hasLocalMeta = !!localStorage.getItem(LOCAL_META_KEY)
     } catch {}
   }
 
-  // نسخة محلية مؤكدة (حتى لو فارغة) = لا نستهلك السحابة إلا بتحديث صريح
-  if (!forceRefresh && (localCache.length > 0 || hasLocalMeta)) {
-    inspectionsMemoryCache = localCache
-    inspectionsSessionLoaded = true
-    return localCache
-  }
-
-  if (typeof window !== 'undefined' && !navigator.onLine) {
-    inspectionsMemoryCache = localCache
-    inspectionsSessionLoaded = true
-    return localCache
-  }
-
-  try {
-    const res = await fetch('/api/inspections', {
-      cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache' }
-    })
-
-    if (res.ok) {
-      const json = await res.json()
-      if (json.success && Array.isArray(json.data)) {
-        const cloudData: InspectionRecord[] = json.data
-        inspectionsMemoryCache = cloudData
-        inspectionsSessionLoaded = true
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData))
-            localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ timestamp: Date.now() }))
-          } catch (e) {
-            console.warn('LocalStorage limit reached for inspections, continuing in memory', e)
-          }
-        }
-        return cloudData
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load inspections from cloud API:', err)
-  }
-
   inspectionsMemoryCache = localCache
-  inspectionsSessionLoaded = true
   return localCache
 }
 
 // حفظ وتحديث الكشوفات في السحابة والكاش المحلي
 export async function saveInspectionsToCloud(inspections: InspectionRecord[]): Promise<void> {
   inspectionsMemoryCache = inspections
-  inspectionsSessionLoaded = true
-  // حفظ في الكاش المحلي أولاً
+
+  // 1. حفظ في الكاش المحلي أولاً
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(inspections))
@@ -84,7 +65,7 @@ export async function saveInspectionsToCloud(inspections: InspectionRecord[]): P
     }
   }
 
-  // حفظ في السحابة عبر السيرفر الآمن
+  // 2. رفع ومزامنة فورية للسحابة ليراها المدير ومسؤول الفرع فوراً
   try {
     const res = await fetch('/api/inspections', {
       method: 'POST',
@@ -99,16 +80,18 @@ export async function saveInspectionsToCloud(inspections: InspectionRecord[]): P
     if (!res.ok) {
       const errJson = await res.json().catch(() => null)
       console.error('API failed to save inspections:', errJson)
+      throw new Error(errJson?.error || 'فشل المزامنة مع السحابة')
     }
   } catch (err) {
     console.error('Failed to save inspections to cloud API:', err)
+    throw err
   }
 }
 
-// إضافة كشف جديد
+// إضافة كشف جديد - يجلب أحدث نسخة سحابية أولاً لمنع ضياع كشوفات الكُتّاب الآخرين
 export async function addInspectionRecord(record: InspectionRecord): Promise<void> {
-  const current = await loadInspectionsFromCloud()
-  const existsIndex = current.findIndex(i => i.id === record.id)
+  const current = await loadInspectionsFromCloud(true)
+  const existsIndex = current.findIndex((i) => i.id === record.id)
   let updatedList: InspectionRecord[]
   if (existsIndex >= 0) {
     updatedList = [...current]
@@ -121,22 +104,22 @@ export async function addInspectionRecord(record: InspectionRecord): Promise<voi
 
 // تحديث كشف قائم
 export async function updateInspectionRecord(record: InspectionRecord): Promise<void> {
-  const current = await loadInspectionsFromCloud()
-  const updatedList = current.map(item => item.id === record.id ? record : item)
+  const current = await loadInspectionsFromCloud(true)
+  const updatedList = current.map((item) => (item.id === record.id ? record : item))
   await saveInspectionsToCloud(updatedList)
 }
 
 // حذف كشف
 export async function deleteInspectionRecord(id: string): Promise<void> {
-  const current = await loadInspectionsFromCloud()
-  const updatedList = current.filter(item => item.id !== id)
+  const current = await loadInspectionsFromCloud(true)
+  const updatedList = current.filter((item) => item.id !== id)
   await saveInspectionsToCloud(updatedList)
 }
 
 // جلب كشف محدد بواسطة المعرف أو التوكن
 export async function getInspectionByIdOrToken(idOrToken: string): Promise<InspectionRecord | null> {
-  const all = await loadInspectionsFromCloud()
-  return all.find(i => i.id === idOrToken || i.token === idOrToken) || null
+  const all = await loadInspectionsFromCloud(true)
+  return all.find((i) => i.id === idOrToken || i.token === idOrToken) || null
 }
 
 // توليد صورة الباركود (QR Code) للكشف
