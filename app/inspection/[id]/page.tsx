@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { InspectionRecord } from '@/lib/inspectionTypes'
-import { Shield, FileText, Camera, CheckCircle2, Droplets, AlertTriangle, Eye } from 'lucide-react'
+import { Shield, FileText, Camera, Droplets, AlertTriangle, Eye } from 'lucide-react'
 
 export default function InspectionCitizenViewPage() {
   const params = useParams()
@@ -109,10 +109,16 @@ export default function InspectionCitizenViewPage() {
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap');
         * { font-family: 'Tajawal', sans-serif; }
         .glass {
-          background: rgba(255, 255, 255, 0.82);
-          backdrop-filter: blur(18px);
+          background: rgba(255, 255, 255, 0.78);
+          backdrop-filter: blur(20px);
           border: 1px solid rgba(255, 255, 255, 0.9);
-          box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
+          box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05);
+        }
+        .glass-block {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.95);
+          box-shadow: 0 4px 16px rgba(14, 165, 233, 0.04);
         }
         .glass-strong {
           background: rgba(255, 255, 255, 0.92);
@@ -137,23 +143,20 @@ export default function InspectionCitizenViewPage() {
           </div>
         )}
 
-        {/* هيدر ارتفاع مناسب ونظيف */}
-        <header className="sticky top-0 z-30 h-16 glass-strong border-b border-white/80 px-4 flex items-center justify-between shadow-xs">
+        {/* هيدر بنصوص بسطر واحد بدون كشف معتمد وبدون تكرار الكاشف */}
+        <header className="sticky top-0 z-30 py-3 glass-strong border-b border-white/80 px-4 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white border-2 border-sky-300 shadow-sm grid place-items-center">
-              <Droplets className="w-5 h-5 text-sky-600" />
+            <div className="w-11 h-11 rounded-2xl bg-white border-2 border-sky-300 shadow-sm grid place-items-center shrink-0">
+              <Droplets className="w-6 h-6 text-sky-600" />
             </div>
-            <div>
-              <h1 className="text-base font-black text-[#0c4a8a] leading-none">مديرية ماء البصرة</h1>
-              <p className="text-xs font-bold text-slate-500 mt-1">
-                الكاشف: {inspection.inspectorEmployeeName || inspection.writerOrCollectorName || 'غير محدد'}
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-black text-[#0c4a8a] leading-tight whitespace-nowrap">
+                مديرية ماء البصرة
+              </h1>
+              <p className="text-xs font-bold text-slate-500 whitespace-nowrap mt-0.5">
+                {inspection.branchName || 'مركز جباية واردات أبي الخصيب'}
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-full text-xs font-black">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>كشف معتمد</span>
           </div>
         </header>
 
@@ -165,43 +168,53 @@ export default function InspectionCitizenViewPage() {
                 <FileText className="w-5 h-5 text-[#0c4a8a]" />
                 <span>بيانات الكشف الفني الموقعي</span>
               </h2>
-              <span className="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full">
+              <span className="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full shrink-0">
                 سند الطابو
               </span>
             </div>
 
-            {/* الاسم والتاريخ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              <div className="bg-white/80 p-3.5 rounded-2xl border border-sky-100/80 shadow-xs">
-                <span className="text-xs font-bold text-slate-500 block mb-1">اسم المواطن:</span>
-                <p className="font-black text-[#0c4a8a] text-base">{inspection.citizenName || 'غير محدد'}</p>
-              </div>
-              <div className="bg-white/80 p-3.5 rounded-2xl border border-sky-100/80 shadow-xs">
-                <span className="text-xs font-bold text-slate-500 block mb-1">تاريخ الكشف:</span>
-                <p className="font-black text-slate-800 text-base font-mono">{inspection.inspectionDate || 'غير محدد'}</p>
-              </div>
-            </div>
-
-            {/* 4 مستطيلات للعنوان تحت بعضها بدل الجدول بدون القضاء */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">المحافظة:</span>
-                <span className="text-sm font-black text-slate-900">{inspection.tableData?.governorate || 'البصرة'}</span>
+            {/* البلوكات الزجاجية - الاسم والتاريخ بسطر واحد لكل منهما */}
+            <div className="space-y-2.5">
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 shrink-0">اسم المواطن:</span>
+                <span className="text-sm font-black text-[#0c4a8a] text-left truncate">
+                  {inspection.citizenName || 'غير محدد'}
+                </span>
               </div>
 
-              <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">المحلة:</span>
-                <span className="text-sm font-black text-[#0c4a8a]">{inspection.tableData?.neighborhood || '-'}</span>
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 shrink-0">تاريخ الكشف:</span>
+                <span className="text-sm font-black text-slate-800 font-mono text-left">
+                  {inspection.inspectionDate || 'غير محدد'}
+                </span>
               </div>
 
-              <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">رقم القطعة:</span>
-                <span className="text-sm font-black font-mono text-slate-900">{inspection.tableData?.plotNumber || '-'}</span>
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 shrink-0">المحافظة:</span>
+                <span className="text-sm font-black text-slate-900 text-left">
+                  {inspection.tableData?.governorate || 'البصرة'}
+                </span>
               </div>
 
-              <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">رقم المقاطعة:</span>
-                <span className="text-sm font-black font-mono text-slate-900">{inspection.tableData?.sectorNumber || '-'}</span>
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 shrink-0">المحلة:</span>
+                <span className="text-sm font-black text-[#0c4a8a] text-left">
+                  {inspection.tableData?.neighborhood || '-'}
+                </span>
+              </div>
+
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 shrink-0">رقم القطعة:</span>
+                <span className="text-sm font-black font-mono text-slate-900 text-left">
+                  {inspection.tableData?.plotNumber || '-'}
+                </span>
+              </div>
+
+              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 shrink-0">رقم المقاطعة:</span>
+                <span className="text-sm font-black font-mono text-slate-900 text-left">
+                  {inspection.tableData?.sectorNumber || '-'}
+                </span>
               </div>
             </div>
           </div>
@@ -218,16 +231,16 @@ export default function InspectionCitizenViewPage() {
                 inspection.reportPoints.map((p, i) => (
                   <div
                     key={i}
-                    className="bg-white/90 border border-sky-100 p-3.5 rounded-2xl flex items-start gap-3 shadow-xs"
+                    className="glass-block p-3.5 rounded-2xl flex items-start gap-3"
                   >
                     <span className="w-7 h-7 rounded-full bg-blue-100 border border-blue-300 grid place-items-center text-xs font-black text-[#0c4a8a] shrink-0 mt-0.5">
                       {i + 1}
                     </span>
-                    <p className="font-bold text-sm sm:text-base text-slate-800 leading-relaxed">{p}</p>
+                    <p className="font-bold text-sm text-slate-800 leading-relaxed">{p}</p>
                   </div>
                 ))
               ) : (
-                <div className="bg-white/90 border border-sky-100 p-3.5 rounded-2xl shadow-xs">
+                <div className="glass-block p-3.5 rounded-2xl">
                   <p className="font-bold text-sm text-slate-800 leading-relaxed">
                     {inspection.rawReportText || 'لا يوجد تقرير مكتوب'}
                   </p>
@@ -235,13 +248,20 @@ export default function InspectionCitizenViewPage() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-600 pt-3 mt-4 border-t border-slate-200/80 gap-2">
-              <span>
-                الكاشف: <b className="text-slate-900 font-black">{inspection.inspectorEmployeeName || inspection.writerOrCollectorName || 'غير محدد'}</b>
-              </span>
-              <span>
-                المسؤول: <b className="text-slate-900 font-black">{inspection.revenuesManagerName || 'حسين علي لفتة جابر'}</b>
-              </span>
+            {/* الكاشف والمسؤول بأسفل التقرير فقط وفي بلوك زجاجي موحد */}
+            <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-700 mt-4">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500">الكاشف:</span>
+                <span className="text-slate-900 font-black">
+                  {inspection.inspectorEmployeeName || inspection.writerOrCollectorName || 'غير محدد'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500">المسؤول:</span>
+                <span className="text-slate-900 font-black">
+                  {inspection.revenuesManagerName || 'حسين علي لفتة جابر'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -262,7 +282,7 @@ export default function InspectionCitizenViewPage() {
                 {inspection.images.map((img, i) => (
                   <div
                     key={img.id || i}
-                    className="aspect-[4/3] rounded-2xl bg-slate-900 border border-slate-200 overflow-hidden relative group shadow-xs cursor-pointer"
+                    className="aspect-[4/3] rounded-2xl bg-slate-900 border border-slate-200 overflow-hidden relative group shadow-xs cursor-pointer active:scale-95 transition-transform"
                     onClick={() => setSelectedImage(img.dataUrl)}
                   >
                     <img
@@ -270,37 +290,53 @@ export default function InspectionCitizenViewPage() {
                       alt={`صورة الكشف ${i + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none select-none"
                     />
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Eye className="w-6 h-6 text-white drop-shadow-md" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-slate-400 text-xs font-bold bg-white/60 rounded-2xl border border-dashed border-slate-200">
+              <div className="text-center py-6 text-slate-400 text-xs font-bold glass-block rounded-2xl border border-dashed border-slate-300">
                 لا توجد صور مرفقة في هذا الكشف
               </div>
             )}
           </div>
         </main>
 
-        {/* نافذة معاينة الصورة */}
+        {/* نافذة معاينة الصور المحسنة للهواتف بشكل كامل وخالي من التعليق */}
         {selectedImage && (
           <div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-2xl flex flex-col justify-between p-4 animate-fade-in"
             onClick={() => setSelectedImage(null)}
           >
-            <div
-              className="relative max-w-3xl max-h-[85vh] rounded-3xl overflow-hidden border border-white/20 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img src={selectedImage} alt="معاينة" className="max-w-full max-h-[80vh] object-contain" />
+            <div className="w-full max-w-2xl mx-auto flex items-center justify-between pt-2 px-1">
+              <span className="text-xs font-bold text-slate-200 bg-white/10 px-3.5 py-1.5 rounded-full border border-white/10">
+                معاينة الصورة
+              </span>
               <button
                 onClick={() => setSelectedImage(null)}
-                className="absolute top-3 left-3 bg-white/20 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-black backdrop-blur-sm transition"
+                className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-4 py-2 rounded-full text-xs font-black shadow-lg transition"
               >
                 إغلاق ✕
               </button>
+            </div>
+
+            <div
+              className="my-auto max-w-full max-h-[80vh] flex items-center justify-center p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={selectedImage}
+                alt="صورة مكبرة"
+                className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl border border-white/20 select-none"
+              />
+            </div>
+
+            <div className="pb-2 text-center">
+              <span className="text-[11px] text-slate-300 font-bold bg-white/10 px-4 py-1.5 rounded-full border border-white/10">
+                انقر في أي مكان للإغلاق
+              </span>
             </div>
           </div>
         )}
@@ -308,4 +344,3 @@ export default function InspectionCitizenViewPage() {
     </>
   )
 }
-
