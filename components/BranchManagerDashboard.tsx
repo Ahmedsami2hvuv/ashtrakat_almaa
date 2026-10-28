@@ -2185,16 +2185,6 @@ export default function BranchManagerDashboard({
             </h1>
           </div>
           <div className="mgr-header-left">
-            {iraqTime && (
-              <div className="mgr-time" title="توقيت بغداد الرسمي">
-                <Clock size={14} color="#0ea5e9" />
-                <span>{iraqTime}</span>
-              </div>
-            )}
-            <button type="button" className="mgr-a4" onClick={openConsignmentA4}>
-              <FileText size={14} />
-              <span>إرسالية A4</span>
-            </button>
             <div className="mgr-mgr-pill">
               <span className="mgr-dot" />
               <small>مسئول الفرع:</small>
@@ -2245,13 +2235,6 @@ export default function BranchManagerDashboard({
 
             <div className="mgr-home-foot">
               <div className="mgr-home-foot-pill">مديرية ماء البصرة • نظام واردات أبي الخصيب • {branch.name}</div>
-            </div>
-
-            <div className="mgr-a4-mobile">
-              <button type="button" onClick={openConsignmentA4}>
-                <FileText size={14} />
-                <span>إنشاء إرسالية (A4)</span>
-              </button>
             </div>
           </section>
         )}
