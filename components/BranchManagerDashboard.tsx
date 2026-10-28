@@ -61,7 +61,8 @@ import {
   DollarSign,
   Filter,
   Eye,
-  CreditCard
+  CreditCard,
+  Droplet
 } from 'lucide-react'
 import { checkWriterWorkHours, getIraqCurrentTime, formatTimeArabic, getIraqDateAndTimeString } from '@/lib/iraqTime'
 import { loadWriterActivities, computeWriterComprehensiveStats, WriterComprehensiveStats, PeriodStats } from '@/lib/writerActivityStore'
@@ -1887,7 +1888,7 @@ export default function BranchManagerDashboard({
     <>
       <div className="mgr-side-brand">
         <div className="mgr-side-brand-row">
-          <div className="mgr-logo">و</div>
+          <div className="mgr-logo"><Droplet size={20} fill="currentColor" /></div>
           <div className="mgr-side-brand-text">
             <div className="mgr-side-title">واردات <span className="mgr-brand-grad">أبي الخصيب</span></div>
             <div className="mgr-side-sub">{branch.name} • <b>{managerDisplayName}</b></div>
@@ -2180,7 +2181,7 @@ export default function BranchManagerDashboard({
               <HamburgerIcon open={sidebarOpen} />
             </button>
             <h1 className="mgr-brand">
-              <span className="mgr-logo">و</span>
+              <span className="mgr-logo"><Droplet size={16} fill="currentColor" /></span>
               <span>واردات <span className="mgr-brand-grad">أبي الخصيب</span></span>
             </h1>
           </div>
