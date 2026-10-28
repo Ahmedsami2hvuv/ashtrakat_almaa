@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { InspectionRecord, InspectionImage } from '@/lib/inspectionTypes'
 import { compressAndConvertToWebP } from '@/lib/imageCompressor'
 import { addInspectionRecord } from '@/lib/inspectionStore'
+import { extractWithBuiltinNLP } from '@/lib/aiInspectionProcessor'
 import {
   Trash2,
   CheckCircle2,
@@ -39,7 +40,7 @@ export default function WriterCollectorInspectionModal({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // قفل تمرير الصفحة الخلفية (أسماء المشتركين) تماماً لمنع أي حركة خلف المودال
+  // قفل تمرير الصفحة الخلفية عند فتح النافذة
   useEffect(() => {
     if (isOpen) {
       const originalOverflow = document.body.style.overflow
@@ -54,7 +55,7 @@ export default function WriterCollectorInspectionModal({
     }
   }, [isOpen])
 
-  // موضع الزر العائم القابل للتحريك بحرية تامة
+  // موضع الزر العائم مع السحب السلس
   const [fabPosition, setFabPosition] = useState<{ x: number; y: number }>({ x: 28, y: 28 })
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number }>({
@@ -64,11 +65,7 @@ export default function WriterCollectorInspectionModal({
     initialY: 28
   })
 
-  // بدء سحب وتحريك البلوك بحرية دون التأثير على الصفحة الخلفية إطلاقاً
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
@@ -81,28 +78,26 @@ export default function WriterCollectorInspectionModal({
     }
 
     const onMove = (moveEvent: MouseEvent | TouchEvent) => {
-      moveEvent.preventDefault()
-      moveEvent.stopPropagation()
-
       const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX
       const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
 
       const deltaX = curX - dragStartRef.current.startX
       const deltaY = dragStartRef.current.startY - curY
 
-      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
         isDraggingRef.current = true
+        if (moveEvent.cancelable) moveEvent.preventDefault()
       }
 
-      setFabPosition({
-        x: Math.max(12, Math.min(window.innerWidth - 200, dragStartRef.current.initialX + deltaX)),
-        y: Math.max(12, Math.min(window.innerHeight - 80, dragStartRef.current.initialY + deltaY))
-      })
+      if (isDraggingRef.current) {
+        setFabPosition({
+          x: Math.max(12, Math.min(window.innerWidth - 200, dragStartRef.current.initialX + deltaX)),
+          y: Math.max(12, Math.min(window.innerHeight - 80, dragStartRef.current.initialY + deltaY))
+        })
+      }
     }
 
-    const onEnd = (endEvent: MouseEvent | TouchEvent) => {
-      endEvent.preventDefault()
-      endEvent.stopPropagation()
+    const onEnd = () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onEnd)
       window.removeEventListener('touchmove', onMove)
@@ -110,14 +105,14 @@ export default function WriterCollectorInspectionModal({
     }
 
     window.addEventListener('mousemove', onMove, { passive: false })
-    window.addEventListener('mouseup', onEnd, { passive: false })
+    window.addEventListener('mouseup', onEnd)
     window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onEnd, { passive: false })
+    window.addEventListener('touchend', onEnd)
   }
 
   if (!isOpen) return null
 
-  // معالجة واختيار الصور وضغطها تلقائياً إلى WebP
+  // اختيار الصور وضغطها تلقائياً إلى WebP
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -139,19 +134,18 @@ export default function WriterCollectorInspectionModal({
         })
       }
       setImages((prev) => [...prev, ...newImages])
-    } catch (err: unknown) {
+    } catch {
       setErrorMessage('حدث خطأ أثناء معالجة وضغط الصور')
     } finally {
       setIsCompressing(false)
     }
   }
 
-  // حذف صورة من القائمة
   const handleRemoveImage = (indexToRemove: number) => {
     setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove))
   }
 
-  // إرسال تقرير الكشف
+  // إرسال ورفع التقرير للمدير
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!reportText.trim()) {
@@ -163,8 +157,10 @@ export default function WriterCollectorInspectionModal({
     setErrorMessage(null)
 
     try {
+      // استخراج البيانات ذكياً عبر المحلل اللغوي الداخلي
+      const aiExtracted = extractWithBuiltinNLP(reportText.trim(), userName, branchName)
+
       const now = new Date()
-      const formattedDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
       const inspectionId = `insp_${Date.now()}_${Math.random().toString(36).substr(2, 7)}`
       const token = `tok_${Math.random().toString(36).substr(2, 12)}`
 
@@ -178,21 +174,14 @@ export default function WriterCollectorInspectionModal({
         rawReportText: reportText.trim(),
         images: images,
         createdAt: now.toISOString(),
-        citizenName: '',
-        inspectionDate: formattedDate,
-        tableData: {
-          sequence: 1,
-          governorate: 'البصرة',
-          district: branchName ? branchName.replace('فرع واردات ', '').replace('مركز جباية واردات ', '') : 'ابي الخصيب',
-          neighborhood: '',
-          plotNumber: '',
-          sectorNumber: ''
-        },
-        reportPoints: [reportText.trim()],
-        inspectorEmployeeName: userName,
+        citizenName: aiExtracted.citizenName || '',
+        inspectionDate: aiExtracted.inspectionDate,
+        tableData: aiExtracted.tableData,
+        reportPoints: aiExtracted.reportPoints,
+        inspectorEmployeeName: aiExtracted.inspectorEmployeeName || userName,
         networksManagerName: '',
-        revenuesManagerName: 'حسين علي لفتة جابر',
-        typistName: 'نور جبار',
+        revenuesManagerName: aiExtracted.revenuesManagerName || 'حسين علي لفتة جابر',
+        typistName: aiExtracted.typistName || 'نور جبار',
         status: 'pending',
         updatedAt: now.toISOString()
       }
@@ -207,6 +196,7 @@ export default function WriterCollectorInspectionModal({
         onClose()
       }, 1800)
     } catch (err: unknown) {
+      console.error('Submit error:', err)
       setErrorMessage('حدث خطأ أثناء رفع التقرير، يرجى المحاولة مرة أخرى')
     } finally {
       setIsSubmitting(false)
@@ -219,28 +209,24 @@ export default function WriterCollectorInspectionModal({
       style={{
         backgroundColor: 'rgba(15, 23, 42, 0.55)',
         backdropFilter: 'blur(25px)',
-        WebkitBackdropFilter: 'blur(25px)',
-        touchAction: 'none'
+        WebkitBackdropFilter: 'blur(25px)'
       }}
       dir="rtl"
     >
-      {/* الحاوية بالكامل بكبر الشاشة وستايل زجاجي أبيض شفاف فاخر */}
       <div
-        className="relative w-full max-w-5xl rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.22)] overflow-hidden my-auto border border-white/80 bg-white/90 backdrop-blur-3xl text-slate-900 flex flex-col"
-        style={{ minHeight: '88vh' }}
+        className="relative w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden my-auto border border-white/80 bg-white/95 backdrop-blur-3xl text-slate-900 flex flex-col"
+        style={{ minHeight: '80vh' }}
       >
-        {/* رأس النافذة الزجاجي الأبيض الشفاف */}
+        {/* رأس النافذة */}
         <header className="px-6 py-4 border-b border-slate-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 bg-blue-50 text-blue-700 border border-blue-200 rounded-2xl flex items-center justify-center shadow-xs">
               <FileText className="w-6 h-6 stroke-[2.2]" />
             </div>
             <div>
-              {/* العنوان: كشف جديد */}
               <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
                 كشف جديد
               </h1>
-              {/* اسم الشخص فقط مباشرة */}
               <p className="text-xs font-bold text-slate-700 mt-0.5 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="font-black text-slate-900 text-sm">{userName}</span>
@@ -248,7 +234,6 @@ export default function WriterCollectorInspectionModal({
             </div>
           </div>
 
-          {/* زر الإغلاق الدائري النظيف باللون الأسود والأبيض */}
           <button
             type="button"
             onClick={onClose}
@@ -282,21 +267,20 @@ export default function WriterCollectorInspectionModal({
                 نص الكشف
               </label>
               <textarea
-                rows={7}
+                rows={6}
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 placeholder="اكتب تفاصيل الكشف الميداني هنا... (مثال: بالإشارة إلى الكشف الموقعي للعقار، تبين أن موقع العقار عبارة قطعة ارض فارغة بمساحة ١٥٠ متر وخالية من المشيدات تماماً ولا يوجد ماء...)"
-                className="w-full bg-white border-2 border-slate-300 hover:border-blue-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl p-4 text-base sm:text-lg font-black text-slate-950 leading-relaxed placeholder:text-slate-400 placeholder:font-normal resize-y outline-none shadow-inner transition-all"
+                className="w-full bg-white border-2 border-slate-300 hover:border-blue-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl p-4 text-base sm:text-lg font-black text-slate-950 leading-relaxed placeholder:text-slate-400 outline-none shadow-inner transition-all"
                 required
               />
-              {/* التوجيه بسطر واحد فقط */}
               <p className="text-xs sm:text-sm font-black text-slate-900 mt-2 bg-blue-50/80 p-2.5 rounded-xl border border-blue-200 flex items-center gap-2 whitespace-nowrap overflow-x-auto">
                 <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>اكتب بأسلوبك الذكاء اصطناعي سيعدل</span>
+                <span>اكتب بأسلوبك والذكاء الاصطناعي سيستخرج البيانات ويرتب الفقرات تلقائياً</span>
               </p>
             </div>
 
-            {/* اختيار الصور - زر ناصع وجذاب بنص أسود عريض وواضح تماماً */}
+            {/* اختيار الصور */}
             <div>
               <label className="block text-base font-black text-slate-950 mb-2.5">
                 صور العقار
@@ -326,7 +310,6 @@ export default function WriterCollectorInspectionModal({
                 )}
               </div>
 
-              {/* معاينة الصور المرفوعة */}
               {images.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {images.map((img, idx) => (
@@ -343,7 +326,7 @@ export default function WriterCollectorInspectionModal({
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(idx)}
-                          className="bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-xl text-xs font-bold transition shadow-md active:scale-95"
+                          className="bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-xl text-xs font-bold transition shadow-md active:scale-95 cursor-pointer"
                           title="حذف الصورة"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -359,16 +342,34 @@ export default function WriterCollectorInspectionModal({
             </div>
           </div>
 
-          <div className="pt-8" />
+          {/* زر رفع التقرير الرئيسي الثابت والمباشر بأسفل النموذج */}
+          <div className="pt-6 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0">
+            <button
+              type="submit"
+              disabled={isSubmitting || isCompressing}
+              className="w-full sm:w-auto min-w-[280px] h-14 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-black text-base sm:text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>جاري رفع التقرير...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5 stroke-[2.5]" />
+                  <span>رفع التقرير للمدير</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
-        {/* زر رفع التقرير العائم المستقل تماماً والقابل للتحريك بحرية بدون تحريك الصفحة الخلفية إطلاقاً */}
+        {/* زر رفع التقرير العائم التكميلي */}
         <div
-          className="fixed z-50 select-none cursor-move touch-none"
+          className="fixed z-50 select-none cursor-move"
           style={{
             bottom: `${fabPosition.y}px`,
-            left: `${fabPosition.x}px`,
-            touchAction: 'none'
+            left: `${fabPosition.x}px`
           }}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
@@ -381,8 +382,7 @@ export default function WriterCollectorInspectionModal({
               }
             }}
             disabled={isSubmitting || isCompressing}
-            className="flex items-center gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black px-7 py-4 rounded-full shadow-[0_15px_40px_rgba(16,185,129,0.5)] border-2 border-white ring-4 ring-emerald-300/70 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50 animate-pulse"
-            style={{ animationDuration: '3s' }}
+            className="flex items-center gap-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black px-7 py-4 rounded-full shadow-[0_15px_40px_rgba(16,185,129,0.5)] border-2 border-white ring-4 ring-emerald-300/70 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             title="انقر لرفع التقرير، أو اسحب الزر لتغيير مكانه"
           >
             {isSubmitting ? (
