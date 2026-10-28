@@ -66,9 +66,9 @@ export default function InspectionCitizenViewPage() {
       <div
         className="min-h-screen grid place-items-center p-4"
         dir="rtl"
-        style={{ background: 'radial-gradient(800px 400px at 20% 0%, #e0f2fe, #fff 60%)' }}
+        style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%)' }}
       >
-        <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border-2 border-sky-200">
+        <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border border-sky-100">
           <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="font-black text-slate-800 text-base">جاري تحميل وثيقة الكشف...</p>
         </div>
@@ -81,9 +81,9 @@ export default function InspectionCitizenViewPage() {
       <div
         className="min-h-screen grid place-items-center p-4"
         dir="rtl"
-        style={{ background: 'radial-gradient(800px 400px at 20% 0%, #fef2f2, #fff 60%)' }}
+        style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}
       >
-        <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl text-center shadow-xl border-2 border-rose-200 max-w-sm">
+        <div className="bg-white p-8 rounded-3xl text-center shadow-xl border border-rose-100 max-w-sm">
           <AlertTriangle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
           <p className="font-black text-rose-700 text-lg mb-2">تعذر فتح الكشف</p>
           <p className="text-sm text-slate-600 mb-4">{error || 'الكشف غير متوفر'}</p>
@@ -98,28 +98,16 @@ export default function InspectionCitizenViewPage() {
     )
   }
 
+  const branchTitle =
+    inspection.branchName && inspection.branchName.trim() !== ''
+      ? inspection.branchName
+      : 'مركز جباية واردات أبي الخصيب'
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap');
         * { font-family: 'Tajawal', sans-serif; }
-        .glass-container {
-          background: rgba(255, 255, 255, 0.82);
-          backdrop-filter: blur(20px);
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05);
-        }
-        .glass-block {
-          background: rgba(255, 255, 255, 0.88);
-          backdrop-filter: blur(16px);
-          border: 1.5px solid rgba(186, 230, 253, 0.8);
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.05);
-        }
-        .glass-header {
-          background: rgba(255, 255, 255, 0.94);
-          backdrop-filter: blur(24px);
-          border-bottom: 2px solid rgba(224, 242, 254, 0.9);
-        }
       `}</style>
 
       <div
@@ -129,124 +117,127 @@ export default function InspectionCitizenViewPage() {
         }`}
         style={{
           background:
-            'radial-gradient(1200px 600px at 15% -5%, #e0f2fe 0%, transparent 60%), radial-gradient(800px 400px at 85% 10%, #bae6fd 0%, transparent 55%), #ffffff'
+            'radial-gradient(1200px 600px at 15% -5%, #e0f2fe 0%, transparent 60%), radial-gradient(800px 400px at 85% 10%, #bae6fd 0%, transparent 55%), #f8fafc'
         }}
       >
-        {/* هيدر: مديرية ماء البصرة واسم الفرع تحته مباشرة */}
-        <header className="sticky top-0 z-30 py-3 glass-header px-4 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white border-2 border-sky-300 shadow-sm grid place-items-center shrink-0">
-              <Droplets className="w-6 h-6 text-sky-600" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-black text-[#0c4a8a] leading-tight whitespace-nowrap">
-                مديرية ماء البصرة
-              </h1>
-              <p className="text-xs font-black text-sky-700 whitespace-nowrap mt-0.5">
-                {inspection.branchName?.trim() || 'مركز جباية واردات أبي الخصيب'}
-              </p>
+        {/* هيدر بنصوص واضحة ومستقرة بدون انكسار */}
+        <header className="sticky top-0 z-30 py-3.5 bg-white/90 backdrop-blur-xl border-b border-sky-100 px-4 shadow-xs">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-200 shadow-xs grid place-items-center shrink-0">
+                <Droplets className="w-6 h-6 text-sky-600" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-black text-[#0c4a8a] leading-tight whitespace-nowrap">
+                  مديرية ماء البصرة
+                </h1>
+                <p className="text-xs font-bold text-slate-600 whitespace-nowrap mt-0.5">
+                  {branchTitle}
+                </p>
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="max-w-2xl mx-auto px-4 mt-5 space-y-5">
-          {/* بيانات الكشف */}
-          <div className="glass-container rounded-3xl p-5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 mb-4">
+        <main className="max-w-2xl mx-auto px-4 mt-6 space-y-6">
+          {/* كارت بيانات الكشف */}
+          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 shadow-xl border border-white/80">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-[#0c4a8a]" />
                 <span>بيانات الكشف</span>
               </h2>
-              <span className="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full shrink-0">
+              <span className="text-xs font-bold text-sky-800 bg-sky-50 border border-sky-200 px-3.5 py-1 rounded-full shrink-0">
                 سند الطابو
               </span>
             </div>
 
-            {/* البلوكات الزجاجية مع حواف وبارزة بوضوح */}
-            <div className="space-y-2.5">
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+            {/* صفوف مريحة وواسعة مع عدم خروج أي نص خارج الحدود */}
+            <div className="space-y-3">
+              <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors">
                 <span className="text-xs font-bold text-slate-500 shrink-0">اسم المواطن:</span>
-                <span className="text-sm font-black text-[#0c4a8a] text-left truncate">
+                <span className="text-sm font-black text-[#0c4a8a] text-left leading-normal">
                   {inspection.citizenName || 'غير محدد'}
                 </span>
               </div>
 
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+              <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors">
                 <span className="text-xs font-bold text-slate-500 shrink-0">تاريخ الكشف:</span>
-                <span className="text-sm font-black text-slate-800 font-mono text-left">
+                <span className="text-sm font-black text-slate-800 font-mono text-left leading-normal">
                   {inspection.inspectionDate || 'غير محدد'}
                 </span>
               </div>
 
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+              <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors">
                 <span className="text-xs font-bold text-slate-500 shrink-0">المحافظة:</span>
-                <span className="text-sm font-black text-slate-900 text-left">
+                <span className="text-sm font-black text-slate-900 text-left leading-normal">
                   {inspection.tableData?.governorate || 'البصرة'}
                 </span>
               </div>
 
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+              <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors">
                 <span className="text-xs font-bold text-slate-500 shrink-0">المحلة:</span>
-                <span className="text-sm font-black text-[#0c4a8a] text-left">
+                <span className="text-sm font-black text-[#0c4a8a] text-left leading-normal">
                   {inspection.tableData?.neighborhood || '-'}
                 </span>
               </div>
 
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+              <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors">
                 <span className="text-xs font-bold text-slate-500 shrink-0">رقم القطعة:</span>
-                <span className="text-sm font-black font-mono text-slate-900 text-left">
+                <span className="text-sm font-black font-mono text-slate-900 text-left leading-normal">
                   {inspection.tableData?.plotNumber || '-'}
                 </span>
               </div>
 
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between gap-3">
+              <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between gap-4 transition-colors">
                 <span className="text-xs font-bold text-slate-500 shrink-0">رقم المقاطعة:</span>
-                <span className="text-sm font-black font-mono text-slate-900 text-left">
+                <span className="text-sm font-black font-mono text-slate-900 text-left leading-normal">
                   {inspection.tableData?.sectorNumber || '-'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* تقرير الكشف */}
-          <div className="glass-container rounded-3xl p-5 shadow-sm">
-            <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-4 border-b border-slate-200/80 pb-3">
+          {/* كارت تقرير الكشف */}
+          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 shadow-xl border border-white/80">
+            <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-4 border-b border-slate-100 pb-3.5">
               <Shield className="w-5 h-5 text-sky-600" />
               <span>تقرير الكشف</span>
             </h3>
 
+            {/* نقاط التقرير مع أرقام الفقرات بداخل كارتات محاطة بالكامل دون أي خروج خارج الحدود */}
             <div className="space-y-3">
               {inspection.reportPoints && inspection.reportPoints.length > 0 ? (
                 inspection.reportPoints.map((p, i) => (
                   <div
                     key={i}
-                    className="glass-block p-3.5 rounded-2xl flex items-start gap-3"
+                    className="bg-slate-50/80 border border-slate-200/70 p-4 rounded-2xl flex items-start gap-3"
                   >
-                    <span className="w-7 h-7 rounded-full bg-blue-100 border border-blue-300 grid place-items-center text-xs font-black text-[#0c4a8a] shrink-0 mt-0.5">
+                    <div className="w-7 h-7 rounded-full bg-sky-100 border border-sky-200 flex items-center justify-center text-xs font-black text-[#0c4a8a] shrink-0 mt-0.5">
                       {i + 1}
-                    </span>
-                    <p className="font-bold text-sm text-slate-800 leading-relaxed">{p}</p>
+                    </div>
+                    <p className="font-bold text-sm text-slate-800 leading-relaxed flex-1 my-0">{p}</p>
                   </div>
                 ))
               ) : (
-                <div className="glass-block p-3.5 rounded-2xl">
-                  <p className="font-bold text-sm text-slate-800 leading-relaxed">
+                <div className="bg-slate-50/80 border border-slate-200/70 p-4 rounded-2xl">
+                  <p className="font-bold text-sm text-slate-800 leading-relaxed my-0">
                     {inspection.rawReportText || 'لا يوجد تقرير مكتوب'}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* الكاشف والمسؤول في بلوكات زجاجية منفصلة */}
-            <div className="space-y-2.5 mt-4 pt-3 border-t border-slate-200/80">
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between">
+            {/* الكاشف والمسؤول في بلوكات منفصلة واسعة ومتناسقة */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100">
+              <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500">الكاشف:</span>
                 <span className="text-sm font-black text-slate-900">
                   {inspection.inspectorEmployeeName || inspection.writerOrCollectorName || 'ساره محمد جاسم'}
                 </span>
               </div>
 
-              <div className="glass-block p-3.5 rounded-2xl flex items-center justify-between">
+              <div className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500">المسؤول:</span>
                 <span className="text-sm font-black text-slate-900">
                   {inspection.revenuesManagerName || 'حسين علي لفتة جابر'}
@@ -255,14 +246,14 @@ export default function InspectionCitizenViewPage() {
             </div>
           </div>
 
-          {/* صور الكشف */}
-          <div className="glass-container rounded-3xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/80">
+          {/* كارت صور الكشف */}
+          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 shadow-xl border border-white/80">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Camera className="w-5 h-5 text-emerald-600" />
                 <span>صور الكشف</span>
               </h3>
-              <span className="bg-slate-900 text-white text-xs px-3 py-1 rounded-full font-black">
+              <span className="bg-slate-900 text-white text-xs px-3.5 py-1 rounded-full font-black">
                 {inspection.images?.length || 0} صور
               </span>
             </div>
@@ -272,7 +263,7 @@ export default function InspectionCitizenViewPage() {
                 {inspection.images.map((img, i) => (
                   <div
                     key={img.id || i}
-                    className="aspect-[4/3] rounded-2xl bg-slate-900 border-2 border-white/80 overflow-hidden relative group shadow-xs cursor-pointer active:scale-95 transition-transform"
+                    className="aspect-[4/3] rounded-2xl bg-slate-900 border border-slate-200 overflow-hidden relative group shadow-xs cursor-pointer active:scale-95 transition-transform"
                     onClick={() => setSelectedImage(img.dataUrl)}
                   >
                     <img
@@ -280,27 +271,27 @@ export default function InspectionCitizenViewPage() {
                       alt={`صورة الكشف ${i + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none select-none"
                     />
-                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Eye className="w-6 h-6 text-white drop-shadow-md" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-slate-400 text-xs font-bold glass-block rounded-2xl border border-dashed border-slate-300">
+              <div className="text-center py-6 text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                 لا توجد صور مرفقة في هذا الكشف
               </div>
             )}
           </div>
         </main>
 
-        {/* نافذة معاينة الصورة المضبوطة 100% للهواتف */}
+        {/* نافذة معاينة الصورة المحسنة بالكامل للهواتف */}
         {selectedImage && (
           <div
-            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 overflow-y-auto"
             onClick={() => setSelectedImage(null)}
           >
-            {/* شريط علوي يحتوي على زر إغلاق ناصع وبارز بوضوح */}
+            {/* شريط علوي بارز يضمن ظهور زر الإغلاق 100% */}
             <div className="w-full max-w-lg flex items-center justify-between shrink-0 py-2 px-1">
               <span className="text-xs font-black text-white bg-white/20 px-3.5 py-1.5 rounded-full border border-white/20">
                 معاينة الصورة
@@ -308,13 +299,13 @@ export default function InspectionCitizenViewPage() {
               <button
                 type="button"
                 onClick={() => setSelectedImage(null)}
-                className="bg-rose-600 hover:bg-rose-700 active:scale-90 text-white px-5 py-2 rounded-full text-xs font-black shadow-2xl border border-rose-400 cursor-pointer shrink-0"
+                className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-5 py-2 rounded-full text-xs font-black shadow-2xl border border-rose-400 cursor-pointer shrink-0"
               >
                 إغلاق ✕
               </button>
             </div>
 
-            {/* الحاوية المركزية للصورة المحصورة بارتفاع الشاشة لتناسب الموبايل دائماً */}
+            {/* الصورة مكبرة ومحصورة داخل ارتفاع الهاتف تماماً */}
             <div
               className="my-auto w-full max-w-lg flex items-center justify-center p-2 shrink-1"
               onClick={(e) => e.stopPropagation()}
@@ -326,7 +317,7 @@ export default function InspectionCitizenViewPage() {
               />
             </div>
 
-            {/* زر سفلي للإغلاق بالنقر في أي مكان */}
+            {/* زر سفلي لإغلاق الصورة */}
             <div className="shrink-0 pt-2 pb-1 text-center">
               <button
                 type="button"
