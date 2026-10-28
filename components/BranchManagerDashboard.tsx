@@ -1921,35 +1921,22 @@ export default function BranchManagerDashboard({
 
   const SidebarContent = ({ onClose }: { onClose?: () => void }) => (
     <>
-      <div className="px-5 py-[18px] border-b border-white/70 bg-white/40">
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 shrink-0 rounded-[10px] bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white flex items-center justify-center font-black text-[13px] shadow-[0_4px_10px_rgba(14,165,233,0.25)]">و</div>
-          <div className="min-w-0 leading-tight">
-            <div className="text-[15px] font-[900] tracking-tight text-slate-900 truncate">
-              واردات <span className="bg-gradient-to-l from-[#0EA5E9] to-[#0284C7] bg-clip-text text-transparent">أبي الخصيب</span>
-            </div>
-            <div className="mt-[3px] text-[11px] font-bold text-slate-500 truncate">
-              {branch.name} • <span className="text-slate-800 font-black">{managerDisplayName}</span>
-            </div>
+      <div className="mgr-side-brand">
+        <div className="mgr-side-brand-row">
+          <div className="mgr-logo">و</div>
+          <div className="mgr-side-brand-text">
+            <div className="mgr-side-title">واردات <span className="mgr-brand-grad">أبي الخصيب</span></div>
+            <div className="mgr-side-sub">{branch.name} • <b>{managerDisplayName}</b></div>
           </div>
-          <button
-            type="button"
-            onClick={() => (onClose ? onClose() : setSidebarOpen(false))}
-            className="ms-auto h-8 w-8 rounded-[10px] bg-white/80 backdrop-blur-md border border-white/80 shadow-[0_2px_8px_rgba(15,23,42,0.06)] flex items-center justify-center text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all duration-300 group"
-            aria-label="إغلاق القائمة"
-            title="إغلاق القائمة"
-          >
-            <span className="relative w-[12px] h-[12px] block">
-              <span className="absolute top-1/2 left-0 w-full h-[2px] bg-current rounded-full rotate-45 -translate-y-1/2 transition-transform group-hover:rotate-90" />
-              <span className="absolute top-1/2 left-0 w-full h-[2px] bg-current rounded-full -rotate-45 -translate-y-1/2 transition-transform group-hover:-rotate-90" />
-            </span>
+          <button type="button" className="mgr-side-close" onClick={() => (onClose ? onClose() : setSidebarOpen(false))} aria-label="إغلاق القائمة" title="إغلاق القائمة">
+            <span /><span />
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="mb-3 px-2 text-[10px] font-black tracking-[0.12em] text-slate-400">القائمة الرئيسية</div>
-        <div className="space-y-[6px]">
+      <div className="mgr-side-nav">
+        <div className="mgr-side-nav-label">القائمة الرئيسية</div>
+        <div className="mgr-side-nav-list">
           {navItems.map((sec) => {
             const Icon = sec.icon
             const isActive = activeTab === sec.id
@@ -1958,221 +1945,364 @@ export default function BranchManagerDashboard({
                 key={sec.id}
                 href={tabHref(sec.id)}
                 onClick={(e) => handleTabLinkClick(e, sec.id, sec.label)}
-                className={`group w-full h-[48px] rounded-[12px] flex items-center gap-3 px-3 text-right transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 no-underline
-                  ${isActive
-                    ? 'bg-gradient-to-l from-sky-500 to-blue-600 text-white shadow-[0_8px_20px_rgba(14,165,233,0.28)] border border-sky-400/30'
-                    : 'bg-white/70 hover:bg-sky-50/90 text-slate-700 border border-white/80 hover:border-sky-100 shadow-[0_1px_0_white_inset] hover:shadow-[0_4px_12px_rgba(14,165,233,0.08)]'
-                  }`}
+                className={`mgr-side-link${isActive ? ' is-active' : ''}`}
               >
-                <div className={`h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0 transition-colors
-                  ${isActive ? 'bg-white/20 text-white' : 'bg-white border border-slate-100 text-[#0284C7] group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500'}`}>
-                  <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
-                </div>
-                <span className={`text-[13.5px] font-bold leading-none truncate ${isActive ? 'text-white' : 'text-slate-800'}`}>{sec.label}</span>
-                <span className={`ms-auto flex items-center justify-center h-5 min-w-[20px] rounded-full text-[10px] font-bold px-1.5 transition
-                  ${isActive ? 'bg-white/20 text-white' : 'bg-slate-900 text-white group-hover:bg-sky-500'}`}>
-                  {navBadge(sec.id)}
-                </span>
+                <span className="mgr-side-ico"><Icon size={18} strokeWidth={1.8} /></span>
+                <span className="mgr-side-link-text">{sec.label}</span>
+                <span className="mgr-side-badge">{navBadge(sec.id)}</span>
               </a>
             )
           })}
         </div>
       </div>
 
-      <div className="p-3 border-t border-white/70 bg-white/30">
-        <div className="rounded-[12px] bg-gradient-to-br from-white to-sky-50/80 border border-white shadow-[inset_0_1px_0_white] px-3 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
-            <span className="text-[11px] font-black text-slate-700">النظام متصل</span>
-          </div>
-          <span className="rounded-full bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1">مديرية ماء البصرة</span>
+      <div className="mgr-side-foot">
+        <div className="mgr-side-status">
+          <span className="mgr-dot" />
+          <span>النظام متصل</span>
+          <span className="mgr-pill">مديرية ماء البصرة</span>
         </div>
       </div>
     </>
   )
 
   return (
-    <div
-      dir="rtl"
-      data-safe-area-inset-root
-      style={{ boxSizing: 'border-box', paddingTop: 'var(--safe-area-inset-top, 0px)', minHeight: '100vh', background: '#f8fbff' }}
-      className="relative overflow-x-clip antialiased selection:bg-sky-200 water-dashboard"
-    >
+    <div dir="rtl" className="mgr-shell water-dashboard" data-safe-area-inset-root>
       <style>{`
-        .glass {
-          background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%);
-          backdrop-filter: blur(18px) saturate(160%);
-          -webkit-backdrop-filter: blur(18px) saturate(160%);
-          border: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 8px 32px rgba(2,132,199,0.07), 0 1px 2px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+        .mgr-shell {
+          --mgr-bg: #f8fbff;
+          --mgr-blue: #0ea5e9;
+          --mgr-blue-deep: #0284c7;
+          --mgr-text: #0f172a;
+          --mgr-muted: #64748b;
+          box-sizing: border-box;
+          min-height: 100vh;
+          background: var(--mgr-bg);
+          color: var(--mgr-text);
+          position: relative;
+          overflow-x: clip;
+          padding-top: var(--safe-area-inset-top, 0px);
+          font-family: 'Tajawal', system-ui, sans-serif;
         }
-        .glass-hover:hover {
-          background: linear-gradient(135deg, rgba(224,242,254,0.9) 0%, rgba(255,255,255,0.85) 100%);
-          border-color: rgba(125,211,252,0.6);
-          box-shadow: 0 20px 40px rgba(14,165,233,0.18), 0 0 0 1px rgba(125,211,252,0.4), inset 0 1px 0 rgba(255,255,255,1);
+        .mgr-shell a { color: inherit; text-decoration: none; }
+        .mgr-blobs { pointer-events: none; position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+        .mgr-blob { position: absolute; border-radius: 9999px; filter: blur(110px); }
+        .mgr-blob-1 { top: -30%; right: -20%; width: 900px; height: 900px; background: #E0F2FE; opacity: .7; animation: mgrFloat 18s ease-in-out infinite; }
+        .mgr-blob-2 { top: 10%; left: -15%; width: 700px; height: 700px; background: #BAE6FD; opacity: .6; animation: mgrFloat 22s ease-in-out infinite reverse; }
+        .mgr-blob-3 { bottom: -20%; left: 20%; width: 800px; height: 800px; background: #7DD3FC; opacity: .35; animation: mgrFloat 25s ease-in-out infinite; }
+        .mgr-blob-4 { top: 42%; right: 30%; width: 520px; height: 520px; background: #fff; opacity: .8; filter: blur(90px); }
+        @keyframes mgrFloat { 0%,100%{transform:translate(0,0)} 50%{transform:translate(10px,-18px)} }
+        @keyframes mgrSlideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+        .mgr-header {
+          position: sticky; z-index: 30; top: var(--safe-area-inset-top, 0px); height: 65px;
+          display: flex; align-items: center;
+          background: rgba(255,255,255,.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(255,255,255,.8);
+          box-shadow: 0 1px 20px rgba(14,165,233,.06);
+        }
+        .mgr-header-inner {
+          width: 100%; max-width: 1600px; margin: 0 auto; padding: 0 16px;
+          display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .mgr-header-right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .mgr-header-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .mgr-ham {
+          width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.8);
+          background: rgba(255,255,255,.8); display: grid; place-items: center; cursor: pointer;
+          box-shadow: 0 4px 16px rgba(14,165,233,.12), inset 0 1px 0 #fff;
+        }
+        .mgr-brand { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; }
+        .mgr-logo {
+          width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+          display: grid; place-items: center; color: #fff !important; font-weight: 900; font-size: 13px;
+          background: linear-gradient(135deg, #0EA5E9, #0284C7);
+          box-shadow: 0 4px 10px rgba(14,165,233,.25);
+          -webkit-background-clip: border-box; background-clip: border-box;
+        }
+        .mgr-brand-grad { background: linear-gradient(to left, #0EA5E9, #0284C7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .mgr-mgr-pill {
+          display: flex; align-items: center; gap: 6px; border-radius: 999px; background: #fff;
+          border: 1px solid rgba(224,242,254,.9); padding: 5px 12px;
+          box-shadow: 0 2px 10px rgba(14,165,233,.08); font-size: 12px; font-weight: 900; color: #1e293b;
+        }
+        .mgr-mgr-pill small { display: none; font-size: 10px; font-weight: 700; color: #94a3b8; }
+        .mgr-dot { width: 8px; height: 8px; border-radius: 999px; background: #34d399; box-shadow: 0 0 8px rgba(16,185,129,.6); flex-shrink: 0; }
+        .mgr-a4 {
+          display: none; align-items: center; gap: 6px; border-radius: 999px; border: 0; cursor: pointer;
+          background: #0ea5e9; color: #fff; font-size: 11px; font-weight: 900; padding: 6px 12px;
+          box-shadow: 0 4px 12px rgba(14,165,233,.3);
+        }
+        .mgr-time {
+          display: none; align-items: center; gap: 6px; border-radius: 999px; background: #fff;
+          border: 1px solid rgba(224,242,254,.9); padding: 5px 10px; font-size: 11px; font-weight: 700; color: #475569;
+        }
+
+        .mgr-layout { max-width: 1600px; margin: 0 auto; display: flex; min-height: calc(100vh - 65px); }
+        .mgr-side-wrap {
+          display: none; flex-shrink: 0; overflow: hidden;
+          transition: width .3s cubic-bezier(.22,1,.36,1);
+        }
+        .mgr-side {
+          width: 270px; display: flex; flex-direction: column;
+          position: sticky; top: calc(var(--safe-area-inset-top, 0px) + 65px);
+          height: calc(100vh - 65px - var(--safe-area-inset-top, 0px));
+          background: rgba(255,255,255,.75); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+          border-left: 1px solid rgba(255,255,255,.8);
+          box-shadow: 4px 0 24px rgba(14,165,233,.06);
+          transition: transform .3s cubic-bezier(.22,1,.36,1);
+        }
+        .mgr-side-brand { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.4); }
+        .mgr-side-brand-row { display: flex; align-items: center; gap: 10px; }
+        .mgr-side-brand .mgr-logo { width: 36px; height: 36px; border-radius: 10px; }
+        .mgr-side-brand-text { min-width: 0; line-height: 1.2; }
+        .mgr-side-title { font-size: 15px; font-weight: 900; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mgr-side-title .mgr-brand-grad { background: linear-gradient(to left, #0EA5E9, #0284C7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .mgr-side-sub { margin-top: 3px; font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mgr-side-sub b { color: #1e293b; font-weight: 900; }
+        .mgr-side-close {
+          margin-inline-start: auto; width: 32px; height: 32px; border-radius: 10px; border: 1px solid rgba(255,255,255,.8);
+          background: rgba(255,255,255,.8); position: relative; cursor: pointer; color: #334155;
+        }
+        .mgr-side-close span { position: absolute; top: 50%; left: 10px; right: 10px; height: 2px; background: currentColor; border-radius: 99px; }
+        .mgr-side-close span:first-child { transform: translateY(-50%) rotate(45deg); }
+        .mgr-side-close span:last-child { transform: translateY(-50%) rotate(-45deg); }
+        .mgr-side-nav { flex: 1; overflow-y: auto; padding: 12px; }
+        .mgr-side-nav-label { margin-bottom: 12px; padding: 0 8px; font-size: 10px; font-weight: 900; letter-spacing: .12em; color: #94a3b8; }
+        .mgr-side-nav-list { display: flex; flex-direction: column; gap: 6px; }
+        .mgr-side-link {
+          width: 100%; height: 48px; border-radius: 12px; display: flex; align-items: center; gap: 12px; padding: 0 12px;
+          background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.8); color: #334155;
+          transition: .25s ease; box-sizing: border-box;
+        }
+        .mgr-side-link:hover { background: rgba(240,249,255,.95); border-color: #e0f2fe; box-shadow: 0 4px 12px rgba(14,165,233,.08); }
+        .mgr-side-link.is-active {
+          background: linear-gradient(to left, #0ea5e9, #2563eb); color: #fff; border-color: rgba(56,189,248,.35);
+          box-shadow: 0 8px 20px rgba(14,165,233,.28);
+        }
+        .mgr-side-ico {
+          width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+          background: #fff; border: 1px solid #f1f5f9; color: #0284c7;
+        }
+        .mgr-side-link:hover .mgr-side-ico { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+        .mgr-side-link.is-active .mgr-side-ico { background: rgba(255,255,255,.2); border-color: transparent; color: #fff; }
+        .mgr-side-link-text { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1e293b; }
+        .mgr-side-link.is-active .mgr-side-link-text { color: #fff; }
+        .mgr-side-badge {
+          min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center;
+          font-size: 10px; font-weight: 700; background: #0f172a; color: #fff;
+        }
+        .mgr-side-link.is-active .mgr-side-badge { background: rgba(255,255,255,.2); }
+        .mgr-side-foot { padding: 12px; border-top: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.3); }
+        .mgr-side-status {
+          border-radius: 12px; background: linear-gradient(135deg, #fff, rgba(240,249,255,.85));
+          border: 1px solid #fff; padding: 12px; display: flex; align-items: center; gap: 8px;
+          font-size: 11px; font-weight: 900; color: #334155;
+        }
+        .mgr-pill { margin-inline-start: auto; border-radius: 999px; background: #0f172a; color: #fff; font-size: 10px; font-weight: 700; padding: 4px 10px; }
+
+        .mgr-main { flex: 1; min-width: 0; padding: 16px; }
+        .mgr-home-hint { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .mgr-home-hint-l { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #0284c7; }
+        .mgr-home-hint-r { height: 24px; padding: 0 10px; border-radius: 999px; background: #fff; border: 1px solid #fff; font-size: 10px; font-weight: 700; color: #64748b; display: grid; place-items: center; box-shadow: 0 1px 4px rgba(15,23,42,.04); }
+
+        .mgr-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .mgr-card {
+          display: block; text-align: right; border-radius: 24px; padding: 1px; color: inherit;
+          background: linear-gradient(135deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+          border: 1px solid rgba(255,255,255,.9);
+          box-shadow: 0 8px 32px rgba(2,132,199,.07), 0 1px 2px rgba(15,23,42,.04), inset 0 1px 0 rgba(255,255,255,.9);
+          transition: transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s ease, border-color .45s ease, background .45s ease;
+        }
+        .mgr-card:hover {
           transform: translateY(-6px);
+          border-color: rgba(125,211,252,.6);
+          background: linear-gradient(135deg, rgba(224,242,254,.9), rgba(255,255,255,.85));
+          box-shadow: 0 20px 40px rgba(14,165,233,.18), 0 0 0 1px rgba(125,211,252,.4), inset 0 1px 0 #fff;
         }
-        @keyframes float { 0%,100%{transform:translateY(0) translateX(0)} 50%{transform:translateY(-18px) translateX(10px)} }
-        @keyframes slideUp { from{transform:translateY(20px); opacity:0} to{transform:translateY(0); opacity:1} }
-        .water-dashboard, .water-dashboard * {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%230284c7' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3C/svg%3E") 12 2, auto !important;
+        .mgr-card-inner {
+          position: relative; border-radius: 23px; min-height: 200px; padding: 28px;
+          display: flex; flex-direction: column;
+          background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.62));
         }
-        .water-dashboard button, .water-dashboard a, .water-dashboard input, .water-dashboard select, .water-dashboard [role='button'], .water-dashboard .cursor-pointer {
-          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%2338bdf8' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23ffffff'/%3E%3C/svg%3E") 12 2, pointer !important;
+        .mgr-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+        .mgr-card-ico {
+          width: 60px; height: 60px; border-radius: 16px; display: grid; place-items: center; color: #0284c7;
+          background: linear-gradient(135deg, #fff, #f0f9ff); border: 1px solid #fff;
+          box-shadow: 0 10px 24px rgba(14,165,233,.14), inset 0 1px 0 #fff;
+          transition: .4s ease;
+        }
+        .mgr-card:hover .mgr-card-ico { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; }
+        .mgr-card-title { margin: 24px 0 0; font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.15; letter-spacing: -.02em; }
+        .mgr-card-desc { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: #64748b; font-weight: 500; }
+        .mgr-card-bot { margin-top: auto; padding-top: 24px; display: flex; align-items: center; justify-content: space-between; }
+        .mgr-card-cta { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #0284c7; }
+        .mgr-card-cta-btn {
+          width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center;
+          background: #f0f9ff; border: 1px solid #e0f2fe; color: #0284c7; transition: .3s ease;
+        }
+        .mgr-card:hover .mgr-card-cta-btn { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+        .mgr-card-meta { font-size: 11px; color: #94a3b8; font-weight: 500; }
+        .mgr-card-line { position: absolute; bottom: 0; left: 28px; right: 28px; height: 1px; background: linear-gradient(to left, transparent, rgba(186,230,253,.7), transparent); opacity: .6; pointer-events: none; }
+        .mgr-home-foot { margin-top: 24px; display: flex; justify-content: center; }
+        .mgr-home-foot-pill {
+          border-radius: 999px; padding: 8px 20px; font-size: 11px; font-weight: 700; color: #64748b;
+          background: linear-gradient(135deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+          border: 1px solid rgba(255,255,255,.8); box-shadow: 0 8px 24px rgba(2,132,199,.06);
+        }
+        .mgr-a4-mobile { display: flex; justify-content: center; margin-top: 16px; }
+        .mgr-a4-mobile button {
+          display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; border: 0; cursor: pointer;
+          background: #0ea5e9; color: #fff; font-size: 12px; font-weight: 900; padding: 10px 16px;
+          box-shadow: 0 4px 12px rgba(14,165,233,.3);
+        }
+
+        .mgr-drawer {
+          position: fixed; inset: 0; z-index: 45; display: flex;
+          top: var(--safe-area-inset-top, 0px);
+          transition: opacity .3s cubic-bezier(.22,1,.36,1);
+        }
+        .mgr-drawer-bg { position: absolute; inset: 0; background: rgba(15,23,42,.3); backdrop-filter: blur(8px); }
+        .mgr-drawer-panel {
+          position: relative; width: 270px; display: flex; flex-direction: column;
+          background: rgba(255,255,255,.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+          border-left: 1px solid rgba(255,255,255,.9);
+          box-shadow: 12px 0 40px rgba(15,23,42,.18);
+          transition: transform .3s cubic-bezier(.22,1,.36,1);
+        }
+        .mgr-toast-wrap { pointer-events: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60; width: 92%; max-width: 380px; }
+        .mgr-toast {
+          animation: mgrSlideUp .4s cubic-bezier(.22,1,.36,1);
+          border-radius: 999px; background: rgba(255,255,255,.92); border: 1px solid #fff;
+          box-shadow: 0 20px 40px rgba(2,132,199,.18); padding: 12px 20px;
+          display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; color: #1e293b;
+        }
+        .mgr-toast-ico {
+          width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; color: #fff;
+          background: linear-gradient(135deg, #0ea5e9, #2563eb);
+        }
+
+        @media (min-width: 640px) {
+          .mgr-a4 { display: inline-flex; }
+          .mgr-a4-mobile { display: none; }
+          .mgr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+        }
+        @media (min-width: 768px) {
+          .mgr-header-inner { padding: 0 24px; }
+          .mgr-side-wrap { display: block; }
+          .mgr-home-hint { display: none; }
+          .mgr-drawer { display: none !important; }
+          .mgr-main { padding: 24px; }
+          .mgr-brand { font-size: 22px; }
+          .mgr-logo { width: 28px; height: 28px; }
+          .mgr-mgr-pill small { display: inline; }
+        }
+        @media (min-width: 1024px) {
+          .mgr-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+          .mgr-time { display: inline-flex; }
+          .mgr-card-title { font-size: 24px; }
+          .mgr-card-inner { padding: 32px; }
         }
       `}</style>
 
-      {/* Background blobs */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-[30%] -right-[20%] h-[900px] w-[900px] rounded-full bg-[#E0F2FE] blur-[120px] opacity-70" style={{ animation: 'float 18s ease-in-out infinite' }} />
-        <div className="absolute top-[10%] -left-[15%] h-[700px] w-[700px] rounded-full bg-[#BAE6FD] blur-[110px] opacity-60" style={{ animation: 'float 22s ease-in-out infinite reverse' }} />
-        <div className="absolute bottom-[-20%] left-[20%] h-[800px] w-[800px] rounded-full bg-[#7DD3FC] blur-[130px] opacity-35" style={{ animation: 'float 25s ease-in-out infinite' }} />
-        <div className="absolute top-[42%] right-[30%] h-[520px] w-[520px] rounded-full bg-white blur-[90px] opacity-80" />
+      <div className="mgr-blobs" aria-hidden>
+        <div className="mgr-blob mgr-blob-1" />
+        <div className="mgr-blob mgr-blob-2" />
+        <div className="mgr-blob mgr-blob-3" />
+        <div className="mgr-blob mgr-blob-4" />
       </div>
 
-      {/* Header 65px */}
-      <header
-        data-safe-area-sticky-top
-        style={{ top: 'var(--safe-area-inset-top, 0px)', height: '65px' }}
-        className="sticky z-30 border-b border-white/80 backdrop-blur-[20px] bg-white/75 shadow-[0_1px_20px_rgba(14,165,233,0.06)]"
-      >
-        <div className="mx-auto max-w-[1600px] px-4 md:px-6 h-full flex items-center justify-between gap-2 overflow-hidden">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="h-[40px] w-[40px] rounded-[10px] bg-white/80 backdrop-blur-xl border border-white/80 shadow-[0_4px_16px_rgba(14,165,233,0.12),inset_0_1px_0_white] flex items-center justify-center hover:bg-white hover:shadow-[0_6px_20px_rgba(14,165,233,0.18)] hover:border-sky-100 active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 shrink-0"
-              aria-label={sidebarOpen ? 'إغلاق القائمة الجانبية' : 'فتح القائمة الجانبية'}
-              title={sidebarOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
-            >
+      <header className="mgr-header">
+        <div className="mgr-header-inner">
+          <div className="mgr-header-right">
+            <button type="button" className="mgr-ham" onClick={() => setSidebarOpen((v) => !v)} aria-label={sidebarOpen ? 'إغلاق القائمة الجانبية' : 'فتح القائمة الجانبية'}>
               <HamburgerIcon open={sidebarOpen} />
             </button>
-            <h1 className="text-[19px] md:text-[22px] font-[800] tracking-tight leading-none flex items-center gap-1.5 text-slate-900 min-w-0 shrink">
-              <span className="inline-flex h-6 w-6 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] text-white text-[11px] md:text-[13px] font-black shadow-[0_4px_10px_rgba(14,165,233,0.25)]">و</span>
-              <span className="truncate whitespace-nowrap">
-                واردات <span className="bg-gradient-to-l from-[#0EA5E9] to-[#0284C7] bg-clip-text text-transparent">أبي الخصيب</span>
-              </span>
+            <h1 className="mgr-brand">
+              <span className="mgr-logo">و</span>
+              <span>واردات <span className="mgr-brand-grad">أبي الخصيب</span></span>
             </h1>
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="mgr-header-left">
             {iraqTime && (
-              <div
-                className="hidden lg:flex items-center gap-1.5 rounded-full bg-white border border-sky-100/80 shadow-[0_2px_10px_rgba(14,165,233,0.08)] px-2.5 py-[5px] text-[11px] font-bold text-slate-600"
-                title="توقيت بغداد الرسمي"
-              >
-                <Clock className="w-3.5 h-3.5 text-sky-500" />
+              <div className="mgr-time" title="توقيت بغداد الرسمي">
+                <Clock size={14} color="#0ea5e9" />
                 <span>{iraqTime}</span>
               </div>
             )}
-            <button
-              type="button"
-              onClick={openConsignmentA4}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-black px-3 py-[6px] shadow-[0_4px_12px_rgba(14,165,233,0.3)] transition active:scale-[0.97]"
-            >
-              <FileText className="w-3.5 h-3.5" />
+            <button type="button" className="mgr-a4" onClick={openConsignmentA4}>
+              <FileText size={14} />
               <span>إرسالية A4</span>
             </button>
-            <div className="flex items-center gap-1.5 rounded-full bg-white border border-sky-100/80 shadow-[0_2px_10px_rgba(14,165,233,0.08)] px-2.5 md:px-3 py-[5px] md:py-[6px] shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.6)] animate-pulse shrink-0" />
-              <span className="text-[10px] font-bold text-slate-400 hidden md:inline shrink-0">مسئول الفرع:</span>
-              <span className="text-[11px] md:text-[12px] font-black text-slate-800 tracking-tight truncate max-w-[90px] md:max-w-none">{managerDisplayName}</span>
+            <div className="mgr-mgr-pill">
+              <span className="mgr-dot" />
+              <small>مسئول الفرع:</small>
+              <span>{managerDisplayName}</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Layout: Sidebar + Main */}
-      <div className="mx-auto max-w-[1600px] flex min-h-[calc(100vh-65px)]">
-        {/* Desktop Sidebar */}
-        <div
-          className="hidden md:block shrink-0 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-          style={{ width: sidebarOpen ? '270px' : '0px' }}
-        >
-          <aside
-            className="w-[270px] flex flex-col border-l border-white/80 shadow-[4px_0_24px_rgba(14,165,233,0.06)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
-            style={{
-              position: 'sticky',
-              top: 'calc(var(--safe-area-inset-top, 0px) + 65px)',
-              height: 'calc(100vh - 65px - var(--safe-area-inset-top, 0px))',
-              background: 'rgba(255,255,255,0.75)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)',
-            }}
-          >
+      <div className="mgr-layout">
+        <div className="mgr-side-wrap" style={{ width: sidebarOpen ? 270 : 0 }}>
+          <aside className="mgr-side" style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)' }}>
             <SidebarContent onClose={() => setSidebarOpen(false)} />
           </aside>
         </div>
 
-        <main className="flex-1 min-w-0 p-4 md:p-6 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] space-y-8">
+        <main className="mgr-main">
         {activeTab === 'dashboard' && (
-          <section className="space-y-6">
-            <div className="md:hidden mb-2 flex items-center justify-between">
-              <div className="text-[11px] font-bold tracking-widest text-sky-600">لوحة التحكم • القائمة الرئيسية</div>
-              <div className="h-6 px-2.5 rounded-full bg-white border border-white shadow-sm text-[10px] font-bold text-slate-500">٧ أقسام</div>
+          <section>
+            <div className="mgr-home-hint">
+              <div className="mgr-home-hint-l">لوحة التحكم • القائمة الرئيسية</div>
+              <div className="mgr-home-hint-r">٧ أقسام</div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="mgr-grid">
               {homeQuickLinks.map((item) => {
                 const Icon = item.icon
+                const badge = navBadge(item.id)
                 return (
                   <a
                     key={item.id}
                     href={tabHref(item.id)}
                     onClick={(e) => handleTabLinkClick(e, item.id, item.label)}
-                    className="group relative text-right rounded-[24px] glass glass-hover p-[1px] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 no-underline"
+                    className="mgr-card"
                   >
-                    <div className="relative rounded-[23px] bg-gradient-to-br from-white/90 to-white/60 p-7 md:p-8 min-h-[200px] flex flex-col">
-                      <div className="flex items-start justify-between">
-                        <div className="relative">
-                          <div className="absolute -inset-4 rounded-2xl bg-sky-100/60 blur-xl opacity-0 group-hover:opacity-100 transition duration-500" />
-                          <div className="relative flex h-[60px] w-[60px] items-center justify-center rounded-[16px] bg-gradient-to-br from-white to-sky-50 border border-white shadow-[0_10px_24px_rgba(14,165,233,0.14),inset_0_1px_0_white] text-[#0284C7] group-hover:from-sky-500 group-hover:to-blue-600 group-hover:text-white transition-all duration-500">
-                            <Icon className="w-7 h-7" strokeWidth={1.8} />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                        </div>
+                    <div className="mgr-card-inner">
+                      <div className="mgr-card-top">
+                        <div className="mgr-card-ico"><Icon size={28} strokeWidth={1.8} /></div>
+                        <span className="mgr-dot" style={{ marginTop: 4 }} />
                       </div>
-
-                      <div className="mt-6">
-                        <h3 className="text-[22px] md:text-[24px] font-[800] text-slate-900 tracking-tight leading-[1.15]">{item.label}</h3>
-                        <p className="mt-2 text-[13px] leading-[1.5] text-slate-500 font-medium">{item.description}</p>
-                      </div>
-
-                      <div className="mt-auto flex items-center justify-between pt-6">
-                        <div className="flex items-center gap-2 text-[12px] font-bold text-sky-600">
+                      <h3 className="mgr-card-title">{item.label}</h3>
+                      <p className="mgr-card-desc">{item.description}</p>
+                      <div className="mgr-card-bot">
+                        <div className="mgr-card-cta">
                           <span>فتح القسم</span>
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-50 border border-sky-100 group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500 transition-all duration-300">
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                          </span>
+                          <span className="mgr-card-cta-btn"><ChevronLeft size={14} /></span>
                         </div>
-                        <div className="text-[11px] text-slate-400 font-medium">
-                          {navBadge(item.id) === '•' ? '—' : `${Number(navBadge(item.id)).toLocaleString('ar-EG')} سجل`}
+                        <div className="mgr-card-meta">
+                          {badge === '•' ? '—' : `${Number(badge).toLocaleString('ar-EG')} سجل`}
                         </div>
                       </div>
-
-                      <div className="pointer-events-none absolute bottom-0 left-7 right-7 h-px bg-gradient-to-r from-transparent via-sky-200/70 to-transparent opacity-60" />
+                      <div className="mgr-card-line" />
                     </div>
                   </a>
                 )
               })}
             </div>
 
-            <footer className="mt-4 flex justify-center">
-              <div className="rounded-full glass px-5 py-2 text-[11px] font-bold tracking-wide text-slate-500 border border-white/80">
-                مديرية ماء البصرة • نظام واردات أبي الخصيب • {branch.name}
-              </div>
-            </footer>
+            <div className="mgr-home-foot">
+              <div className="mgr-home-foot-pill">مديرية ماء البصرة • نظام واردات أبي الخصيب • {branch.name}</div>
+            </div>
 
-            <div className="sm:hidden flex justify-center">
-              <button
-                type="button"
-                onClick={openConsignmentA4}
-                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 hover:bg-sky-600 text-white text-[12px] font-black px-4 py-2 shadow-[0_4px_12px_rgba(14,165,233,0.3)]"
-              >
-                <FileText className="w-3.5 h-3.5" />
+            <div className="mgr-a4-mobile">
+              <button type="button" onClick={openConsignmentA4}>
+                <FileText size={14} />
                 <span>إنشاء إرسالية (A4)</span>
               </button>
             </div>
@@ -3840,44 +3970,30 @@ export default function BranchManagerDashboard({
 
       {/* Mobile Drawer */}
       <div
-        className="fixed inset-0 z-[45] md:hidden flex transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        className="mgr-drawer"
         style={{
-          top: 'var(--safe-area-inset-top, 0px)',
-          bottom: 0,
-          left: 0,
-          right: 0,
           opacity: sidebarOpen ? 1 : 0,
           pointerEvents: sidebarOpen ? 'auto' : 'none',
         }}
       >
+        <div className="mgr-drawer-bg" onClick={() => setSidebarOpen(false)} />
         <div
-          className="absolute inset-0 bg-[#0f172a]/30 backdrop-blur-[8px] transition-opacity duration-300"
-          style={{ opacity: sidebarOpen ? 1 : 0 }}
-          onClick={() => setSidebarOpen(false)}
-        />
-        <div
-          className="relative w-[270px] shrink-0 flex flex-col shadow-[12px_0_40px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
-          style={{
-            background: 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderLeft: '1px solid rgba(255,255,255,0.9)',
-            transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)',
-          }}
+          className="mgr-drawer-panel"
+          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)' }}
         >
           <SidebarContent onClose={() => setSidebarOpen(false)} />
         </div>
       </div>
 
       {/* Toast */}
-      <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 w-[92%] max-w-[380px]">
+      <div className="mgr-toast-wrap">
         {navToast && (
-          <div className="animate-[slideUp_.4s_cubic-bezier(.22,1,.36,1)] rounded-full glass bg-white/90 px-5 py-3 shadow-[0_20px_40px_rgba(2,132,199,0.18)] border border-white flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white">
-              <RefreshCw className="w-4 h-4 animate-spin" />
+          <div className="mgr-toast">
+            <div className="mgr-toast-ico">
+              <RefreshCw size={16} className="animate-spin" />
             </div>
-            <span className="text-[13px] font-bold text-slate-800">{navToast}</span>
-            <span className="ms-auto h-1.5 w-1.5 animate-ping rounded-full bg-sky-500" />
+            <span>{navToast}</span>
+            <span className="mgr-dot" style={{ marginInlineStart: 'auto' }} />
           </div>
         )}
       </div>
