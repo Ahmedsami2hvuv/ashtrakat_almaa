@@ -62,9 +62,7 @@ import {
   Filter,
   Eye,
   CreditCard,
-  Droplets,
-  Megaphone,
-  UserCheck
+  Droplets
 } from 'lucide-react'
 import { checkWriterWorkHours, getIraqCurrentTime, formatTimeArabic, getIraqDateAndTimeString } from '@/lib/iraqTime'
 import { loadWriterActivities, computeWriterComprehensiveStats, WriterComprehensiveStats, PeriodStats } from '@/lib/writerActivityStore'
@@ -92,7 +90,7 @@ export default function BranchManagerDashboard({
   onUpdateBranch,
   onOpenSubscriberApp
 }: BranchManagerDashboardProps) {
-  // التبويب الافتراضي يبدأ بلوحة المؤشرات الرئيسية الرسمية
+  // التبويب الافتراضي: الرئيسية (أزرار أقسام بدون قراءات)
   const tabFromPath = (): TabType => {
     if (typeof window === 'undefined') return 'dashboard'
     const slug = window.location.pathname.split('/').filter(Boolean).pop()
@@ -166,9 +164,10 @@ export default function BranchManagerDashboard({
     }
   }
 
-  // تحميل المشتركين تلقائياً إذا فتح المسؤول تبويب المشتركين أو المناطق أو صفحة الإرساليات
+  // سحب بيانات المشتركين فقط عند الحاجة الفعلية (سجل المشتركين أو فتح إرسالية A4)
+  // الصفحة الرئيسية لا تسحب أي بيانات — وكل قسم آخر يسحب ما يحتاجه عند دخوله فقط
   useEffect(() => {
-    if ((activeTab === 'subscribers' || activeTab === 'areas' || isConsignmentA4Open) && !hasLoadedSubscribers) {
+    if ((activeTab === 'subscribers' || isConsignmentA4Open) && !hasLoadedSubscribers) {
       fetchBranchSubscribers()
     }
   }, [activeTab, isConsignmentA4Open, hasLoadedSubscribers])
@@ -179,6 +178,12 @@ export default function BranchManagerDashboard({
   const [areasListText, setAreasListText] = useState('')
   const [areaSearchQuery, setAreaSearchQuery] = useState('')
   const [selectedAreaForModal, setSelectedAreaForModal] = useState<Area | null>(null)
+  // عند فتح نافذة منطقة: نجلب المشتركين حينها فقط (وليس عند مجرد عرض قائمة المناطق)
+  useEffect(() => {
+    if (selectedAreaForModal && !hasLoadedSubscribers) {
+      fetchBranchSubscribers()
+    }
+  }, [selectedAreaForModal, hasLoadedSubscribers])
   const [isAssigningToArea, setIsAssigningToArea] = useState(false)
   const [areaSubscribersSearch, setAreaSubscribersSearch] = useState('')
   const [allSubscribersSearch, setAllSubscribersSearch] = useState('')
@@ -401,16 +406,6 @@ export default function BranchManagerDashboard({
 
   // حالات الذكاء الاصطناعي
   const [newApiKey, setNewApiKey] = useState('')
-
-  // حساب الإحصائيات (سريعة وخفيفة بالاعتماد على subscribersCount أو المشتركين المحملين)
-  const stats = useMemo(() => {
-    const totalSubscribers = branch.subscribersCount ?? (hasLoadedSubscribers ? loadedSubscribers.length : (branch.subscribers?.length || 0))
-    const totalDebt = loadedSubscribers.reduce((sum, s) => sum + (s.remainingPrev || 0), 0)
-    const totalAreas = branch.areas?.length || 0
-    const totalCollectors = branch.collectors?.length || 0
-    const totalWriters = branch.writers?.length || 0
-    return { totalSubscribers, totalDebt, totalAreas, totalCollectors, totalWriters }
-  }, [branch, loadedSubscribers, hasLoadedSubscribers])
 
   // حالات وضع التحديد والتخصيص الجماعي في سجل المشتركين
   const [isSelectMode, setIsSelectMode] = useState(false)
@@ -1840,16 +1835,18 @@ export default function BranchManagerDashboard({
     )
   }
 
-  const navItems = [
-    { id: 'dashboard', label: 'الرئيسية والمؤشرات', icon: BarChart3 },
-    { id: 'subscribers', label: 'سجل المشتركين', icon: Users },
-    { id: 'areas', label: 'المناطق المائية', icon: MapPin },
-    { id: 'collectors', label: 'المحصلين (الجباة)', icon: Wallet },
-    { id: 'writers', label: 'كُتّاب الاشتراكات', icon: BookOpen },
-    { id: 'consignments', label: 'مخزن الإرساليات', icon: Layers },
-    { id: 'inspections', label: 'الكشوفات الفنية', icon: FileText },
-    { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', icon: Settings }
+  const navItems: { id: TabType; label: string; description: string; icon: typeof Users }[] = [
+    { id: 'dashboard', label: 'الرئيسية', description: 'اختصارات الأقسام بدون سحب بيانات', icon: Building2 },
+    { id: 'subscribers', label: 'سجل المشتركين', description: 'عرض وإدارة المشتركين عند الحاجة', icon: Users },
+    { id: 'areas', label: 'المناطق المائية', description: 'إدارة المناطق وربط المشتركين', icon: MapPin },
+    { id: 'collectors', label: 'المحصلين (الجباة)', description: 'كادر المحصلين وصلاحياتهم', icon: Wallet },
+    { id: 'writers', label: 'كُتّاب الاشتراكات', description: 'كادر الكتّاب وساعات العمل', icon: BookOpen },
+    { id: 'consignments', label: 'مخزن الإرساليات', description: 'الإرساليات المعتمدة والطباعة', icon: Layers },
+    { id: 'inspections', label: 'الكشوفات الفنية', description: 'كشوفات المعاينة الميدانية', icon: FileText },
+    { id: 'settings', label: 'الإعدادات والنسخ الاحتياطي', description: 'الاستيراد والنسخ والإعدادات', icon: Settings }
   ]
+
+  const homeQuickLinks = navItems.filter((item) => item.id !== 'dashboard')
 
   return (
     <div className="min-h-screen flex flex-col font-sans water-dashboard" style={{ background: 'linear-gradient(145deg, #f8fafc 0%, #eef2f7 48%, #f9fafb 100%)', color: '#1f2937' }} dir="rtl">
@@ -2023,7 +2020,7 @@ export default function BranchManagerDashboard({
               <span className="flex-1"><span className="block text-sm font-extrabold text-slate-800">{item.label}</span></span>
               <ChevronLeft className="w-4 h-4 text-slate-400"/>
             </button> )})}</div>
-          <div className="mt-6 rounded-2xl border border-white/90 bg-white/45 p-4 shadow-sm"><div className="text-xs font-bold text-slate-700">حفظ محلي ذكي</div><p className="text-[11px] leading-6 text-slate-500 mt-1">الأقسام تُفتح بروابط مستقلة، وتبقى بيانات الفرع المحفوظة على هذا الجهاز متاحة عند الرجوع إليها.</p></div>
+          <div className="mt-6 rounded-2xl border border-white/90 bg-white/45 p-4 shadow-sm"><div className="text-xs font-bold text-slate-700">توفير الاستهلاك</div><p className="text-[11px] leading-6 text-slate-500 mt-1">كل قسم يسحب بياناته عند فتحه فقط. الصفحة الرئيسية أزرار بلا قراءات من السحابة.</p></div>
         </aside>
       </div>}
       <div className="h-14 md:h-16" />
@@ -2031,194 +2028,42 @@ export default function BranchManagerDashboard({
       {/* المحتوى الرئيسي */}
       <div className="flex-1 max-w-[1700px] mx-auto w-full p-4 sm:p-6 md:p-8 space-y-8">
         <main className="space-y-8">
-        {/* 1. DASHBOARD & INDICATORS SECTION (لوحة المؤشرات والإحصائيات الإدارية) */}
+        {/* 1. الصفحة الرئيسية: أزرار أقسام فقط — بدون أي قراءات أو مؤشرات */}
         {activeTab === 'dashboard' && (
           <section className="space-y-6">
-            <div 
-              className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-3"
-              style={{ borderBottom: '1px solid #cbd5e1' }}
-            >
-              <div>
-                <h2 
-                  className="text-lg font-black flex items-center gap-2"
-                  style={{ color: '#0F172A' }}
-                >
-                  <BarChart3 className="w-5 h-5" style={{ color: '#0284c7' }} />
-                  لوحة المؤشرات والإحصائيات الإدارية
-                </h2>
-                <p className="text-xs" style={{ color: '#64748B' }}>
-                  نظرة شاملة ومحدثة لأداء الإيرادات والجباية في {branch.name}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-xs px-3 py-1 rounded-md font-mono font-bold shadow-sm"
-                  style={{ backgroundColor: '#1E293B', color: '#38bdf8' }}
-                >
-                  تحديث مباشر
-                </span>
-                <button
-                  onClick={() => fetchBranchSubscribers(true)}
-                  disabled={isLoadingSubscribers}
-                  className="p-1.5 rounded-lg transition"
-                  style={{ color: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)' }}
-                  title="تحديث البيانات"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingSubscribers ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
+            <div className="pb-3" style={{ borderBottom: '1px solid #cbd5e1' }}>
+              <h2 className="text-lg font-black flex items-center gap-2" style={{ color: '#0F172A' }}>
+                <Building2 className="w-5 h-5" style={{ color: '#0284c7' }} />
+                الرئيسية
+              </h2>
+              <p className="text-xs mt-1" style={{ color: '#64748B' }}>
+                اختر القسم المطلوب — البيانات تُجلب فقط عند فتح ذلك القسم، لتقليل استهلاك السحابة
+              </p>
             </div>
 
-            {/* بطاقات الإحصائيات الأربع (Stats Grid Cards) مثل الملف الأصلي السطور 167-223 تماماً */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Card 1: إجمالي المشتركين */}
-              <div 
-                className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-semibold text-gray-500">إجمالي المشتركين المسجلين</span>
-                    <h3 
-                      className="text-3xl font-black mt-2"
-                      style={{ color: '#0F172A' }}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {homeQuickLinks.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigateTab(item.id)}
+                    className="gov-card group text-right p-5 rounded-2xl transition active:scale-[0.99] flex items-start gap-4"
+                  >
+                    <span
+                      className="w-12 h-12 shrink-0 rounded-xl border border-white/90 bg-white/70 grid place-items-center text-slate-600 group-hover:text-sky-700 transition"
                     >
-                      {stats.totalSubscribers.toLocaleString('ar-IQ')}
-                    </h3>
-                    <p className="text-[11px] text-emerald-600 mt-2 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      تغطية تامة لجميع الأحياء
-                    </p>
-                  </div>
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.1)', color: '#0F172A' }}
-                  >
-                    <Users className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: المناطق المائية المعتمدة */}
-              <div 
-                className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-semibold text-gray-500">المناطق المائية المعتمدة</span>
-                    <h3 
-                      className="text-2xl font-black mt-2"
-                      style={{ color: '#0F172A' }}
-                    >
-                      {stats.totalAreas} <span className="text-xs font-normal text-gray-500">منطقة</span>
-                    </h3>
-                    <p className="text-[11px] font-bold mt-2 flex items-center gap-1" style={{ color: '#0284c7' }}>
-                      <Droplets className="w-3.5 h-3.5" />
-                      نطاقات اشتراك موزعة ميدانياً
-                    </p>
-                  </div>
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}
-                  >
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: كادر المحصلين والكتّاب */}
-              <div 
-                className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-semibold text-gray-500">كادر المحصلين والكتّاب</span>
-                    <h3 
-                      className="text-3xl font-black mt-2"
-                      style={{ color: '#0F172A' }}
-                    >
-                      {stats.totalCollectors + stats.totalWriters} <span className="text-xs font-normal text-gray-500">موظف ميداني</span>
-                    </h3>
-                    <p className="text-[11px] text-emerald-600 mt-2 font-bold flex items-center gap-1">
-                      <UserCheck className="w-3.5 h-3.5" />
-                      {stats.totalCollectors} محصل جباية | {stats.totalWriters} كاتب
-                    </p>
-                  </div>
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.1)', color: '#0F172A' }}
-                  >
-                    <UserCheck className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: الإرساليات المعتمدة */}
-              <div 
-                className="gov-card p-6 rounded-2xl"
-                style={{ borderTop: '1px solid rgba(255,255,255,.9)' }}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-semibold text-gray-500">الإرساليات المعتمدة بالمخزن</span>
-                    <h3 
-                      className="text-3xl font-black mt-2"
-                      style={{ color: '#0F172A' }}
-                    >
-                      {(branch.consignments || []).length} <span className="text-xs font-normal text-gray-500">إرسالية</span>
-                    </h3>
-                    <p className="text-[11px] font-bold mt-2 flex items-center gap-1" style={{ color: '#0369a1' }}>
-                      <Layers className="w-3.5 h-3.5" />
-                      مودعة بالمخزن المالي وموثقة A4
-                    </p>
-                  </div>
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}
-                  >
-                    <Layers className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Management Notice Box (صندوق التوجيه الإداري مثل الملف الأصلي السطور 225-239 تماماً) */}
-            <div 
-              className="gov-card p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4"
-              style={{ borderRight: '4px solid #0284c7' }}
-            >
-              <div className="flex items-center gap-4">
-                <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: 'rgba(2, 132, 199, 0.15)', color: '#0284c7' }}
-                >
-                  <Megaphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 
-                    className="font-bold text-sm"
-                    style={{ color: '#0F172A' }}
-                  >
-                    توجيه إداري صادر من مكتب مسؤول الفرع ({currentManager?.name || 'الأستاذ / حسين علي لفته'})
-                  </h4>
-                  <p className="text-xs text-gray-600 mt-1">
-                    يُرجى من كافة السادة المحصلين والكتّاب الالتزام التام بتدقيق السجلات اليومية وتسليم الإرساليات إلى المخزن المالي في موعد أقصاه الساعة الثانية ظهراً.
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigateTab('consignments')}
-                className="px-4 py-2 rounded-xl font-bold text-xs transition whitespace-nowrap cursor-pointer shadow"
-                style={{
-                  backgroundColor: '#0F172A',
-                  color: '#38bdf8',
-                  border: '1px solid #334155'
-                }}
-              >
-                استعراض مخزن الإرساليات
-              </button>
+                      <Icon className="w-6 h-6" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-extrabold text-slate-900">{item.label}</span>
+                      <span className="block text-[11px] text-slate-500 mt-1 leading-5">{item.description}</span>
+                    </span>
+                    <ChevronLeft className="w-4 h-4 text-slate-400 mt-1 shrink-0 group-hover:text-slate-600" />
+                  </button>
+                )
+              })}
             </div>
           </section>
         )}
@@ -2827,7 +2672,7 @@ export default function BranchManagerDashboard({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 font-bold">
-                    انقر على أي منطقة لعرض مشتركيها وإضافة مشتركين إليها فورياً
+                    قائمة المناطق خفيفة بدون سحب مشتركين — اضغط منطقة لجلب مشتركيها عند الحاجة
                   </p>
                 </div>
 
@@ -2893,7 +2738,7 @@ export default function BranchManagerDashboard({
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                   {filteredAreas.map((area) => {
                     const subsCount = areaSubscribersCountMap.get(area.id) || 0
-                    const hasSubs = subsCount > 0
+                    const hasSubs = hasLoadedSubscribers && subsCount > 0
 
                     return (
                       <div
@@ -2928,10 +2773,10 @@ export default function BranchManagerDashboard({
                                 ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
                                 : 'bg-slate-200/70 text-slate-600'
                             }`}
-                            title={`${subsCount} مشترك`}
+                            title={hasLoadedSubscribers ? `${subsCount} مشترك` : 'يظهر العدد بعد فتح المنطقة'}
                           >
                             <Users className="w-2.5 h-2.5" />
-                            <span>{subsCount}</span>
+                            <span>{hasLoadedSubscribers ? subsCount : '—'}</span>
                           </span>
 
                           <button
