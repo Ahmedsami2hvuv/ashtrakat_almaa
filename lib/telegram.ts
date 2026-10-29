@@ -87,7 +87,7 @@ function largestPhotoFileId(msg: TgMessage): { file_id: string; file_unique_id: 
 
 /** بناء نص تفاصيل الكشف المنشور مع الألبوم */
 export function buildInspectionCaption(record: InspectionRecord, siteOrigin?: string): string {
-  const origin = siteOrigin || process.env.NEXT_PUBLIC_SITE_URL || 'https://ashtrakat-almaa.vercel.app'
+  const origin = siteOrigin || process.env.NEXT_PUBLIC_SITE_URL || 'https://ashtakat-almaa.vercel.app'
   const lines = [
     '📋 كشف فني — مديرية ماء البصرة',
     `👤 المواطن: ${record.citizenName || '—'}`,

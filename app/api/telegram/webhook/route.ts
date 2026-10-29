@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://ashtrakat-almaa.vercel.app'
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://ashtakat-almaa.vercel.app'
     const imgCount = found.images?.filter((img) => img.telegramFileId || (img.dataUrl && img.dataUrl.length > 32)).length || 0
 
     await reply(
@@ -135,7 +135,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'أضف TELEGRAM_BOT_TOKEN و TELEGRAM_CHANNEL_ID أولاً' }, { status: 503 })
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+    // نستخدم نفس الدومين اللي فتحته بالمتصفح حتى ما ينربط رابط غلط
+    const origin = new URL(request.url).origin
     const webhookUrl = `${origin}/api/telegram/webhook`
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN()}/setWebhook`, {
       method: 'POST',

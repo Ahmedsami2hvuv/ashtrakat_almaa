@@ -212,7 +212,7 @@ export async function getInspectionByIdOrToken(idOrToken: string): Promise<Inspe
 // توليد صورة الباركود (QR Code) للكشف
 export async function generateInspectionQRDataUrl(inspectionId: string, origin?: string): Promise<string> {
   const baseUrl =
-    origin || (typeof window !== 'undefined' ? window.location.origin : 'https://ashtrakat-almaa.vercel.app')
+    origin || (typeof window !== 'undefined' ? window.location.origin : 'https://ashtakat-almaa.vercel.app')
   const inspectionUrl = `${baseUrl}/inspection/${inspectionId}`
 
   try {
