@@ -9,7 +9,11 @@ import {
   DEFAULT_LAYOUT_CONFIG,
   loadSavedLayoutConfig
 } from '@/lib/inspectionLayoutStore'
-import { renderHighlightedInspectionText } from '@/lib/inspectionHighlight'
+import { autoMarkPropertyRed, renderHighlightedInspectionText } from '@/lib/inspectionHighlight'
+
+function stripRedTags(text: string): string {
+  return (text || '').replace(/<\/?red>/gi, '')
+}
 import {
   Plus,
   Trash2,
@@ -279,11 +283,11 @@ export default function InspectionPrintableA4({
     })
   }
 
-  // تحديث نقطة تقرير
+  // تحديث نقطة تقرير — نحفظ النص مع تلوين الوصف بعد «عبارة» تلقائياً بدون إظهار وسوم red للكاتب
   const handlePointChange = (index: number, value: string) => {
     if (!onUpdate) return
     const points = [...(inspection.reportPoints || [])]
-    points[index] = value
+    points[index] = autoMarkPropertyRed(stripRedTags(value))
     onUpdate({
       ...inspection,
       reportPoints: points
@@ -851,7 +855,7 @@ export default function InspectionPrintableA4({
                               <div className="flex items-start gap-2">
                                 <textarea
                                   rows={2}
-                                  value={point}
+                                  value={stripRedTags(point)}
                                   onChange={(e) => handlePointChange(index, e.target.value)}
                                   className="w-full bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded p-1 font-bold text-base sm:text-lg text-slate-950 outline-none leading-relaxed resize-y m-0"
                                 />
