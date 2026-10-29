@@ -3029,6 +3029,7 @@ export default function BranchManagerDashboard({
           {activeTab === 'inspections' && (
             <BranchInspectionsTab
               branch={branch}
+              managerName={currentManager?.name || branch.managers?.[0]?.name}
               onOpenInspectionModal={(record) => {
                 setFocusedInspection(record || null)
                 setShowInspectionDashboard(true)
