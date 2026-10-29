@@ -206,9 +206,13 @@ export default function BranchInspectionsTab({
   return (
     <div dir="rtl" className="insp-root space-y-4">
       <style>{`
-        .insp-root { font-weight: 800; -webkit-font-smoothing: antialiased; }
+        .insp-root {
+          font-weight: 800;
+          -webkit-font-smoothing: antialiased;
+          color: #0f172a;
+        }
         .insp-root, .insp-root button, .insp-root input, .insp-root select, .insp-root th, .insp-root td {
-          font-family: var(--font-tajawal), Tajawal, sans-serif;
+          font-family: var(--font-cairo), Cairo, Tahoma, sans-serif;
         }
         .insp-glass {
           background: rgba(255,255,255,0.82);
@@ -263,8 +267,8 @@ export default function BranchInspectionsTab({
           <div className="insp-stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
             <Coins className="w-4 h-4" />
           </div>
-          <div className="text-[12px] font-black text-amber-900/90 pl-10">بانتظار المعالجة الفنية</div>
-          <div className="text-[34px] leading-none font-black text-amber-950 mt-2">{stats.pending}</div>
+          <div className="text-[13px] font-black text-amber-950 pl-10">بانتظار المعالجة الفنية</div>
+          <div className="text-[36px] leading-none font-black text-amber-950 mt-2">{stats.pending}</div>
           <div className="insp-bar" style={{ background: '#fde68a' }}>
             <span
               style={{
@@ -277,9 +281,9 @@ export default function BranchInspectionsTab({
 
         {/* الإجمالي */}
         <div className="insp-glass insp-stat">
-          <div className="text-[12px] font-black text-slate-600">إجمالي الكشوفات</div>
-          <div className="text-[34px] leading-none font-black text-slate-900 mt-2">{stats.total}</div>
-          <div className="text-[12px] font-black text-sky-600 mt-3">+{stats.weekNew} هذا الأسبوع</div>
+          <div className="text-[13px] font-black text-slate-700">إجمالي الكشوفات</div>
+          <div className="text-[36px] leading-none font-black text-slate-900 mt-2">{stats.total}</div>
+          <div className="text-[13px] font-black text-sky-700 mt-3">+{stats.weekNew} هذا الأسبوع</div>
         </div>
 
         {/* المصورة */}
@@ -287,9 +291,9 @@ export default function BranchInspectionsTab({
           <div className="insp-stat-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
             <Camera className="w-4 h-4" />
           </div>
-          <div className="text-[12px] font-black text-sky-900/90 pl-10">الكشوفات المصورة</div>
-          <div className="text-[34px] leading-none font-black text-sky-950 mt-2">{stats.photographed}</div>
-          <div className="text-[12px] font-black text-sky-700 mt-3">{stats.photoPct}% مرفق بصور</div>
+          <div className="text-[13px] font-black text-sky-950 pl-10">الكشوفات المصورة</div>
+          <div className="text-[36px] leading-none font-black text-sky-950 mt-2">{stats.photographed}</div>
+          <div className="text-[13px] font-black text-sky-800 mt-3">{stats.photoPct}% مرفق بصور</div>
         </div>
 
         {/* المعتمدة */}
@@ -297,8 +301,8 @@ export default function BranchInspectionsTab({
           <div className="insp-stat-icon" style={{ background: '#d1fae5', color: '#059669' }}>
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <div className="text-[12px] font-black text-emerald-900/90 pl-10">تمت المعالجة والاعتماد</div>
-          <div className="text-[34px] leading-none font-black text-emerald-950 mt-2">{stats.approved}</div>
+          <div className="text-[13px] font-black text-emerald-950 pl-10">تمت المعالجة والاعتماد</div>
+          <div className="text-[36px] leading-none font-black text-emerald-950 mt-2">{stats.approved}</div>
           <div className="insp-bar" style={{ background: '#a7f3d0' }}>
             <span
               style={{
@@ -310,25 +314,25 @@ export default function BranchInspectionsTab({
         </div>
       </div>
 
-      {/* بحث + فلاتر */}
-      <div className="insp-glass rounded-[22px] p-3 flex flex-col gap-3">
-        <div className="relative w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+      {/* بحث + فلاتر بنفس السطر */}
+      <div className="insp-glass rounded-[22px] p-3 flex flex-col lg:flex-row lg:items-center gap-2.5">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-5 h-5 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث باسم المواطن، الكاتب/المحصل، المحلة / نص التقرير..."
-            className="w-full h-11 rounded-full bg-white border border-slate-200 pr-10 pl-4 text-[12px] font-bold text-slate-800 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+            className="w-full h-12 rounded-full bg-white border border-slate-200 pr-11 pl-4 text-[15px] font-extrabold text-slate-900 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="text-[12px] font-black text-slate-800 whitespace-nowrap">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="h-12 px-3.5 rounded-full bg-slate-900 text-white text-[14px] font-black whitespace-nowrap inline-flex items-center">
             النتائج: {filtered.length} كشف
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="h-9 rounded-full bg-white border border-slate-200 px-3 text-[12px] font-black text-slate-700 outline-none"
+            className="h-12 rounded-full bg-white border border-slate-300 px-4 text-[14px] font-black text-slate-900 outline-none"
           >
             <option value="all">كل الحالات</option>
             <option value="pending">قيد التدقيق</option>
@@ -337,9 +341,9 @@ export default function BranchInspectionsTab({
           <button
             type="button"
             onClick={clearFilters}
-            className="h-9 px-3 rounded-full bg-white border border-slate-200 text-[12px] font-black text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1"
+            className="h-12 px-4 rounded-full bg-white border border-slate-300 text-[14px] font-black text-slate-900 hover:bg-slate-50 inline-flex items-center gap-1.5"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
             مسح
           </button>
         </div>
@@ -348,11 +352,11 @@ export default function BranchInspectionsTab({
       {/* الجدول */}
       <div className="insp-glass rounded-[22px] overflow-hidden">
         <div className="px-4 py-3.5 border-b border-slate-100/90 flex items-center justify-between gap-2 bg-white/55">
-          <h2 className="text-[14px] font-black text-slate-800">سجل الكشوفات الميدانية</h2>
+          <h2 className="text-[16px] font-black text-slate-900">سجل الكشوفات الميدانية</h2>
           <button
             type="button"
             onClick={handleExportCsv}
-            className="h-9 px-3.5 rounded-full bg-white border border-slate-200 text-[11px] font-black text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1.5 shadow-sm"
+            className="h-10 px-4 rounded-full bg-white border border-slate-300 text-[13px] font-black text-slate-900 hover:bg-slate-50 inline-flex items-center gap-1.5 shadow-sm"
           >
             <Download className="w-3.5 h-3.5" />
             تصدير
@@ -372,17 +376,17 @@ export default function BranchInspectionsTab({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-right text-[12px] min-w-[920px]">
-              <thead className="bg-slate-50/90 text-slate-500 font-black">
+            <table className="w-full text-right text-[14px] min-w-[920px]">
+              <thead className="bg-slate-50/90 text-slate-700 font-black">
                 <tr>
-                  <th className="py-3.5 px-3 font-black">ت</th>
-                  <th className="py-3.5 px-3 font-black">القائم بالكشف</th>
-                  <th className="py-3.5 px-3 font-black">اسم المواطن / صاحب العقار</th>
-                  <th className="py-3.5 px-3 font-black">المحلة / المنطقة</th>
-                  <th className="py-3.5 px-3 font-black">تاريخ الكشف</th>
-                  <th className="py-3.5 px-3 font-black">الصور المرفقة</th>
-                  <th className="py-3.5 px-3 font-black">الحالة</th>
-                  <th className="py-3.5 px-3 font-black text-center">الإجراءات</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">ت</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">القائم بالكشف</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">اسم المواطن / صاحب العقار</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">المحلة / المنطقة</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">تاريخ الكشف</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">الصور المرفقة</th>
+                  <th className="py-3.5 px-3 font-black text-[13px]">الحالة</th>
+                  <th className="py-3.5 px-3 font-black text-[13px] text-center">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -430,26 +434,26 @@ export default function BranchInspectionsTab({
                         </span>
                       </td>
 
-                      <td className="py-4 px-3 font-mono text-[11px] text-slate-600 font-bold">
+                      <td className="py-4 px-3 font-mono text-[13px] text-slate-800 font-black">
                         {item.inspectionDate || item.createdAt?.substring(0, 10) || '—'}
                       </td>
 
                       <td className="py-4 px-3">
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-black">
-                          <Camera className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full text-[13px] font-black">
+                          <Camera className="w-3.5 h-3.5" />
                           {item.images?.length || 0} صور
                         </span>
                       </td>
 
                       <td className="py-4 px-3">
                         {done ? (
-                          <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black">
-                            <CheckCircle2 className="w-3 h-3" />
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full text-[12px] font-black">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
                             {statusLabel(item.status)}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-black">
-                            <Clock className="w-3 h-3" />
+                          <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-full text-[12px] font-black">
+                            <Clock className="w-3.5 h-3.5" />
                             {statusLabel(item.status)}
                           </span>
                         )}

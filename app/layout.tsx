@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Tajawal } from 'next/font/google'
+import { Cairo, Tajawal } from 'next/font/google'
 import './globals.css'
 
 const tajawal = Tajawal({
@@ -7,6 +7,13 @@ const tajawal = Tajawal({
   weight: ['400', '500', '700', '800', '900'],
   display: 'swap',
   variable: '--font-tajawal',
+})
+
+const cairo = Cairo({
+  subsets: ['arabic'],
+  weight: ['600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-cairo',
 })
 
 export const metadata: Metadata = {
@@ -41,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ar" dir="rtl" className={tajawal.variable}>
+    <html lang="ar" dir="rtl" className={`${tajawal.variable} ${cairo.variable}`}>
       <body className={tajawal.className}>
         <ServiceWorkerRegister />
         {children}
