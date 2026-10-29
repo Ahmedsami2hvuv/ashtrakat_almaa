@@ -314,25 +314,26 @@ export default function BranchInspectionsTab({
         </div>
       </div>
 
-      {/* بحث + فلاتر بنفس السطر */}
-      <div className="insp-glass rounded-[22px] p-3 flex flex-col lg:flex-row lg:items-center gap-2.5">
-        <div className="relative flex-1 min-w-0">
-          <Search className="w-5 h-5 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث باسم المواطن، الكاتب/المحصل، المحلة / نص التقرير..."
-            className="w-full h-12 rounded-full bg-white border border-slate-200 pr-11 pl-4 text-[15px] font-extrabold text-slate-900 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <div className="h-12 px-3.5 rounded-full bg-slate-900 text-white text-[14px] font-black whitespace-nowrap inline-flex items-center">
-            النتائج: {filtered.length} كشف
+      {/* بحث + فلاتر بنفس السطر دائماً */}
+      <div className="insp-glass rounded-[22px] p-2.5 sm:p-3 overflow-x-auto">
+        <div className="flex flex-nowrap items-center gap-2 min-w-0">
+          <div className="relative flex-1 min-w-[140px] max-w-full">
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="بحث..."
+              title="بحث باسم المواطن، الكاتب/المحصل، المحلة / نص التقرير"
+              className="w-full h-11 sm:h-12 rounded-full bg-white border border-slate-200 pr-9 sm:pr-11 pl-3 text-[13px] sm:text-[15px] font-extrabold text-slate-900 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+            />
+          </div>
+          <div className="h-11 sm:h-12 px-2.5 sm:px-3.5 rounded-full bg-slate-900 text-white text-[12px] sm:text-[14px] font-black whitespace-nowrap inline-flex items-center shrink-0">
+            النتائج: {filtered.length}
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="h-12 rounded-full bg-white border border-slate-300 px-4 text-[14px] font-black text-slate-900 outline-none"
+            className="h-11 sm:h-12 rounded-full bg-white border border-slate-300 px-2.5 sm:px-3 text-[12px] sm:text-[14px] font-black text-slate-900 outline-none shrink-0 max-w-[42vw] sm:max-w-none"
           >
             <option value="all">كل الحالات</option>
             <option value="pending">قيد التدقيق</option>
@@ -341,7 +342,7 @@ export default function BranchInspectionsTab({
           <button
             type="button"
             onClick={clearFilters}
-            className="h-12 px-4 rounded-full bg-white border border-slate-300 text-[14px] font-black text-slate-900 hover:bg-slate-50 inline-flex items-center gap-1.5"
+            className="h-11 sm:h-12 px-3 sm:px-4 rounded-full bg-white border border-slate-300 text-[12px] sm:text-[14px] font-black text-slate-900 hover:bg-slate-50 inline-flex items-center gap-1 shrink-0"
           >
             <X className="w-4 h-4" />
             مسح
