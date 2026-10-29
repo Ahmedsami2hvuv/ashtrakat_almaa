@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { InspectionRecord } from '@/lib/inspectionTypes'
 import { renderHighlightedInspectionText } from '@/lib/inspectionHighlight'
+import { getInspectionImageSrc } from '@/lib/inspectionImageUrl'
 import { Shield, FileText, Camera, Droplets, AlertTriangle, Eye } from 'lucide-react'
 
 export default function InspectionCitizenViewPage() {
@@ -263,14 +264,17 @@ export default function InspectionCitizenViewPage() {
 
             {inspection.images && inspection.images.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {inspection.images.map((img, i) => (
+                {inspection.images.map((img, i) => {
+                  const src = getInspectionImageSrc(img)
+                  if (!src) return null
+                  return (
                   <div
                     key={img.id || i}
                     className="aspect-[4/3] rounded-2xl bg-slate-900 border border-slate-200 overflow-hidden relative group shadow-xs cursor-pointer active:scale-95 transition-transform"
-                    onClick={() => setSelectedImage(img.dataUrl)}
+                    onClick={() => setSelectedImage(src)}
                   >
                     <img
-                      src={img.dataUrl}
+                      src={src}
                       alt={`صورة الكشف ${i + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none select-none"
                     />
@@ -278,7 +282,8 @@ export default function InspectionCitizenViewPage() {
                       <Eye className="w-6 h-6 text-white drop-shadow-md" />
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-6 text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">

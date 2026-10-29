@@ -28,6 +28,9 @@ function writeLocalCache(inspections: InspectionRecord[]) {
             name: img.name,
             createdAt: img.createdAt,
             sizeBytes: img.sizeBytes,
+            telegramFileId: img.telegramFileId,
+            telegramFileUniqueId: img.telegramFileUniqueId,
+            telegramMessageId: img.telegramMessageId,
             dataUrl: ''
           }))
         : []
@@ -139,7 +142,10 @@ export async function saveInspectionsToCloud(inspections: InspectionRecord[]): P
     images: Array.isArray(item.images)
       ? item.images.map((img) => ({
           ...img,
-          dataUrl: ''
+          dataUrl: '',
+          telegramFileId: img.telegramFileId,
+          telegramFileUniqueId: img.telegramFileUniqueId,
+          telegramMessageId: img.telegramMessageId
         }))
       : []
   }))

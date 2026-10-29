@@ -2,10 +2,15 @@
 
 export interface InspectionImage {
   id: string
-  dataUrl: string // بصيغة webp مضغوطة بنسبة 90%
+  /** مؤقت عند الرفع فقط؛ بعد النشر لتليجرام يُفرَّغ ويُستبدل بـ telegramFileId */
+  dataUrl: string
   name?: string
   createdAt: string
   sizeBytes?: number
+  /** معرّف ملف تليجرام الدائم لاستدعاء الصورة من القناة */
+  telegramFileId?: string
+  telegramFileUniqueId?: string
+  telegramMessageId?: number
 }
 
 export interface TechnicalReportTable {
@@ -43,4 +48,7 @@ export interface InspectionRecord {
   status: 'pending' | 'reviewed' | 'approved' | 'rejected'
   directorNotes?: string
   updatedAt: string
+  /** معرفات رسائل ألبوم الصور في قناة تليجرام */
+  telegramMessageIds?: number[]
+  telegramMediaGroupId?: string
 }

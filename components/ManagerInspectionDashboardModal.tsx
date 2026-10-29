@@ -17,6 +17,7 @@ import {
   saveLayoutConfigToStorage
 } from '@/lib/inspectionLayoutStore'
 import InspectionPrintableA4 from './InspectionPrintableA4'
+import { getInspectionImageSrc, inspectionNeedsFullImagePayload } from '@/lib/inspectionImageUrl'
 import {
   FileText,
   Sparkles,
@@ -79,14 +80,11 @@ export default function ManagerInspectionDashboardModal({
     setPortalReady(true)
   }, [])
 
-  // تحميل قائمة خفيفة أولاً، ثم تعبئة الكشف الحالي بصوره الكاملة عند الحاجة
+  // تحميل قائمة خفيفة أولاً؛ صور تليجرام تُعرض مباشرة عبر البروكسي، والـ base64 القديم يُجلب عند الحاجة
   const hydrateInspection = async (item: InspectionRecord) => {
-    const needsImages =
-      Array.isArray(item.images) &&
-      item.images.length > 0 &&
-      item.images.some((img) => !(img.dataUrl && img.dataUrl.length > 32))
+    const needsLegacyFull = inspectionNeedsFullImagePayload(item.images)
 
-    if (!needsImages) {
+    if (!needsLegacyFull) {
       setCurrentInspection(JSON.parse(JSON.stringify(item)))
       return
     }
@@ -533,17 +531,24 @@ export default function ManagerInspectionDashboardModal({
                   </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {currentInspection.images.map((img, idx) => (
+                  {currentInspection.images.map((img, idx) => {
+                    const src = getInspectionImageSrc(img)
+                    return (
                     <div
                       key={img.id || idx}
                       className="rounded-lg overflow-hidden border border-slate-200 bg-slate-100 aspect-video relative shadow-xs"
                     >
-                      <img src={img.dataUrl} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+                      {src ? (
+                        <img src={src} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">لا معاينة</div>
+                      )}
                       <span className="absolute bottom-1 right-1 bg-black/70 text-[9px] text-white px-1.5 py-0.5 rounded font-mono">
-                        {Math.round((img.sizeBytes || 0) / 1024)} KB
+                        {img.telegramFileId ? 'TG' : `${Math.round((img.sizeBytes || 0) / 1024)} KB`}
                       </span>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
