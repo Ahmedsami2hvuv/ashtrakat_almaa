@@ -19,6 +19,7 @@ import ConsignmentsA4Page from './ConsignmentsA4Page'
 import BranchConsignmentsStore from './BranchConsignmentsStore'
 import BranchInspectionsTab from './BranchInspectionsTab'
 import ManagerInspectionDashboardModal from './ManagerInspectionDashboardModal'
+import { InspectionRecord } from '@/lib/inspectionTypes'
 import * as XLSX from 'xlsx'
 import {
   Users,
@@ -144,6 +145,7 @@ export default function BranchManagerDashboard({
     return () => clearTimeout(t)
   }, [navToast])
   const [showInspectionDashboard, setShowInspectionDashboard] = useState(false)
+  const [focusedInspection, setFocusedInspection] = useState<InspectionRecord | null>(null)
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
   const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -3028,6 +3030,7 @@ export default function BranchManagerDashboard({
             <BranchInspectionsTab
               branch={branch}
               onOpenInspectionModal={(record) => {
+                setFocusedInspection(record || null)
                 setShowInspectionDashboard(true)
               }}
             />
@@ -7057,10 +7060,14 @@ export default function BranchManagerDashboard({
           {/* لوحة الكشوفات الفنية للمدير */}
       <ManagerInspectionDashboardModal
         isOpen={showInspectionDashboard}
-        onClose={() => setShowInspectionDashboard(false)}
+        onClose={() => {
+          setShowInspectionDashboard(false)
+          setFocusedInspection(null)
+        }}
         branchId={branch.id}
         branchName={branch.name}
         branchManagerName={currentManager?.name || branch.managers?.[0]?.name}
+        initialInspection={focusedInspection}
       />
     </div>
   )

@@ -9,6 +9,7 @@ import {
   DEFAULT_LAYOUT_CONFIG,
   loadSavedLayoutConfig
 } from '@/lib/inspectionLayoutStore'
+import { renderHighlightedInspectionText } from '@/lib/inspectionHighlight'
 import {
   Plus,
   Trash2,
@@ -81,58 +82,8 @@ function resolveCleanBranchName(stored?: string, override?: string): string {
   return 'أبي الخصيب'
 }
 
-/** يحيط وصف العقار بعد «عبارة عن / عبارة» بوسم أحمر للعرض */
-function autoMarkPropertyRed(text: string): string {
-  if (!text || text.includes('<red>')) return text
-
-  let result = text
-
-  // مثال: تبين أن موقع العقار عبارة قطعة ارض فارغة بمساحة ١٥٠ متر
-  result = result.replace(
-    /(عبارة(?:\s*عن)?\s+)(.+?)(?=\s+(?:ضمن|وخالية|خالية|علماً|علما|كما|ولا|وليس|ويخلو|وتقع|وفي|في حي|في منطقة|حسب)|[.،,]|$)/,
-    '$1<red>$2</red>'
-  )
-
-  if (!result.includes('<red>')) {
-    result = result.replace(
-      /\(([^)]*(?:بناية|دار|دارين|قطعة|ارض|أرض|بستان|محل|مكتب)[^)]*)\)/gi,
-      '(<red>$1</red>)'
-    )
-  }
-
-  return result
-}
-
-// دالة ذكية لتلوين الكلام المعني بوصف العقار باللون الأحمر
 function renderHighlightedPoint(text: string) {
-  if (!text) return null
-
-  const marked = autoMarkPropertyRed(text)
-
-  if (marked.includes('<red>')) {
-    const parts = marked.split(/(<red>[\s\S]*?<\/red>)/gi)
-    return (
-      <>
-        {parts.map((part, i) => {
-          if (part.startsWith('<red>') && part.endsWith('</red>')) {
-            const inner = part.replace(/<\/?red>/gi, '')
-            return (
-              <span
-                key={i}
-                className="font-black underline decoration-red-300 decoration-1 underline-offset-2"
-                style={{ color: '#dc2626' }}
-              >
-                {inner}
-              </span>
-            )
-          }
-          return <span key={i}>{part}</span>
-        })}
-      </>
-    )
-  }
-
-  return <span>{text}</span>
+  return renderHighlightedInspectionText(text)
 }
 
 export default function InspectionPrintableA4({
@@ -160,19 +111,20 @@ export default function InspectionPrintableA4({
     setPortalReady(true)
   }, [])
 
-  // عند اختيار عنصر: ضع اللوحة أسفل وسط الشاشة (وتبقى حيث يسحبها المستخدم)
+  // في وضع التصميم: أظهر لوحة التحريك دائماً في منتصف الشاشة (قابلة للسحب)
   useEffect(() => {
-    if (!activeElementId) {
+    if (!isDesignMode) {
       setToolbarPos(null)
+      setActiveElementId(null)
       return
     }
     setToolbarPos((prev) =>
       prev ?? {
-        x: Math.max(16, window.innerWidth / 2 - 220),
-        y: Math.max(16, window.innerHeight - 90)
+        x: Math.max(16, window.innerWidth / 2 - 240),
+        y: Math.max(80, Math.min(window.innerHeight - 120, window.innerHeight * 0.55))
       }
     )
-  }, [activeElementId])
+  }, [isDesignMode])
 
   // سحب لوحة التحريك بالماوس أو اللمس
   useEffect(() => {
@@ -420,14 +372,13 @@ export default function InspectionPrintableA4({
         }
       `}</style>
 
-      {/* لوحة تحكم قابلة للسحب — تُعرض فوق الشاشة (خارج الورقة) حتى تعمل مع العناصر في أسفل الصفحة */}
+      {/* لوحة تحكم قابلة للسحب — تظهر فور تفعيل وضع التصميم */}
       {portalReady &&
         isDesignMode &&
-        activeElementId &&
         toolbarPos &&
         createPortal(
           <div
-            className="fixed z-[9999] bg-white/95 backdrop-blur-2xl text-slate-900 px-3 py-2.5 rounded-2xl shadow-[0_15px_45px_rgba(0,0,0,0.22)] border border-white/90 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-2 select-none print:hidden max-w-[95vw]"
+            className="fixed z-[2147483000] bg-white/95 backdrop-blur-2xl text-slate-900 px-3 py-2.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.28)] border-2 border-sky-300/80 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-2 select-none print:hidden max-w-[95vw]"
             dir="rtl"
             style={{
               left: toolbarPos.x,
@@ -435,13 +386,14 @@ export default function InspectionPrintableA4({
               cursor: isDraggingToolbar ? 'grabbing' : 'default'
             }}
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            {/* مقبض السحب — اسحب اللوحة لأي مكان قريب من العنصر */}
             <div
-              className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-slate-100 border border-slate-200 cursor-grab active:cursor-grabbing touch-none"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-sky-50 border border-sky-200 cursor-grab active:cursor-grabbing touch-none"
               title="اسحب اللوحة لأي مكان في الشاشة"
               onMouseDown={(e) => {
                 e.preventDefault()
+                e.stopPropagation()
                 startToolbarDrag(e.clientX, e.clientY)
               }}
               onTouchStart={(e) => {
@@ -449,57 +401,52 @@ export default function InspectionPrintableA4({
                 if (t) startToolbarDrag(t.clientX, t.clientY)
               }}
             >
-              <GripHorizontal className="w-4 h-4 text-slate-700 stroke-[2.5]" />
-              <span className="text-[10px] font-black text-slate-600 hidden sm:inline">اسحب</span>
+              <GripHorizontal className="w-4 h-4 text-sky-700 stroke-[2.5]" />
+              <span className="text-[10px] font-black text-sky-800">اسحب</span>
             </div>
 
             <div className="flex items-center gap-1.5 pl-2 border-l border-slate-300">
               <Sliders className="w-4 h-4 text-slate-900 shrink-0" />
               <span className="text-xs font-black text-slate-950 whitespace-nowrap">
-                {ELEMENT_LABELS[activeElementId] || 'العنصر المحدد'}
+                {activeElementId
+                  ? ELEMENT_LABELS[activeElementId]
+                  : 'اضغط على عنصر بالورقة'}
               </span>
             </div>
 
             <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200" dir="ltr">
-              <button
-                type="button"
-                onClick={() => updateElementLayout(activeElementId, { dy: -3 })}
-                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
-                title="تحريك لأعلى"
-              >
-                <ArrowUp className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => updateElementLayout(activeElementId, { dy: 3 })}
-                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
-                title="تحريك لأسفل"
-              >
-                <ArrowDown className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => updateElementLayout(activeElementId, { dx: 3 })}
-                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
-                title="تحريك لليمين"
-              >
-                <ArrowRight className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => updateElementLayout(activeElementId, { dx: -3 })}
-                className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center"
-                title="تحريك لليسار"
-              >
-                <ArrowLeft className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              </button>
+              {(
+                [
+                  { dy: -3, icon: ArrowUp, title: 'تحريك لأعلى' },
+                  { dy: 3, icon: ArrowDown, title: 'تحريك لأسفل' },
+                  { dx: 3, icon: ArrowRight, title: 'تحريك لليمين' },
+                  { dx: -3, icon: ArrowLeft, title: 'تحريك لليسار' }
+                ] as const
+              ).map((btn, idx) => {
+                const Icon = btn.icon
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    disabled={!activeElementId}
+                    onClick={() => activeElementId && updateElementLayout(activeElementId, btn)}
+                    className="p-1.5 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer flex items-center justify-center disabled:opacity-35 disabled:cursor-not-allowed"
+                    title={btn.title}
+                  >
+                    <Icon className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+                  </button>
+                )
+              })}
             </div>
 
             <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
               <button
                 type="button"
-                onClick={() => updateElementLayout(activeElementId, { dScale: 0.08, dFont: 1 })}
-                className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1"
+                disabled={!activeElementId}
+                onClick={() =>
+                  activeElementId && updateElementLayout(activeElementId, { dScale: 0.08, dFont: 1 })
+                }
+                className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1 disabled:opacity-35"
                 title="تكبير"
               >
                 <Maximize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
@@ -507,8 +454,11 @@ export default function InspectionPrintableA4({
               </button>
               <button
                 type="button"
-                onClick={() => updateElementLayout(activeElementId, { dScale: -0.08, dFont: -1 })}
-                className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1"
+                disabled={!activeElementId}
+                onClick={() =>
+                  activeElementId && updateElementLayout(activeElementId, { dScale: -0.08, dFont: -1 })
+                }
+                className="px-2.5 py-1 hover:bg-white active:scale-95 text-slate-950 rounded-lg transition cursor-pointer text-xs font-black flex items-center gap-1 disabled:opacity-35"
                 title="تصغير"
               >
                 <Minimize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
@@ -518,21 +468,13 @@ export default function InspectionPrintableA4({
 
             <button
               type="button"
-              onClick={() => resetElementLayout(activeElementId)}
-              className="p-2 hover:bg-slate-100 active:scale-95 text-slate-900 rounded-xl transition cursor-pointer border border-slate-200 flex items-center gap-1 text-xs font-bold"
+              disabled={!activeElementId}
+              onClick={() => activeElementId && resetElementLayout(activeElementId)}
+              className="p-2 hover:bg-slate-100 active:scale-95 text-slate-900 rounded-xl transition cursor-pointer border border-slate-200 flex items-center gap-1 text-xs font-bold disabled:opacity-35"
               title="استعادة الموضع الأصلي"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-950 stroke-[2]" />
               <span className="hidden sm:inline">استعادة</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveElementId(null)}
-              className="p-1.5 hover:bg-rose-100 text-slate-800 hover:text-rose-700 rounded-xl transition cursor-pointer"
-              title="إلغاء التحديد"
-            >
-              <X className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>,
           document.body

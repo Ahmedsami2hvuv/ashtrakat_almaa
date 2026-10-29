@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { InspectionRecord } from '@/lib/inspectionTypes'
+import { renderHighlightedInspectionText } from '@/lib/inspectionHighlight'
 import { Shield, FileText, Camera, Droplets, AlertTriangle, Eye } from 'lucide-react'
 
 export default function InspectionCitizenViewPage() {
@@ -216,13 +217,15 @@ export default function InspectionCitizenViewPage() {
                     <div className="w-7 h-7 rounded-full bg-sky-100 border border-sky-200 flex items-center justify-center text-xs font-black text-[#0c4a8a] shrink-0 mt-0.5">
                       {i + 1}
                     </div>
-                    <p className="font-bold text-sm text-slate-800 leading-relaxed flex-1 my-0">{p}</p>
+                    <p className="font-bold text-sm text-slate-800 leading-relaxed flex-1 my-0">
+                      {renderHighlightedInspectionText(p)}
+                    </p>
                   </div>
                 ))
               ) : (
                 <div className="bg-slate-50/80 border border-slate-200/70 p-4 rounded-2xl">
                   <p className="font-bold text-sm text-slate-800 leading-relaxed my-0">
-                    {inspection.rawReportText || 'لا يوجد تقرير مكتوب'}
+                    {renderHighlightedInspectionText(inspection.rawReportText || 'لا يوجد تقرير مكتوب')}
                   </p>
                 </div>
               )}

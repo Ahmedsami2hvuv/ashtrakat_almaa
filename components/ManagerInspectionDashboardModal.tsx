@@ -41,6 +41,8 @@ interface ManagerInspectionDashboardModalProps {
   branchId?: string
   branchName?: string
   branchManagerName?: string
+  /** عند الفتح من صف كشف معيّن: يعرض هذا الكشف فقط بدون شريط القائمة */
+  initialInspection?: InspectionRecord | null
 }
 
 export default function ManagerInspectionDashboardModal({
@@ -48,12 +50,14 @@ export default function ManagerInspectionDashboardModal({
   onClose,
   branchId,
   branchName,
-  branchManagerName
+  branchManagerName,
+  initialInspection = null
 }: ManagerInspectionDashboardModalProps) {
   const [inspections, setInspections] = useState<InspectionRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [currentInspection, setCurrentInspection] = useState<InspectionRecord | null>(null)
+  const focusSingleOnly = !!initialInspection?.id
 
   // حالات الذكاء الاصطناعي والحفظ
   const [isAiProcessing, setIsAiProcessing] = useState(false)
@@ -92,6 +96,20 @@ export default function ManagerInspectionDashboardModal({
   const loadData = async () => {
     setLoading(true)
     try {
+      // فتح كشف محدد فقط من زر المعاينة/التعديل
+      if (initialInspection?.id) {
+        setInspections([initialInspection])
+        setSelectedIndex(0)
+        await hydrateInspection(initialInspection)
+        setLoading(false)
+        const full = await loadFullInspectionById(initialInspection.id)
+        if (full) {
+          setCurrentInspection(full)
+          setInspections([full])
+        }
+        return
+      }
+
       const cached = await loadInspectionsFromCloud({ forceRefresh: false, full: false })
       if (cached.length > 0) {
         setInspections(cached)
@@ -117,6 +135,7 @@ export default function ManagerInspectionDashboardModal({
   useEffect(() => {
     if (isOpen) {
       loadData()
+      if (focusSingleOnly) return
       const interval = setInterval(() => {
         loadInspectionsFromCloud({ forceRefresh: true, full: false }).then((latest) => {
           setInspections(latest)
@@ -125,7 +144,7 @@ export default function ManagerInspectionDashboardModal({
       }, 20000)
       return () => clearInterval(interval)
     }
-  }, [isOpen])
+  }, [isOpen, initialInspection?.id])
 
   // التبديل بين الكشوفات
   const handleSelectInspection = (item: InspectionRecord, index: number) => {
@@ -252,197 +271,130 @@ export default function ManagerInspectionDashboardModal({
 
   if (!isOpen) return null
 
+  const glassBtn =
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-slate-900 bg-white/70 hover:bg-white/95 backdrop-blur-xl border border-white/90 shadow-[0_4px_16px_rgba(15,23,42,0.08),inset_0_1px_0_#fff] ring-1 ring-slate-900/5 transition active:scale-95 cursor-pointer disabled:opacity-45'
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-md print:bg-white print:p-0"
       dir="rtl"
     >
-      {/* شريط الأدوات العلوي الثابت - تصميم زجاجي شفاف فاخر مع خطوط سوداء واضحة */}
-      <header className="print-hide bg-white/80 backdrop-blur-2xl border-b border-slate-200/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0 z-20">
-        {/* القسم الأيمن: عنوان الكشف وبياناته */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/90 text-slate-950 border border-slate-300/80 flex items-center justify-center shrink-0 shadow-2xs">
-            <FileText className="w-5 h-5 text-slate-950 stroke-[2.2]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black text-slate-950">
-                استمارة الكشف الفني الموقعي (A4)
-              </h1>
-              {currentInspection && (
-                <span className="text-xs font-mono font-black bg-white text-slate-900 px-2 py-0.5 rounded-lg border border-slate-300 shadow-2xs">
-                  {currentInspection.citizenName || 'كشف رسمي'}
-                </span>
-              )}
+      {/* شريط واحد مضغوط: استمارة الكشف + اسم المواطن + الأزرار الزجاجية */}
+      <header className="print-hide shrink-0 z-20 border-b border-white/40 bg-white/55 backdrop-blur-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+        <div className="px-3 sm:px-4 py-2 flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-xl bg-white/80 border border-white shadow-2xs flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 text-slate-900 stroke-[2.2]" />
             </div>
-            <p className="text-[11px] text-slate-600 font-bold hidden sm:block">
-              تعديل مباشر على الورقة + تحريك وتكبير وتخصيص أي عنصر بالماوس والكيبورد
-            </p>
-          </div>
-        </div>
-
-        {/* القسم الأوسط/الأيسر: أزرار العمليات الرئيسية مرتبة وواضحة جداً بتصميم زجاجي شفاف وخطوط سوداء */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* زر تفعيل/إلغاء وضع تصميم وتخصيص العناصر المباشر */}
-          <button
-            type="button"
-            onClick={() => setIsDesignMode(!isDesignMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border ${
-              isDesignMode
-                ? 'bg-amber-400 text-slate-950 border-amber-500 ring-2 ring-amber-300'
-                : 'bg-white/90 hover:bg-white text-slate-950 border-slate-300/80'
-            }`}
-            title="انقر لتفعيل إمكانية النقر على أي عنصر بالورقة لتحريكه وتكبيره وتصغيره"
-          >
-            <Move className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-            <span>{isDesignMode ? 'إيقاف تعديل المظهر' : 'تعديل مكان وحجم العناصر'}</span>
-          </button>
-
-          {/* في حال تفعيل وضع التصميم: أزرار حفظ التصميم واستعادته */}
-          {isDesignMode && (
-            <>
-              <button
-                type="button"
-                onClick={handleSaveLayout}
-                className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border border-emerald-600"
-                title="حفظ موضع وحجم العناصر الحالي كافتراضي دائم"
-              >
-                <Save className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                <span>حفظ التصميم</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetLayout}
-                className="flex items-center gap-1 bg-white/90 hover:bg-white text-slate-950 px-2.5 py-1.5 rounded-xl text-xs font-black border border-slate-300 cursor-pointer transition shadow-2xs"
-                title="استعادة المواضع الافتراضية للورقة"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                <span>الافتراضي</span>
-              </button>
-            </>
-          )}
-
-          {/* التحكم في حجم الورقة وزووم الرؤية */}
-          <div className="flex items-center bg-white/90 rounded-xl p-1 border border-slate-300/80 text-slate-950 hidden md:flex shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setZoomLevel((prev) => Math.max(70, prev - 10))}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition"
-              title="تصغير العرض"
-            >
-              <ZoomOut className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-            </button>
-            <span className="text-xs font-mono font-black px-2 text-slate-950">{zoomLevel}%</span>
-            <button
-              type="button"
-              onClick={() => setZoomLevel((prev) => Math.min(130, prev + 10))}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition"
-              title="تكبير العرض"
-            >
-              <ZoomIn className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoomLevel(100)}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition text-[11px] font-black text-slate-950"
-              title="الحجم الافتراضي"
-            >
-              <Maximize2 className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-            </button>
+            <h1 className="text-sm sm:text-base font-black text-slate-950 whitespace-nowrap">
+              استمارة الكشف
+            </h1>
+            {currentInspection && (
+              <span className="text-xs sm:text-sm font-black text-sky-900 bg-white/80 border border-sky-200/80 px-2.5 py-1 rounded-full truncate max-w-[42vw] sm:max-w-xs shadow-2xs">
+                {currentInspection.citizenName || 'كشف رسمي'}
+              </span>
+            )}
           </div>
 
-          {/* زر الترتيب بالذكاء الاصطناعي */}
-          <button
-            type="button"
-            onClick={handleRunAI}
-            disabled={isAiProcessing || !currentInspection}
-            className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-slate-950 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border border-slate-300/80 disabled:opacity-50"
-            title="إعادة استخلاص وترتيب البيانات بالذكاء الاصطناعي"
-          >
-            <Sparkles className={`w-3.5 h-3.5 text-amber-500 stroke-[2.5] ${isAiProcessing ? 'animate-spin' : ''}`} />
-            <span>{isAiProcessing ? 'جاري التنسيق...' : 'ترتيب بالذكاء الاصطناعي'}</span>
-          </button>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setIsDesignMode(!isDesignMode)}
+              className={`${glassBtn} ${
+                isDesignMode ? 'ring-2 ring-amber-400 border-amber-300 bg-amber-50/90' : ''
+              }`}
+              title="تفعيل أو تعطيل تحريك عناصر الورقة"
+            >
+              <Move className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>{isDesignMode ? 'تعطيل العناصر' : 'تفعيل العناصر'}</span>
+            </button>
 
-          {/* زر حفظ تعديلات البيانات في السحابة */}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || !currentInspection}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-50 border ${
-              saveSuccess
-                ? 'bg-emerald-400 text-slate-950 border-emerald-500 ring-2 ring-emerald-300'
-                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-600'
-            }`}
-          >
-            {isSaving ? (
+            {isDesignMode && (
               <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-950" />
-                <span>جاري الحفظ...</span>
-              </>
-            ) : saveSuccess ? (
-              <>
-                <CheckCircle className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                <span>تم الحفظ ✓</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                <span>حفظ البيانات</span>
+                <button type="button" onClick={handleSaveLayout} className={glassBtn} title="حفظ التصميم">
+                  <Save className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>حفظ التصميم</span>
+                </button>
+                <button type="button" onClick={handleResetLayout} className={glassBtn} title="الافتراضي">
+                  <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>الافتراضي</span>
+                </button>
               </>
             )}
-          </button>
 
-          {/* زر الطباعة الفورية A4 - يطبع الورقة فقط */}
-          <button
-            type="button"
-            onClick={handlePrint}
-            disabled={!currentInspection}
-            className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer border border-sky-600"
-            title="طباعة ورقة الكشف الفني فقط"
-          >
-            <Printer className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-            <span>طباعة الاستمارة</span>
-          </button>
+            <div className={`${glassBtn} hidden md:inline-flex !gap-0 !px-1`}>
+              <button type="button" onClick={() => setZoomLevel((p) => Math.max(70, p - 10))} className="p-1.5 rounded-lg hover:bg-white/80" title="تصغير">
+                <ZoomOut className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+              <span className="text-[11px] font-mono font-black px-1.5">{zoomLevel}%</span>
+              <button type="button" onClick={() => setZoomLevel((p) => Math.min(130, p + 10))} className="p-1.5 rounded-lg hover:bg-white/80" title="تكبير">
+                <ZoomIn className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+            </div>
 
-          {/* زر صور العقار */}
-          {currentInspection && currentInspection.images && currentInspection.images.length > 0 && (
             <button
               type="button"
-              onClick={() => setShowImagesDrawer(!showImagesDrawer)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition border cursor-pointer shadow-2xs ${
-                showImagesDrawer
-                  ? 'bg-amber-100 text-slate-950 border-amber-300'
-                  : 'bg-white/90 text-slate-950 hover:bg-white border-slate-300/80'
-              }`}
+              onClick={handleRunAI}
+              disabled={isAiProcessing || !currentInspection}
+              className={glassBtn}
+              title="ترتيب بالذكاء الاصطناعي"
             >
-              <Camera className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
-              <span>الصور ({currentInspection.images.length})</span>
+              <Sparkles className={`w-3.5 h-3.5 text-amber-500 stroke-[2.5] ${isAiProcessing ? 'animate-spin' : ''}`} />
+              <span>{isAiProcessing ? 'جاري...' : 'ذكاء اصطناعي'}</span>
             </button>
-          )}
 
-          {/* زر نسخ رابط المواطن */}
-          {currentInspection && (
             <button
               type="button"
-              onClick={handleCopyLink}
-              className="flex items-center gap-1 bg-white/90 hover:bg-white text-slate-950 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-black border border-slate-300/80 cursor-pointer transition shadow-2xs"
-              title="نسخ رابط صفحة المواطن"
+              onClick={handleSave}
+              disabled={isSaving || !currentInspection}
+              className={`${glassBtn} ${saveSuccess ? 'ring-2 ring-emerald-400 border-emerald-300 bg-emerald-50/90' : ''}`}
             >
-              <Copy className="w-3 h-3 text-slate-950 stroke-[2.5]" />
-              <span>{copiedLink ? 'تم النسخ!' : 'رابط الباركود'}</span>
+              {isSaving ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin stroke-[2.5]" />
+              ) : (
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+              )}
+              <span>{isSaving ? '...' : saveSuccess ? 'تم' : 'حفظ'}</span>
             </button>
-          )}
 
-          {/* زر إغلاق النافذة البارز */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-1 bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black shadow-xs transition active:scale-95 cursor-pointer ml-1 border border-rose-600"
-          >
-            <X className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>إغلاق</span>
-          </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={!currentInspection}
+              className={glassBtn}
+              title="طباعة"
+            >
+              <Printer className="w-3.5 h-3.5 text-sky-700 stroke-[2.5]" />
+              <span>طباعة</span>
+            </button>
+
+            {currentInspection && currentInspection.images && currentInspection.images.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowImagesDrawer(!showImagesDrawer)}
+                className={`${glassBtn} ${showImagesDrawer ? 'ring-2 ring-sky-300' : ''}`}
+              >
+                <Camera className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                <span>صور ({currentInspection.images.length})</span>
+              </button>
+            )}
+
+            {currentInspection && (
+              <button type="button" onClick={handleCopyLink} className={glassBtn} title="رابط الباركود">
+                <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>{copiedLink ? 'تم النسخ' : 'رابط'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black text-white bg-rose-500/90 hover:bg-rose-600 border border-rose-400/50 shadow-sm backdrop-blur-xl transition active:scale-95 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>إغلاق</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -480,8 +432,8 @@ export default function ManagerInspectionDashboardModal({
         </div>
       )}
 
-      {/* قائمة الكشوفات المتعددة - تختفي عند الطباعة */}
-      {inspections.length > 1 && (
+      {/* شريط الكشوفات المتعددة — يُخفى عند فتح كشف محدد من المعاينة */}
+      {!focusSingleOnly && inspections.length > 1 && (
         <div className="print-hide bg-slate-100 border-b border-slate-200 px-4 py-1.5 flex items-center gap-2 overflow-x-auto shrink-0 text-xs">
           <span className="font-bold text-slate-600 whitespace-nowrap">الكشوفات الواردة ({inspections.length}):</span>
           <div className="flex items-center gap-1.5 overflow-x-auto">
