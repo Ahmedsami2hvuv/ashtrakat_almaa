@@ -345,7 +345,8 @@ export default function InspectionPrintableA4({
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          header, nav, aside, footer, button, .print-hide, [role="dialog"] > div:not(.print-allow) {
+          .print-hide,
+          .inspection-no-print {
             display: none !important;
           }
           .inspection-print-container {
@@ -382,11 +383,12 @@ export default function InspectionPrintableA4({
         toolbarPos &&
         createPortal(
           <div
-            className="fixed z-[2147483000] bg-white/95 backdrop-blur-2xl text-slate-900 px-3 py-2.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.28)] border-2 border-sky-300/80 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-2 select-none print:hidden max-w-[95vw]"
+            className="fixed bg-white/95 backdrop-blur-2xl text-slate-900 px-3 py-2.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.28)] border-2 border-sky-300/80 ring-1 ring-slate-900/10 flex flex-wrap items-center gap-2 select-none print:hidden max-w-[95vw]"
             dir="rtl"
             style={{
               left: toolbarPos.x,
               top: toolbarPos.y,
+              zIndex: 1000000,
               cursor: isDraggingToolbar ? 'grabbing' : 'default'
             }}
             onClick={(e) => e.stopPropagation()}

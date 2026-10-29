@@ -277,61 +277,72 @@ export default function ManagerInspectionDashboardModal({
 
   if (!isOpen || !portalReady) return null
 
-  // أزرار زجاجية بيضاء شفافة حقيقية فوق خلفية سماوية
+  // زجاج أبيض واضح فوق شريط أبيض صلب
   const glassBtnStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.42)',
-    backdropFilter: 'blur(18px)',
-    WebkitBackdropFilter: 'blur(18px)',
-    border: '1px solid rgba(255, 255, 255, 0.85)',
+    background: 'rgba(255, 255, 255, 0.78)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1.5px solid rgba(186, 230, 253, 0.95)',
     boxShadow:
-      'inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 22px rgba(14, 165, 233, 0.14), 0 1px 2px rgba(15, 23, 42, 0.06)'
+      'inset 0 1px 0 #ffffff, 0 6px 18px rgba(14, 165, 233, 0.12), 0 1px 2px rgba(15, 23, 42, 0.05)'
   }
 
   const glassBtnClass =
-    'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-black text-slate-900 transition active:scale-95 cursor-pointer disabled:opacity-45 hover:brightness-110'
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-black text-slate-900 transition active:scale-95 cursor-pointer disabled:opacity-45 shrink-0 hover:bg-white'
 
   const modal = (
     <div
-      className="fixed inset-0 z-[2147483000] flex flex-col print:bg-white print:p-0"
+      className="fixed inset-0 flex flex-col print:bg-white print:p-0"
       dir="rtl"
-      style={{ background: '#dbeafe' }}
+      style={{ background: '#e0f2fe', zIndex: 999999 }}
     >
-      {/* طبقة تغطية كاملة — ما تبين أي صفحة خلفها */}
-      <div className="print-hide absolute inset-0" style={{ background: 'linear-gradient(180deg, #e0f2fe 0%, #dbeafe 40%, #e2e8f0 100%)' }} aria-hidden />
-
-      {/* شريط زجاجي مضغوط فوق خلفية سماوية */}
-      <header
-        className="print-hide relative shrink-0 z-20"
+      {/* شريط علوي بنفس شكل هيدر النظام: يمين العنوان — يسار الأزرار بصف مسئول الفرع */}
+      <div
+        className="inspection-no-print print-hide relative shrink-0"
         style={{
-          background: 'linear-gradient(135deg, rgba(14,165,233,0.35) 0%, rgba(56,189,248,0.22) 45%, rgba(255,255,255,0.35) 100%)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: '1px solid rgba(255,255,255,0.65)',
-          boxShadow: '0 10px 40px rgba(14,165,233,0.12)'
+          height: 'auto',
+          minHeight: 65,
+          background: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.9)',
+          boxShadow: '0 1px 20px rgba(14,165,233,0.08)',
+          zIndex: 2
         }}
       >
-        <div className="px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
+          {/* يمين: استمارة الكشف + اسم المواطن */}
+          <div className="flex items-center gap-2 min-w-0 shrink">
             <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              style={glassBtnStyle}
+              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white font-black"
+              style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)', boxShadow: '0 4px 10px rgba(14,165,233,.25)' }}
             >
-              <FileText className="w-4 h-4 text-slate-900 stroke-[2.2]" />
+              <FileText className="w-4 h-4 stroke-[2.2]" />
             </div>
-            <h1 className="text-sm sm:text-base font-black text-slate-950 whitespace-nowrap drop-shadow-sm">
-              استمارة الكشف
-            </h1>
-            {currentInspection && (
-              <span
-                className="text-xs sm:text-sm font-black text-slate-900 px-3 py-1.5 rounded-full truncate max-w-[42vw] sm:max-w-xs"
-                style={glassBtnStyle}
-              >
-                {currentInspection.citizenName || 'كشف رسمي'}
-              </span>
-            )}
+            <div className="min-w-0">
+              <div className="text-sm sm:text-base font-black text-slate-900 whitespace-nowrap leading-tight">
+                استمارة الكشف
+              </div>
+              {currentInspection && (
+                <div className="text-[11px] font-bold text-sky-700 truncate max-w-[28vw] sm:max-w-[220px]">
+                  {currentInspection.citizenName || 'كشف رسمي'}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* يسار: بصف مسئول الفرع — الأزرار الزجاجية ظاهرة دائماً */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end max-w-[70%] sm:max-w-none">
+            <div
+              className="hidden sm:flex items-center gap-1.5 rounded-full bg-white border border-sky-100 px-2.5 py-1 shadow-sm shrink-0"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,.6)]" />
+              <small className="text-[10px] font-bold text-slate-400">مسئول الفرع:</small>
+              <span className="text-xs font-black text-slate-800 whitespace-nowrap">
+                {branchManagerName || '—'}
+              </span>
+            </div>
+
             <button
               type="button"
               onClick={() => setIsDesignMode(!isDesignMode)}
@@ -340,9 +351,8 @@ export default function ManagerInspectionDashboardModal({
                 ...glassBtnStyle,
                 ...(isDesignMode
                   ? {
-                      background: 'rgba(253, 230, 138, 0.55)',
-                      border: '1px solid rgba(251, 191, 36, 0.7)',
-                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 2px rgba(251,191,36,0.35)'
+                      background: 'rgba(254, 243, 199, 0.95)',
+                      border: '1.5px solid #fbbf24'
                     }
                   : {})
               }}
@@ -354,26 +364,16 @@ export default function ManagerInspectionDashboardModal({
 
             {isDesignMode && (
               <>
-                <button type="button" onClick={handleSaveLayout} className={glassBtnClass} style={glassBtnStyle} title="حفظ التصميم">
+                <button type="button" onClick={handleSaveLayout} className={glassBtnClass} style={glassBtnStyle}>
                   <Save className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>حفظ التصميم</span>
                 </button>
-                <button type="button" onClick={handleResetLayout} className={glassBtnClass} style={glassBtnStyle} title="الافتراضي">
+                <button type="button" onClick={handleResetLayout} className={glassBtnClass} style={glassBtnStyle}>
                   <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>الافتراضي</span>
                 </button>
               </>
             )}
-
-            <div className={`${glassBtnClass} hidden md:inline-flex !gap-0 !px-1`} style={glassBtnStyle}>
-              <button type="button" onClick={() => setZoomLevel((p) => Math.max(70, p - 10))} className="p-1.5 rounded-lg hover:bg-white/50" title="تصغير">
-                <ZoomOut className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-              <span className="text-[11px] font-mono font-black px-1.5">{zoomLevel}%</span>
-              <button type="button" onClick={() => setZoomLevel((p) => Math.min(130, p + 10))} className="p-1.5 rounded-lg hover:bg-white/50" title="تكبير">
-                <ZoomIn className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-            </div>
 
             <button
               type="button"
@@ -381,10 +381,9 @@ export default function ManagerInspectionDashboardModal({
               disabled={isAiProcessing || !currentInspection}
               className={glassBtnClass}
               style={glassBtnStyle}
-              title="ترتيب بالذكاء الاصطناعي"
             >
               <Sparkles className={`w-3.5 h-3.5 text-amber-500 stroke-[2.5] ${isAiProcessing ? 'animate-spin' : ''}`} />
-              <span>{isAiProcessing ? 'جاري...' : 'ذكاء اصطناعي'}</span>
+              <span className="hidden xs:inline sm:inline">{isAiProcessing ? 'جاري...' : 'ذكاء'}</span>
             </button>
 
             <button
@@ -394,12 +393,7 @@ export default function ManagerInspectionDashboardModal({
               className={glassBtnClass}
               style={{
                 ...glassBtnStyle,
-                ...(saveSuccess
-                  ? {
-                      background: 'rgba(167, 243, 208, 0.55)',
-                      border: '1px solid rgba(52, 211, 153, 0.7)'
-                    }
-                  : {})
+                ...(saveSuccess ? { background: 'rgba(167,243,208,0.95)', border: '1.5px solid #34d399' } : {})
               }}
             >
               {isSaving ? (
@@ -416,7 +410,6 @@ export default function ManagerInspectionDashboardModal({
               disabled={!currentInspection}
               className={glassBtnClass}
               style={glassBtnStyle}
-              title="طباعة"
             >
               <Printer className="w-3.5 h-3.5 text-sky-700 stroke-[2.5]" />
               <span>طباعة</span>
@@ -435,21 +428,20 @@ export default function ManagerInspectionDashboardModal({
             )}
 
             {currentInspection && (
-              <button type="button" onClick={handleCopyLink} className={glassBtnClass} style={glassBtnStyle} title="رابط الباركود">
+              <button type="button" onClick={handleCopyLink} className={glassBtnClass} style={glassBtnStyle}>
                 <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>{copiedLink ? 'تم النسخ' : 'رابط'}</span>
+                <span>{copiedLink ? 'تم' : 'رابط'}</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center gap-1 px-3.5 py-2 rounded-2xl text-xs font-black text-white transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black text-white shrink-0 transition active:scale-95 cursor-pointer"
               style={{
-                background: 'rgba(244, 63, 94, 0.88)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.35)',
-                boxShadow: '0 8px 22px rgba(244, 63, 94, 0.28)'
+                background: '#f43f5e',
+                border: '1px solid rgba(255,255,255,0.4)',
+                boxShadow: '0 6px 16px rgba(244, 63, 94, 0.3)'
               }}
             >
               <X className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -457,7 +449,7 @@ export default function ManagerInspectionDashboardModal({
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* شريط إشعار حفظ التصميم بنجاح */}
       {layoutSavedNotice && (
