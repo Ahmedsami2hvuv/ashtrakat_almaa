@@ -16,8 +16,8 @@ import {
   Search,
   Pencil,
   Download,
-  Droplets,
-  X
+  X,
+  Coins
 } from 'lucide-react'
 
 interface BranchInspectionsTabProps {
@@ -30,14 +30,16 @@ type StatusFilter = 'all' | 'pending' | 'done'
 
 function cleanBranchLabel(name?: string): string {
   if (!name) return 'أبي الخصيب'
-  return name
-    .replace(/مديرية\s+ماء\s+البصرة/gi, '')
-    .replace(/مركز\s+جباية\s+واردات/gi, '')
-    .replace(/مركز\s+واردات/gi, '')
-    .replace(/فرع\s+واردات/gi, '')
-    .replace(/\bفرع\b/gi, '')
-    .replace(/^\s*واردات\s+/gi, '')
-    .trim() || name
+  return (
+    name
+      .replace(/مديرية\s+ماء\s+البصرة/gi, '')
+      .replace(/مركز\s+جباية\s+واردات/gi, '')
+      .replace(/مركز\s+واردات/gi, '')
+      .replace(/فرع\s+واردات/gi, '')
+      .replace(/\bفرع\b/gi, '')
+      .replace(/^\s*واردات\s+/gi, '')
+      .trim() || name
+  )
 }
 
 function statusLabel(status: InspectionRecord['status']): string {
@@ -62,7 +64,6 @@ function isThisWeek(isoOrDate: string | undefined): boolean {
 
 export default function BranchInspectionsTab({
   branch,
-  managerName,
   onOpenInspectionModal
 }: BranchInspectionsTabProps) {
   const [inspections, setInspections] = useState<InspectionRecord[]>([])
@@ -72,7 +73,6 @@ export default function BranchInspectionsTab({
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const branchShort = cleanBranchLabel(branch.name)
-  const managerLabel = managerName || branch.managers?.[0]?.name || 'مسؤول الفرع'
 
   const fetchInspections = async (force = true) => {
     setLoading(true)
@@ -108,10 +108,9 @@ export default function BranchInspectionsTab({
     return inspections.filter((item) => {
       if (!branch.id) return true
       if (!item.branchId) {
-        const shortName = branchShort
         return (
           !item.branchName ||
-          item.branchName.includes(shortName) ||
+          item.branchName.includes(branchShort) ||
           item.branchName.includes(branch.name)
         )
       }
@@ -191,14 +190,7 @@ export default function BranchInspectionsTab({
   }
 
   return (
-    <div
-      dir="rtl"
-      className="min-h-[70vh] -mx-1 sm:-mx-2 rounded-[28px] p-3 sm:p-4"
-      style={{
-        background:
-          'radial-gradient(1200px 600px at 15% -5%, #e0f2fe 0%, transparent 60%), radial-gradient(800px 400px at 85% 10%, #bae6fd 0%, transparent 55%), linear-gradient(180deg, #f8fbff 0%, #ffffff 100%)'
-      }}
-    >
+    <div dir="rtl" className="space-y-4">
       <style>{`
         .insp-glass {
           background: rgba(255,255,255,0.82);
@@ -207,101 +199,130 @@ export default function BranchInspectionsTab({
           border: 1px solid rgba(255,255,255,0.95);
           box-shadow: 0 8px 32px rgba(15,23,42,0.06);
         }
-        .insp-glass-strong {
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(22px);
-          -webkit-backdrop-filter: blur(22px);
-          border: 1px solid #fff;
-          box-shadow: 0 10px 36px rgba(15,23,42,0.07);
+        .insp-stat {
+          position: relative;
+          overflow: hidden;
+          border-radius: 22px;
+          padding: 16px 16px 14px;
+          min-height: 118px;
         }
+        .insp-stat-icon {
+          position: absolute;
+          left: 14px;
+          top: 14px;
+          width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+        }
+        .insp-bar {
+          height: 6px;
+          border-radius: 999px;
+          overflow: hidden;
+          margin-top: 14px;
+        }
+        .insp-bar > span {
+          display: block;
+          height: 100%;
+          border-radius: 999px;
+        }
+        .insp-action {
+          width: 32px;
+          height: 32px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          transition: transform .15s ease, background .15s ease;
+        }
+        .insp-action:active { transform: scale(.94); }
       `}</style>
 
-      {/* هيدر */}
-      <header className="insp-glass-strong h-[65px] rounded-2xl px-4 flex items-center justify-between mb-4 sticky top-2 z-10">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[12px] sm:text-[13px] font-bold bg-white border border-slate-200/80 px-3 py-1.5 rounded-full text-slate-800 shadow-sm truncate">
-            مسؤول الفرع: {managerLabel}
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2 align-middle shadow-[0_0_0_3px_rgba(16,185,129,0.25)]" />
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="font-black text-[14px] sm:text-[15px] text-slate-900">
-            <span className="text-[#0ea5e9]">واردات</span> {branchShort}
-          </span>
-          <div className="w-9 h-9 rounded-xl bg-[#0ea5e9] text-white grid place-items-center shadow-md shadow-sky-200">
-            <Droplets className="w-5 h-5" />
-          </div>
-        </div>
-      </header>
-
-      {/* عنوان */}
-      <div className="insp-glass rounded-2xl p-4 flex items-center justify-between mb-4 gap-3">
+      {/* عنوان الصفحة + تحديث — بدون هيدر مكرر فوق هيدر اللوحة */}
+      <div className="insp-glass rounded-[22px] px-4 py-3.5 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => fetchInspections(true)}
-          className="h-9 px-4 rounded-full bg-white border border-slate-200 text-[12px] font-bold text-slate-800 hover:bg-slate-50 active:scale-95 transition inline-flex items-center gap-1.5 shadow-sm"
+          className="h-10 px-4 rounded-full bg-white border border-slate-200 text-[12px] font-black text-slate-800 hover:bg-slate-50 inline-flex items-center gap-1.5 shadow-sm"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           تحديث
         </button>
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg sm:text-xl font-black text-slate-900">الكشوفات</h1>
-          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white grid place-items-center shadow-md">
-            <FileText className="w-4.5 h-4.5" />
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-[20px] sm:text-[22px] font-black text-slate-900 tracking-tight">الكشوفات</h1>
+          <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white grid place-items-center shadow-md">
+            <FileText className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* إحصائيات */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div className="insp-glass rounded-2xl p-3.5 bg-amber-50/70 relative overflow-hidden">
-          <div className="text-[11px] text-amber-800/80 font-bold">بانتظار المعالجة الفنية</div>
-          <div className="text-2xl font-black text-amber-950 mt-1">{stats.pending}</div>
-          <div className="mt-2 h-1.5 rounded-full bg-amber-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-amber-400"
-              style={{ width: `${stats.total ? Math.min(100, (stats.pending / stats.total) * 100) : 0}%` }}
+      {/* الإحصائيات بنفس ترتيب وتصميم الصورة المطلوبة */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* بانتظار المعالجة */}
+        <div className="insp-glass insp-stat" style={{ background: 'rgba(255,251,235,0.92)' }}>
+          <div className="insp-stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+            <Coins className="w-4 h-4" />
+          </div>
+          <div className="text-[12px] font-bold text-amber-900/80 pl-10">بانتظار المعالجة الفنية</div>
+          <div className="text-[34px] leading-none font-black text-amber-950 mt-2">{stats.pending}</div>
+          <div className="insp-bar" style={{ background: '#fde68a' }}>
+            <span
+              style={{
+                width: `${stats.total ? Math.min(100, (stats.pending / stats.total) * 100) : 0}%`,
+                background: 'linear-gradient(90deg,#fbbf24,#f59e0b)'
+              }}
             />
           </div>
-          <div className="absolute left-3 top-3 w-7 h-7 rounded-full bg-amber-100 text-amber-600 grid place-items-center">
-            <Clock className="w-3.5 h-3.5" />
+        </div>
+
+        {/* الإجمالي */}
+        <div className="insp-glass insp-stat">
+          <div className="text-[12px] font-bold text-slate-500">إجمالي الكشوفات</div>
+          <div className="text-[34px] leading-none font-black text-slate-900 mt-2">{stats.total}</div>
+          <div className="text-[12px] font-bold text-sky-600 mt-3">+{stats.weekNew} هذا الأسبوع</div>
+        </div>
+
+        {/* المصورة */}
+        <div className="insp-glass insp-stat" style={{ background: 'rgba(240,249,255,0.95)' }}>
+          <div className="insp-stat-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+            <Camera className="w-4 h-4" />
           </div>
+          <div className="text-[12px] font-bold text-sky-900/80 pl-10">الكشوفات المصورة</div>
+          <div className="text-[34px] leading-none font-black text-sky-950 mt-2">{stats.photographed}</div>
+          <div className="text-[12px] font-bold text-sky-700 mt-3">{stats.photoPct}% مرفق بصور</div>
         </div>
 
-        <div className="insp-glass rounded-2xl p-3.5 relative overflow-hidden">
-          <div className="text-[11px] text-slate-500 font-bold">إجمالي الكشوفات</div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{stats.total}</div>
-          <div className="text-[11px] font-bold text-sky-600 mt-2">+{stats.weekNew} هذا الأسبوع</div>
-        </div>
-
-        <div className="insp-glass rounded-2xl p-3.5 bg-sky-50/70 relative overflow-hidden">
-          <div className="text-[11px] text-sky-800/80 font-bold">الكشوفات المصورة</div>
-          <div className="text-2xl font-black text-sky-950 mt-1">{stats.photographed}</div>
-          <div className="text-[11px] font-bold text-sky-700 mt-2">{stats.photoPct}% مرفق بصور</div>
-          <div className="absolute left-3 top-3 w-7 h-7 rounded-full bg-sky-100 text-sky-600 grid place-items-center">
-            <Camera className="w-3.5 h-3.5" />
+        {/* المعتمدة */}
+        <div className="insp-glass insp-stat" style={{ background: 'rgba(236,253,245,0.95)' }}>
+          <div className="insp-stat-icon" style={{ background: '#d1fae5', color: '#059669' }}>
+            <CheckCircle2 className="w-4 h-4" />
           </div>
-        </div>
-
-        <div className="insp-glass rounded-2xl p-3.5 bg-emerald-50/70 relative overflow-hidden">
-          <div className="text-[11px] text-emerald-800/80 font-bold">تمت المعالجة والاعتماد</div>
-          <div className="text-2xl font-black text-emerald-950 mt-1">{stats.approved}</div>
-          <div className="mt-2 h-1.5 rounded-full bg-emerald-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-emerald-500"
-              style={{ width: `${stats.total ? Math.min(100, (stats.approved / stats.total) * 100) : 0}%` }}
+          <div className="text-[12px] font-bold text-emerald-900/80 pl-10">تمت المعالجة والاعتماد</div>
+          <div className="text-[34px] leading-none font-black text-emerald-950 mt-2">{stats.approved}</div>
+          <div className="insp-bar" style={{ background: '#a7f3d0' }}>
+            <span
+              style={{
+                width: `${stats.total ? Math.min(100, (stats.approved / stats.total) * 100) : 0}%`,
+                background: 'linear-gradient(90deg,#34d399,#10b981)'
+              }}
             />
-          </div>
-          <div className="absolute left-3 top-3 w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 grid place-items-center">
-            <CheckCircle2 className="w-3.5 h-3.5" />
           </div>
         </div>
       </div>
 
-      {/* بحث وفلاتر */}
-      <div className="insp-glass rounded-2xl p-3 flex flex-col sm:flex-row gap-3 mb-4 items-stretch sm:items-center">
-        <div className="flex items-center gap-2 order-2 sm:order-1 shrink-0">
-          <div className="text-[12px] font-bold text-slate-700 whitespace-nowrap py-2">
+      {/* بحث + فلاتر */}
+      <div className="insp-glass rounded-[22px] p-3 flex flex-col gap-3">
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="بحث باسم المواطن، الكاتب/المحصل، المحلة / نص التقرير..."
+            className="w-full h-11 rounded-full bg-white border border-slate-200 pr-10 pl-4 text-[12px] font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-[12px] font-black text-slate-700 whitespace-nowrap">
             النتائج: {filtered.length} كشف
           </div>
           <select
@@ -313,36 +334,25 @@ export default function BranchInspectionsTab({
             <option value="pending">قيد التدقيق</option>
             <option value="done">تمت المعالجة / معتمد</option>
           </select>
-          {(searchQuery || statusFilter !== 'all') && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="h-9 px-3 rounded-full bg-white border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1"
-            >
-              <X className="w-3.5 h-3.5" />
-              مسح
-            </button>
-          )}
-        </div>
-        <div className="relative flex-1 order-1 sm:order-2">
-          <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث باسم المواطن، الكاتب/المحصل، المحلة / نص التقرير..."
-            className="w-full h-10 rounded-full bg-white border border-slate-200 pr-10 pl-4 text-[12px] font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-          />
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="h-9 px-3 rounded-full bg-white border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1"
+          >
+            <X className="w-3.5 h-3.5" />
+            مسح
+          </button>
         </div>
       </div>
 
-      {/* جدول */}
-      <div className="insp-glass rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100/80 flex items-center justify-between gap-2 bg-white/50">
-          <h2 className="text-[13px] font-black text-slate-800">سجل الكشوفات الميدانية</h2>
+      {/* الجدول */}
+      <div className="insp-glass rounded-[22px] overflow-hidden">
+        <div className="px-4 py-3.5 border-b border-slate-100/90 flex items-center justify-between gap-2 bg-white/55">
+          <h2 className="text-[14px] font-black text-slate-800">سجل الكشوفات الميدانية</h2>
           <button
             type="button"
             onClick={handleExportCsv}
-            className="h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1.5"
+            className="h-9 px-3.5 rounded-full bg-white border border-slate-200 text-[11px] font-black text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1.5 shadow-sm"
           >
             <Download className="w-3.5 h-3.5" />
             تصدير
@@ -350,55 +360,61 @@ export default function BranchInspectionsTab({
         </div>
 
         {loading && branchInspections.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 text-sm flex flex-col items-center justify-center">
+          <div className="p-14 text-center text-slate-500 text-sm flex flex-col items-center justify-center">
             <div className="w-8 h-8 border-[3px] border-sky-500 border-t-transparent rounded-full animate-spin mb-3" />
             <span className="font-bold">جاري جلب الكشوفات الفنية من السحابة...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-sm flex flex-col items-center justify-center">
+          <div className="p-14 text-center text-slate-400 text-sm flex flex-col items-center justify-center">
             <FileText className="w-12 h-12 text-slate-300 mb-3" />
             <p className="font-bold text-slate-600">لا توجد كشوفات مطابقة</p>
-            <p className="text-xs text-slate-400 mt-1">جرّب تغيير البحث أو الفلتر، أو انتظر رفع كشف جديد من الكاتب/المحصل</p>
+            <p className="text-xs text-slate-400 mt-1">جرّب تغيير البحث أو الفلتر</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-right text-[12px] min-w-[860px]">
-              <thead className="bg-slate-50/80 text-slate-600 font-bold">
+            <table className="w-full text-right text-[12px] min-w-[920px]">
+              <thead className="bg-slate-50/90 text-slate-500 font-black">
                 <tr>
-                  <th className="py-3 px-3">ت</th>
-                  <th className="py-3 px-3">القائم بالكشف</th>
-                  <th className="py-3 px-3">اسم المواطن / صاحب العقار</th>
-                  <th className="py-3 px-3">المحلة / المنطقة</th>
-                  <th className="py-3 px-3">تاريخ الكشف</th>
-                  <th className="py-3 px-3">الصور المرفقة</th>
-                  <th className="py-3 px-3">الحالة</th>
-                  <th className="py-3 px-3 text-center">الإجراءات</th>
+                  <th className="py-3.5 px-3 font-black">ت</th>
+                  <th className="py-3.5 px-3 font-black">القائم بالكشف</th>
+                  <th className="py-3.5 px-3 font-black">اسم المواطن / صاحب العقار</th>
+                  <th className="py-3.5 px-3 font-black">المحلة / المنطقة</th>
+                  <th className="py-3.5 px-3 font-black">تاريخ الكشف</th>
+                  <th className="py-3.5 px-3 font-black">الصور المرفقة</th>
+                  <th className="py-3.5 px-3 font-black">الحالة</th>
+                  <th className="py-3.5 px-3 font-black text-center">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((item, idx) => {
                   const done = isDoneStatus(item.status)
-                  const roleLabel = item.userRole === 'writer' ? 'كاتب' : item.userRole === 'collector' ? 'محصل' : 'مدير'
+                  const roleLabel =
+                    item.userRole === 'writer' ? 'كاتب' : item.userRole === 'collector' ? 'محصل' : 'مدير'
                   const initial = (item.writerOrCollectorName || '?').trim().charAt(0)
                   return (
-                    <tr key={item.id} className="border-t border-slate-100 hover:bg-white/70 transition-colors">
-                      <td className="py-3.5 px-3 font-mono text-slate-400 font-bold">{idx + 1}</td>
+                    <tr key={item.id} className="border-t border-slate-100 hover:bg-white/75 transition-colors">
+                      <td className="py-4 px-3 font-mono text-slate-400 font-bold">{idx + 1}</td>
 
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 text-white text-[12px] font-black grid place-items-center shadow-sm">
+                      <td className="py-4 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="w-9 h-9 rounded-full text-white text-[13px] font-black grid place-items-center shadow-sm shrink-0"
+                            style={{ background: 'linear-gradient(135deg,#38bdf8,#2563eb)' }}
+                          >
                             {initial}
                           </span>
                           <div className="min-w-0">
-                            <div className="font-black text-slate-900 truncate">{item.writerOrCollectorName}</div>
-                            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                            <div className="font-black text-slate-900 truncate leading-tight">
+                              {item.writerOrCollectorName}
+                            </div>
+                            <span className="inline-block mt-1 text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
                               {roleLabel}
                             </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-3 font-bold text-slate-900">
+                      <td className="py-4 px-3 font-black text-slate-900">
                         {item.citizenName || (
                           <span className="text-slate-400 italic font-normal">
                             {(item.rawReportText || '').substring(0, 35)}
@@ -407,44 +423,44 @@ export default function BranchInspectionsTab({
                         )}
                       </td>
 
-                      <td className="py-3.5 px-3">
-                        <span className="inline-flex items-center gap-1.5 text-[#0ea5e9] font-bold">
+                      <td className="py-4 px-3">
+                        <span className="inline-flex items-center gap-1.5 text-[#0ea5e9] font-black">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#0ea5e9]" />
                           {item.tableData?.neighborhood || 'غير محدد'}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 font-semibold">
+                      <td className="py-4 px-3 font-mono text-[11px] text-slate-600 font-bold">
                         {item.inspectionDate || item.createdAt?.substring(0, 10) || '—'}
                       </td>
 
-                      <td className="py-3.5 px-3">
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                      <td className="py-4 px-3">
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-black">
                           <Camera className="w-3 h-3" />
                           {item.images?.length || 0} صور
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-3">
+                      <td className="py-4 px-3">
                         {done ? (
-                          <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black">
                             <CheckCircle2 className="w-3 h-3" />
                             {statusLabel(item.status)}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                          <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-black">
                             <Clock className="w-3 h-3" />
                             {statusLabel(item.status)}
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-3">
+                      <td className="py-4 px-3">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => onOpenInspectionModal(item)}
-                            className="w-8 h-8 rounded-full bg-sky-500 hover:bg-sky-600 text-white grid place-items-center shadow-sm shadow-sky-200 transition active:scale-95"
+                            className="insp-action bg-sky-500 hover:bg-sky-600 text-white shadow-sm shadow-sky-200"
                             title="معاينة الكشف"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -452,15 +468,15 @@ export default function BranchInspectionsTab({
                           <button
                             type="button"
                             onClick={() => handleCopyLink(item)}
-                            className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 grid place-items-center transition active:scale-95"
+                            className="insp-action bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
                             title={copiedId === item.id ? 'تم النسخ' : 'نسخ رابط المواطن'}
                           >
-                            <Copy className={`w-3.5 h-3.5 ${copiedId === item.id ? 'text-emerald-600' : 'text-slate-600'}`} />
+                            <Copy className={`w-3.5 h-3.5 ${copiedId === item.id ? 'text-emerald-600' : ''}`} />
                           </button>
                           <button
                             type="button"
                             onClick={() => onOpenInspectionModal(item)}
-                            className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 grid place-items-center transition active:scale-95"
+                            className="insp-action bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
                             title="تعديل الكشف"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -468,7 +484,7 @@ export default function BranchInspectionsTab({
                           <button
                             type="button"
                             onClick={() => handleDelete(item.id)}
-                            className="w-8 h-8 rounded-full bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 grid place-items-center transition active:scale-95"
+                            className="insp-action bg-white border border-slate-200 text-rose-600 hover:bg-rose-50"
                             title="حذف الكشف"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
