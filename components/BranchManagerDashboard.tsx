@@ -146,6 +146,8 @@ export default function BranchManagerDashboard({
   }, [navToast])
   const [showInspectionDashboard, setShowInspectionDashboard] = useState(false)
   const [focusedInspection, setFocusedInspection] = useState<InspectionRecord | null>(null)
+  const [inspectionsRefreshNonce, setInspectionsRefreshNonce] = useState(0)
+  const [inspectionsRefreshing, setInspectionsRefreshing] = useState(false)
   const [isConsignmentA4Open, setIsConsignmentA4Open] = useState(false)
   const [selectedConsignmentForView, setSelectedConsignmentForView] = useState<Consignment | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -2212,13 +2214,29 @@ export default function BranchManagerDashboard({
             <button type="button" className="mgr-ham" onClick={() => setSidebarOpen((v) => !v)} aria-label={sidebarOpen ? 'إغلاق القائمة الجانبية' : 'فتح القائمة الجانبية'}>
               <HamburgerIcon open={sidebarOpen} />
             </button>
-            <h1 className="mgr-brand">
+            <h1 className="mgr-brand" style={{ fontWeight: 900 }}>
               <span className="mgr-logo"><Droplet size={16} fill="currentColor" /></span>
-              <span>واردات <span className="mgr-brand-grad">أبي الخصيب</span></span>
+              <span>
+                واردات <span className="mgr-brand-grad">أبي الخصيب</span>
+                {activeTab === 'inspections' && (
+                  <span className="mr-2 text-slate-900">· الكشوفات</span>
+                )}
+              </span>
             </h1>
           </div>
           <div className="mgr-header-left">
-            <div className="mgr-mgr-pill">
+            {activeTab === 'inspections' && (
+              <button
+                type="button"
+                onClick={() => setInspectionsRefreshNonce((n) => n + 1)}
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-white border border-sky-200 text-[12px] font-black text-slate-800 hover:bg-sky-50 shadow-sm"
+                title="تحديث الكشوفات"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${inspectionsRefreshing ? 'animate-spin' : ''}`} />
+                تحديث
+              </button>
+            )}
+            <div className="mgr-mgr-pill" style={{ fontWeight: 900 }}>
               <span className="mgr-dot" />
               <small>مسئول الفرع:</small>
               <span>{managerDisplayName}</span>
@@ -3030,6 +3048,8 @@ export default function BranchManagerDashboard({
             <BranchInspectionsTab
               branch={branch}
               managerName={currentManager?.name || branch.managers?.[0]?.name}
+              refreshNonce={inspectionsRefreshNonce}
+              onLoadingChange={setInspectionsRefreshing}
               onOpenInspectionModal={(record) => {
                 setFocusedInspection(record || null)
                 setShowInspectionDashboard(true)

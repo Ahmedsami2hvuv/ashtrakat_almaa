@@ -8,7 +8,6 @@ import {
   FileText,
   Eye,
   Trash2,
-  RefreshCw,
   Copy,
   Camera,
   CheckCircle2,
@@ -24,6 +23,9 @@ interface BranchInspectionsTabProps {
   branch: DirectorateBranch
   managerName?: string
   onOpenInspectionModal: (record?: InspectionRecord) => void
+  /** يزيده الأب لتشغيل التحديث من هيدر الصفحة */
+  refreshNonce?: number
+  onLoadingChange?: (loading: boolean) => void
 }
 
 type StatusFilter = 'all' | 'pending' | 'done'
@@ -64,7 +66,9 @@ function isThisWeek(isoOrDate: string | undefined): boolean {
 
 export default function BranchInspectionsTab({
   branch,
-  onOpenInspectionModal
+  onOpenInspectionModal,
+  refreshNonce = 0,
+  onLoadingChange
 }: BranchInspectionsTabProps) {
   const [inspections, setInspections] = useState<InspectionRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -74,14 +78,19 @@ export default function BranchInspectionsTab({
 
   const branchShort = cleanBranchLabel(branch.name)
 
+  const setBusy = (value: boolean) => {
+    setLoading(value)
+    onLoadingChange?.(value)
+  }
+
   const fetchInspections = async (force = true) => {
-    setLoading(true)
+    setBusy(true)
     try {
       if (force) {
         const cached = await loadInspectionsFromCloud({ forceRefresh: false, full: false })
         if (cached.length > 0) {
           setInspections(cached)
-          setLoading(false)
+          setBusy(false)
         }
       }
       const data = await loadInspectionsFromCloud({ forceRefresh: true, full: false })
@@ -89,7 +98,7 @@ export default function BranchInspectionsTab({
     } catch (err) {
       console.error('Failed to load inspections:', err)
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
@@ -98,11 +107,16 @@ export default function BranchInspectionsTab({
     const interval = setInterval(() => {
       loadInspectionsFromCloud({ forceRefresh: true, full: false }).then((latest) => {
         setInspections(latest)
-        setLoading(false)
+        setBusy(false)
       })
     }, 20000)
     return () => clearInterval(interval)
   }, [branch.id])
+
+  useEffect(() => {
+    if (refreshNonce > 0) fetchInspections(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshNonce])
 
   const branchInspections = useMemo(() => {
     return inspections.filter((item) => {
@@ -190,8 +204,12 @@ export default function BranchInspectionsTab({
   }
 
   return (
-    <div dir="rtl" className="space-y-4">
+    <div dir="rtl" className="insp-root space-y-4">
       <style>{`
+        .insp-root { font-weight: 800; -webkit-font-smoothing: antialiased; }
+        .insp-root, .insp-root button, .insp-root input, .insp-root select, .insp-root th, .insp-root td {
+          font-family: var(--font-tajawal), Tajawal, sans-serif;
+        }
         .insp-glass {
           background: rgba(255,255,255,0.82);
           backdrop-filter: blur(18px);
@@ -238,24 +256,6 @@ export default function BranchInspectionsTab({
         .insp-action:active { transform: scale(.94); }
       `}</style>
 
-      {/* عنوان الصفحة + تحديث — بدون هيدر مكرر فوق هيدر اللوحة */}
-      <div className="insp-glass rounded-[22px] px-4 py-3.5 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => fetchInspections(true)}
-          className="h-10 px-4 rounded-full bg-white border border-slate-200 text-[12px] font-black text-slate-800 hover:bg-slate-50 inline-flex items-center gap-1.5 shadow-sm"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          تحديث
-        </button>
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-[20px] sm:text-[22px] font-black text-slate-900 tracking-tight">الكشوفات</h1>
-          <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white grid place-items-center shadow-md">
-            <FileText className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
       {/* الإحصائيات بنفس ترتيب وتصميم الصورة المطلوبة */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* بانتظار المعالجة */}
@@ -263,7 +263,7 @@ export default function BranchInspectionsTab({
           <div className="insp-stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
             <Coins className="w-4 h-4" />
           </div>
-          <div className="text-[12px] font-bold text-amber-900/80 pl-10">بانتظار المعالجة الفنية</div>
+          <div className="text-[12px] font-black text-amber-900/90 pl-10">بانتظار المعالجة الفنية</div>
           <div className="text-[34px] leading-none font-black text-amber-950 mt-2">{stats.pending}</div>
           <div className="insp-bar" style={{ background: '#fde68a' }}>
             <span
@@ -277,9 +277,9 @@ export default function BranchInspectionsTab({
 
         {/* الإجمالي */}
         <div className="insp-glass insp-stat">
-          <div className="text-[12px] font-bold text-slate-500">إجمالي الكشوفات</div>
+          <div className="text-[12px] font-black text-slate-600">إجمالي الكشوفات</div>
           <div className="text-[34px] leading-none font-black text-slate-900 mt-2">{stats.total}</div>
-          <div className="text-[12px] font-bold text-sky-600 mt-3">+{stats.weekNew} هذا الأسبوع</div>
+          <div className="text-[12px] font-black text-sky-600 mt-3">+{stats.weekNew} هذا الأسبوع</div>
         </div>
 
         {/* المصورة */}
@@ -287,9 +287,9 @@ export default function BranchInspectionsTab({
           <div className="insp-stat-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
             <Camera className="w-4 h-4" />
           </div>
-          <div className="text-[12px] font-bold text-sky-900/80 pl-10">الكشوفات المصورة</div>
+          <div className="text-[12px] font-black text-sky-900/90 pl-10">الكشوفات المصورة</div>
           <div className="text-[34px] leading-none font-black text-sky-950 mt-2">{stats.photographed}</div>
-          <div className="text-[12px] font-bold text-sky-700 mt-3">{stats.photoPct}% مرفق بصور</div>
+          <div className="text-[12px] font-black text-sky-700 mt-3">{stats.photoPct}% مرفق بصور</div>
         </div>
 
         {/* المعتمدة */}
@@ -297,7 +297,7 @@ export default function BranchInspectionsTab({
           <div className="insp-stat-icon" style={{ background: '#d1fae5', color: '#059669' }}>
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <div className="text-[12px] font-bold text-emerald-900/80 pl-10">تمت المعالجة والاعتماد</div>
+          <div className="text-[12px] font-black text-emerald-900/90 pl-10">تمت المعالجة والاعتماد</div>
           <div className="text-[34px] leading-none font-black text-emerald-950 mt-2">{stats.approved}</div>
           <div className="insp-bar" style={{ background: '#a7f3d0' }}>
             <span
@@ -318,17 +318,17 @@ export default function BranchInspectionsTab({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث باسم المواطن، الكاتب/المحصل، المحلة / نص التقرير..."
-            className="w-full h-11 rounded-full bg-white border border-slate-200 pr-10 pl-4 text-[12px] font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+            className="w-full h-11 rounded-full bg-white border border-slate-200 pr-10 pl-4 text-[12px] font-bold text-slate-800 placeholder:text-slate-400 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="text-[12px] font-black text-slate-700 whitespace-nowrap">
+          <div className="text-[12px] font-black text-slate-800 whitespace-nowrap">
             النتائج: {filtered.length} كشف
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="h-9 rounded-full bg-white border border-slate-200 px-3 text-[12px] font-bold text-slate-700 outline-none"
+            className="h-9 rounded-full bg-white border border-slate-200 px-3 text-[12px] font-black text-slate-700 outline-none"
           >
             <option value="all">كل الحالات</option>
             <option value="pending">قيد التدقيق</option>
@@ -337,7 +337,7 @@ export default function BranchInspectionsTab({
           <button
             type="button"
             onClick={clearFilters}
-            className="h-9 px-3 rounded-full bg-white border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50 inline-flex items-center gap-1"
+            className="h-9 px-3 rounded-full bg-white border border-slate-200 text-[12px] font-black text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1"
           >
             <X className="w-3.5 h-3.5" />
             مسح
