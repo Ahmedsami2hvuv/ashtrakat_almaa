@@ -36,11 +36,19 @@ export default function BranchInspectionsTab({
   const [searchQuery, setSearchQuery] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // تحميل الكشوفات الحية دائمًا من السحابة لضمان ظهور تقارير الكُتّاب للمدير فوراً
+  // عرض الكاش فوراً ثم تحديث خفيف من السحابة (بدون صور) حتى لا تعلق الشاشة
   const fetchInspections = async (force = true) => {
     setLoading(true)
     try {
-      const data = await loadInspectionsFromCloud(force)
+      // أولاً: كاش سريع إن وُجد
+      if (force) {
+        const cached = await loadInspectionsFromCloud({ forceRefresh: false, full: false })
+        if (cached.length > 0) {
+          setInspections(cached)
+          setLoading(false)
+        }
+      }
+      const data = await loadInspectionsFromCloud({ forceRefresh: true, full: false })
       setInspections(data)
     } catch (err) {
       console.error('Failed to load inspections:', err)
@@ -51,25 +59,35 @@ export default function BranchInspectionsTab({
 
   useEffect(() => {
     fetchInspections(true)
-    // تحديث تلقائي حيي كل 12 ثانية لجلب أي كشف جديد يرفعه الكاتب أو المحصل فوراً
+    // تحديث خفيف كل 20 ثانية (قائمة بدون صور base64)
     const interval = setInterval(() => {
-      loadInspectionsFromCloud(true).then((latest) => {
+      loadInspectionsFromCloud({ forceRefresh: true, full: false }).then((latest) => {
         setInspections(latest)
+        setLoading(false)
       })
-    }, 12000)
+    }, 20000)
     return () => clearInterval(interval)
   }, [branch.id])
 
-  // فلترة الكشوفات للفرع أو البحث
-  const filtered = inspections.filter((item) => {
+  const branchInspections = inspections.filter((item) => {
+    if (!branch.id) return true
+    if (!item.branchId) {
+      const shortName = branch.name.replace(/^فرع\s*/, '').replace(/مركز\s+جباية\s+واردات\s*/i, '').trim()
+      return !item.branchName || item.branchName.includes(shortName) || item.branchName.includes(branch.name)
+    }
+    return item.branchId === branch.id
+  })
+
+  // فلترة الكشوفات للفرع الحالي + البحث
+  const filtered = branchInspections.filter((item) => {
     const q = searchQuery.toLowerCase().trim()
-    const matchesSearch =
+    return (
       !q ||
       item.citizenName?.toLowerCase().includes(q) ||
       item.writerOrCollectorName?.toLowerCase().includes(q) ||
       item.tableData?.neighborhood?.toLowerCase().includes(q) ||
       item.rawReportText?.toLowerCase().includes(q)
-    return matchesSearch
+    )
   })
 
   // نسخ الرابط
@@ -130,27 +148,27 @@ export default function BranchInspectionsTab({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <span className="text-[11px] text-slate-500 font-bold block mb-1">إجمالي الكشوفات</span>
-            <p className="text-xl font-black text-slate-800">{inspections.length}</p>
+            <p className="text-xl font-black text-slate-800">{branchInspections.length}</p>
           </div>
 
           <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
             <span className="text-[11px] text-amber-700 font-bold block mb-1">بانتظار المعالجة الفنية</span>
             <p className="text-xl font-black text-amber-800">
-              {inspections.filter((i) => i.status === 'pending').length}
+              {branchInspections.filter((i) => i.status === 'pending').length}
             </p>
           </div>
 
           <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
             <span className="text-[11px] text-emerald-700 font-bold block mb-1">تمت المعالجة والاعتماد</span>
             <p className="text-xl font-black text-emerald-800">
-              {inspections.filter((i) => i.status === 'reviewed' || i.status === 'approved').length}
+              {branchInspections.filter((i) => i.status === 'reviewed' || i.status === 'approved').length}
             </p>
           </div>
 
           <div className="bg-sky-50 p-3 rounded-xl border border-sky-200">
             <span className="text-[11px] text-sky-700 font-bold block mb-1">الكشوفات المصورة</span>
             <p className="text-xl font-black text-sky-800">
-              {inspections.filter((i) => i.images && i.images.length > 0).length}
+              {branchInspections.filter((i) => i.images && i.images.length > 0).length}
             </p>
           </div>
         </div>

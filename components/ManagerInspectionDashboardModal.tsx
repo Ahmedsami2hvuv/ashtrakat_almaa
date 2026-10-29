@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { InspectionRecord } from '@/lib/inspectionTypes'
-import { loadInspectionsFromCloud, updateInspectionRecord, deleteInspectionRecord } from '@/lib/inspectionStore'
+import {
+  loadInspectionsFromCloud,
+  loadFullInspectionById,
+  updateInspectionRecord,
+  deleteInspectionRecord
+} from '@/lib/inspectionStore'
 import { processInspectionReportWithAI } from '@/lib/aiInspectionProcessor'
 import {
   InspectionLayoutConfig,
@@ -64,38 +69,70 @@ export default function ManagerInspectionDashboardModal({
   const [layoutConfig, setLayoutConfig] = useState<InspectionLayoutConfig>(DEFAULT_LAYOUT_CONFIG)
   const [layoutSavedNotice, setLayoutSavedNotice] = useState<string | null>(null)
 
-  // تحميل الكشوفات وإعدادات التصميم
-  const loadData = async (force = true) => {
-    setLoading(true)
-    const list = await loadInspectionsFromCloud(force)
-    setInspections(list)
-    if (list.length > 0) {
-      setCurrentInspection(list[0])
-      setSelectedIndex(0)
+  // تحميل قائمة خفيفة أولاً، ثم تعبئة الكشف الحالي بصوره الكاملة عند الحاجة
+  const hydrateInspection = async (item: InspectionRecord) => {
+    const needsImages =
+      Array.isArray(item.images) &&
+      item.images.length > 0 &&
+      item.images.some((img) => !(img.dataUrl && img.dataUrl.length > 32))
+
+    if (!needsImages) {
+      setCurrentInspection(JSON.parse(JSON.stringify(item)))
+      return
     }
-    setLayoutConfig(loadSavedLayoutConfig())
-    setLoading(false)
+
+    setCurrentInspection(JSON.parse(JSON.stringify(item)))
+    const full = await loadFullInspectionById(item.id)
+    if (full) {
+      setCurrentInspection(full)
+      setInspections((prev) => prev.map((row) => (row.id === full.id ? { ...row, images: full.images } : row)))
+    }
+  }
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const cached = await loadInspectionsFromCloud({ forceRefresh: false, full: false })
+      if (cached.length > 0) {
+        setInspections(cached)
+        await hydrateInspection(cached[0])
+        setSelectedIndex(0)
+        setLoading(false)
+      }
+
+      const list = await loadInspectionsFromCloud({ forceRefresh: true, full: false })
+      setInspections(list)
+      if (list.length > 0) {
+        await hydrateInspection(list[0])
+        setSelectedIndex(0)
+      } else {
+        setCurrentInspection(null)
+      }
+    } finally {
+      setLayoutConfig(loadSavedLayoutConfig())
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     if (isOpen) {
-      loadData(true)
-      // تحديث مستمر كل 12 ثانية لجلب الكشوفات الجديدة المرفوعة من الكُتّاب فوراً
+      loadData()
       const interval = setInterval(() => {
-        loadInspectionsFromCloud(true).then((latest) => {
+        loadInspectionsFromCloud({ forceRefresh: true, full: false }).then((latest) => {
           setInspections(latest)
+          setLoading(false)
         })
-      }, 12000)
+      }, 20000)
       return () => clearInterval(interval)
     }
   }, [isOpen])
 
   // التبديل بين الكشوفات
   const handleSelectInspection = (item: InspectionRecord, index: number) => {
-    setCurrentInspection(JSON.parse(JSON.stringify(item)))
     setSelectedIndex(index)
     setAiNotice(null)
     setSaveSuccess(false)
+    void hydrateInspection(item)
   }
 
   // تشغيل الذكاء الاصطناعي لاستخلاص وترتيب الورقة فوراً
