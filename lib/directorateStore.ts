@@ -186,20 +186,21 @@ export async function loadBranchSubscribersAndBilling(
   branchId: string,
   forceRefresh = false
 ): Promise<{ subscribers: Subscriber[]; billing: BillingRecords }> {
-  // 1. كاش الجلسة: لا نعيد الشبكة إذا سبق فتح هذا القسم في نفس الجلسة
-  if (!forceRefresh && branchSubscribersCache[branchId]) {
-    return branchSubscribersCache[branchId]
-  }
-
-  // إذا تغيرت نسخة السحابة منذ آخر تنزيل (استيراد جديد أو تعديل من جهاز آخر) نتجاهل النسخة المحلية القديمة
+  // إذا تغيرت نسخة السحابة منذ آخر تنزيل (استيراد جديد أو تعديل من جهاز آخر) نتجاهل كل النسخ المحلية القديمة،
+  // ومنها كاش الجلسة في الذاكرة (الصفحة المفتوحة منذ مدة)
   let serverVersion: string | null = null
   if (typeof window !== 'undefined' && (typeof navigator === 'undefined' || navigator.onLine)) {
     serverVersion = await fetchBranchServerVersion(branchId)
     if (serverVersion) {
       let localVersion: string | null = null
       try { localVersion = localStorage.getItem(getBranchServerVersionKey(branchId)) } catch {}
-      if (localVersion !== serverVersion) forceRefresh = true
+      if (!localVersion || Date.parse(localVersion) !== Date.parse(serverVersion)) forceRefresh = true
     }
+  }
+
+  // 1. كاش الجلسة: لا نعيد الشبكة إذا سبق فتح هذا القسم في نفس الجلسة
+  if (!forceRefresh && branchSubscribersCache[branchId]) {
+    return branchSubscribersCache[branchId]
   }
 
   // الكاش الدائم له الأولوية: لا نعيد تنزيل قاعدة الفرع عند الرجوع إلى الصفحة.
@@ -294,6 +295,54 @@ export async function loadBranchSubscribersAndBilling(
 }
 
 // حفظ مشتركي وسجلات ديون فرع معين (يدعم التقسيم الذكي للدفعات الكبيرة و IndexedDB)
+function getStoredBranchVersion(branchId: string): string | null {
+  try { return localStorage.getItem(getBranchServerVersionKey(branchId)) } catch { return null }
+}
+
+function storeBranchVersion(branchId: string, version: unknown) {
+  if (typeof version !== 'string' || !version) return
+  try { localStorage.setItem(getBranchServerVersionKey(branchId), version) } catch {}
+}
+
+let versionConflictAlertShown = false
+async function readSaveResponse(res: Response, branchId: string, label: string): Promise<void> {
+  let data: any = null
+  try { data = await res.clone().json() } catch {}
+  if (!res.ok) {
+    if (data?.code === 'version_conflict' && typeof window !== 'undefined' && !versionConflictAlertShown) {
+      versionConflictAlertShown = true
+      alert(data.error)
+    }
+    throw new Error(`${label}${data?.error || (await res.text())}`)
+  }
+  if (data?.updatedAt) storeBranchVersion(branchId, data.updatedAt)
+}
+
+// مسح جميع مشتركي الفرع وديونهم من السحابة ومن هذا الجهاز (يبقى الكتاب والمناطق والإعدادات)
+export async function wipeBranchSubscribers(branchId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/branch-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId, wipe: true, confirm: 'مسح' })
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.success) {
+      return { success: false, error: data?.error || 'فشل مسح المشتركين' }
+    }
+    storeBranchVersion(branchId, data.updatedAt)
+    branchSubscribersCache[branchId] = { subscribers: [], billing: {}, timestamp: Date.now() }
+    if (typeof window !== 'undefined') {
+      try { localStorage.removeItem(getBranchStorageKey(branchId)) } catch {}
+      try { localStorage.removeItem(getPendingSyncKey(branchId)) } catch {}
+      await saveToIndexedDB(branchId, [], {})
+    }
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'خطأ في الاتصال بالسيرفر' }
+  }
+}
+
 export async function saveBranchSubscribersAndBilling(
   branchId: string,
   subscribers: Subscriber[],
@@ -359,14 +408,12 @@ export async function saveBranchSubscribersAndBilling(
             chunkIndex: i,
             totalChunks,
             subscribersChunk: subsChunk,
-            billingChunk: chunkBilling
+            billingChunk: chunkBilling,
+            baseVersion: getStoredBranchVersion(branchId)
           })
         })
 
-        if (!res.ok) {
-          const errText = await res.text()
-          throw new Error(`فشل حفظ الدفعة ${i + 1}: ${errText}`)
-        }
+        await readSaveResponse(res, branchId, `فشل حفظ الدفعة ${i + 1}: `)
       }
 
       // إنهاء وتثبيت الفهرس السحابي
@@ -381,13 +428,12 @@ export async function saveBranchSubscribersAndBilling(
           branchId,
           isFinalize: true,
           totalChunks,
-          totalSubscribers: subscribers.length
+          totalSubscribers: subscribers.length,
+          baseVersion: getStoredBranchVersion(branchId)
         })
       })
 
-      if (!finalizeRes.ok) {
-        throw new Error('فشل تثبيت الفهرس السحابي للفرع')
-      }
+      await readSaveResponse(finalizeRes, branchId, 'فشل تثبيت الفهرس السحابي للفرع: ')
 
       if (onProgress) {
         onProgress('تم الحفظ السحابي بنجاح تام!', 100)
@@ -402,14 +448,12 @@ export async function saveBranchSubscribersAndBilling(
         body: JSON.stringify({
           branchId,
           subscribers,
-          billing
+          billing,
+          baseVersion: getStoredBranchVersion(branchId)
         })
       })
 
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText)
-      }
+      await readSaveResponse(res, branchId, '')
 
       return { success: true }
     }

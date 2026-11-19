@@ -12,7 +12,8 @@ import {
   generateSecureToken,
   generateWhatsAppLink,
   loadBranchSubscribersAndBilling,
-  saveBranchSubscribersAndBilling
+  saveBranchSubscribersAndBilling,
+  wipeBranchSubscribers
 } from '@/lib/directorateStore'
 import { Area, Subscriber, BillingRecords } from '@/components/MainApp'
 import ConsignmentsA4Page from './ConsignmentsA4Page'
@@ -317,6 +318,10 @@ export default function BranchManagerDashboard({
 
   // حالات استيراد المشتركين
   const [showImportModal, setShowImportModal] = useState(false)
+  // مسح جميع مشتركي الفرع (يتطلب كتابة كلمة مسح)
+  const [showWipeModal, setShowWipeModal] = useState(false)
+  const [wipeConfirmText, setWipeConfirmText] = useState('')
+  const [isWiping, setIsWiping] = useState(false)
   const [importText, setImportText] = useState('')
 
   // حالات استيراد ملف الإكسل الشامل
@@ -3881,6 +3886,24 @@ export default function BranchManagerDashboard({
                     </div>
                   </button>
                 </div>
+
+                {/* زر مسح جميع المشتركين (منطقة خطرة) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWipeConfirmText('')
+                    setShowWipeModal(true)
+                  }}
+                  className="w-full p-4 bg-red-50 hover:bg-red-100 border border-red-300 text-right rounded-2xl transition flex items-center gap-3 shadow-xs"
+                >
+                  <div className="p-2.5 bg-red-600 text-white rounded-xl shadow-xs shrink-0">
+                    <Trash2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-red-700 text-sm">مسح المشتركين</h4>
+                    <p className="text-[11px] text-red-600/80 font-bold mt-0.5">حذف جميع مشتركي الفرع وديونهم نهائياً لإعادة رفعهم من جديد (يبقى الكتّاب والمناطق والإعدادات)</p>
+                  </div>
+                </button>
               </div>
 
               {/* قسم إدارة واستيراد المناطق (خيارات مجمعة ووقتية) */}
@@ -4089,6 +4112,64 @@ export default function BranchManagerDashboard({
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition"
               >
                 بدء الاستيراد
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تأكيد مسح جميع المشتركين */}
+      {showWipeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-xl border border-red-200">
+            <h3 className="text-base font-black text-red-700 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              مسح جميع المشتركين
+            </h3>
+            <p className="text-xs text-slate-700 font-bold leading-6">
+              سيتم حذف جميع مشتركي فرع ({branch.name}) وعددهم ({loadedSubscribers.length || branch.subscribersCount || 0}) مع ديونهم من السيرفر ومن هذا الجهاز.
+              لا يمكن التراجع عن هذه العملية. الكتّاب والمحصلون والمناطق والإعدادات تبقى كما هي.
+            </p>
+            <p className="text-xs text-slate-500">للتأكيد اكتب كلمة <span className="font-black text-red-600">مسح</span> في الحقل:</p>
+            <input
+              type="text"
+              value={wipeConfirmText}
+              onChange={(e) => setWipeConfirmText(e.target.value)}
+              placeholder="مسح"
+              className="w-full px-3.5 py-2.5 bg-white border border-red-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowWipeModal(false)}
+                disabled={isWiping}
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                disabled={wipeConfirmText.trim() !== 'مسح' || isWiping}
+                onClick={async () => {
+                  if (wipeConfirmText.trim() !== 'مسح') return
+                  setIsWiping(true)
+                  const result = await wipeBranchSubscribers(branch.id)
+                  setIsWiping(false)
+                  if (!result.success) {
+                    alert(`فشل مسح المشتركين:\n${result.error || 'يرجى المحاولة مرة أخرى'}`)
+                    return
+                  }
+                  setLoadedSubscribers([])
+                  setLoadedBilling({})
+                  setHasLoadedSubscribers(true)
+                  onUpdateBranch({ ...branch, subscribersCount: 0, subscribers: [], billing: {} })
+                  setShowWipeModal(false)
+                  setWipeConfirmText('')
+                  alert('تم مسح جميع المشتركين بنجاح. يمكنك الآن رفع ملف الإكسل من جديد.')
+                }}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition"
+              >
+                {isWiping ? 'جارِ المسح...' : 'مسح نهائياً'}
               </button>
             </div>
           </div>

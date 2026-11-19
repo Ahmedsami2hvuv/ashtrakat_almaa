@@ -173,6 +173,37 @@ async function getExistingSubscribersCount(branchId: string): Promise<number> {
   }
 }
 
+// نسخة بيانات الفرع الحالية في السحابة (وقت آخر حفظ)
+async function getCurrentBranchVersion(branchId: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/app_sync?key=eq.branch_subscribers_${branchId}&select=updated_at`,
+      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }, cache: 'no-store' }
+    )
+    if (!res.ok) return null
+    const rows = await res.json()
+    return rows?.[0]?.updated_at || null
+  } catch {
+    return null
+  }
+}
+
+// منع جهاز يحمل نسخة قديمة من الكتابة فوق نسخة أحدث في السحابة
+async function versionConflictResponse(branchId: string, baseVersion: unknown) {
+  const current = await getCurrentBranchVersion(branchId)
+  if (!current) return null
+  const same = typeof baseVersion === 'string' && Date.parse(baseVersion) === Date.parse(current)
+  if (same) return null
+  return NextResponse.json(
+    {
+      success: false,
+      code: 'version_conflict',
+      error: 'تم إيقاف الحفظ: بيانات المشتركين تغيّرت في السحابة بعد فتح هذه الصفحة. حدّث الصفحة لتنزيل النسخة الأحدث ثم أعد التعديل.'
+    },
+    { status: 409 }
+  )
+}
+
 // رفض الحفظ إذا كانت النسخة المرسلة أقل من نصف المحفوظ (نسخة قديمة في هاتف)
 function shrinkBlocked(existing: number, incoming: number, allowShrink: unknown): boolean {
   return allowShrink !== true && existing >= 2000 && incoming < existing * 0.5
@@ -200,9 +231,48 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString()
 
+    // 0. مسح جميع مشتركي الفرع وديونهم بطلب صريح من مسؤول الفرع (لا يمس الكتاب والمناطق والإعدادات)
+    if (body.wipe === true) {
+      if (body.confirm !== 'مسح') {
+        return NextResponse.json({ success: false, error: 'يجب كتابة كلمة "مسح" للتأكيد' }, { status: 400 })
+      }
+      const sbHeaders = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' }
+      const delRes = await fetch(
+        `${SB_URL}/rest/v1/app_sync?key=like.${encodeURIComponent(`branch_subscribers_${branchId}_chunk_*`)}`,
+        { method: 'DELETE', headers: sbHeaders }
+      )
+      if (!delRes.ok) {
+        return NextResponse.json({ success: false, error: await delRes.text() }, { status: 500 })
+      }
+      const emptyRes = await fetch(`${SB_URL}/rest/v1/app_sync`, {
+        method: 'POST',
+        headers: { ...sbHeaders, Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({
+          key: `branch_subscribers_${branchId}`,
+          value: { branchId, subscribers: [], billing: {}, updatedAt: now },
+          updated_at: now
+        })
+      })
+      if (!emptyRes.ok) {
+        return NextResponse.json({ success: false, error: await emptyRes.text() }, { status: 500 })
+      }
+      if (branchId === 'branch_abi_alkhaseeb') {
+        try {
+          await fetch(`${SB_URL}/rest/v1/app_sync`, {
+            method: 'POST',
+            headers: { ...sbHeaders, Prefer: 'resolution=merge-duplicates' },
+            body: JSON.stringify({ key: LEGACY_SYNC_KEY, value: { subscribers: [], billing: {}, updatedAt: now }, updated_at: now })
+          })
+        } catch {}
+      }
+      return NextResponse.json({ success: true, wiped: true, updatedAt: now })
+    }
+
     // 1. إذا كان الطلب عبارة عن حفظ جزء محدد (Chunk)
     if (isChunk && typeof chunkIndex === 'number') {
       if (chunkIndex === 0) {
+        const conflict = await versionConflictResponse(branchId, body.baseVersion)
+        if (conflict) return conflict
         const existing = await getExistingSubscribersCount(branchId)
         const incomingMax = (Number(totalChunks) || 1) * 2000
         if (shrinkBlocked(existing, incomingMax, body.allowShrink)) {
@@ -243,6 +313,8 @@ export async function POST(request: Request) {
 
     // 2. إذا كان الطلب لإنهاء وتثبيت الفهرس المجمع لجميع الأجزاء
     if (isFinalize) {
+      const finalizeConflict = await versionConflictResponse(branchId, body.baseVersion)
+      if (finalizeConflict) return finalizeConflict
       const existingBeforeFinalize = await getExistingSubscribersCount(branchId)
       const incomingTotal = typeof body.totalSubscribers === 'number' ? body.totalSubscribers : 0
       if (shrinkBlocked(existingBeforeFinalize, incomingTotal, body.allowShrink)) {
@@ -277,10 +349,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: errText }, { status: 500 })
       }
 
-      return NextResponse.json({ success: true, finalized: true })
+      return NextResponse.json({ success: true, finalized: true, updatedAt: now })
     }
 
     // 3. الحفظ المعتاد للبيانات الأحادية الصغيرة (أقل من حجم الحد الأقصى)
+    const plainConflict = await versionConflictResponse(branchId, body.baseVersion)
+    if (plainConflict) return plainConflict
     const existingCount = await getExistingSubscribersCount(branchId)
     const incomingCount = Array.isArray(subscribers) ? subscribers.length : 0
     if (shrinkBlocked(existingCount, incomingCount, body.allowShrink)) {
@@ -338,7 +412,7 @@ export async function POST(request: Request) {
       } catch {}
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, updatedAt: now })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'خطأ في حفظ بيانات الفرع'
     return NextResponse.json({ success: false, error: message }, { status: 500 })
