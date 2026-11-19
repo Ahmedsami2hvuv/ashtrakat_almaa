@@ -330,7 +330,15 @@ export default function DirectorateRootApp() {
             }
           }
 
-          // فحص جلسة المحصل المحفوظة بالهاتف أولاً (لتمكين الفتح المباشر دون نت)
+          // أولوية جلسة مدير الواردات على جلسة المحصل المحفوظة في نفس المتصفح
+          const dirSession = localStorage.getItem('basra_director_session')
+          if (dirSession) {
+            setActiveView('director_dashboard')
+            setIsLoading(false)
+            return
+          }
+
+          // فحص جلسة المحصل المحفوظة بالهاتف فقط إذا لم توجد جلسة مدير
           const savedCollectorStr = localStorage.getItem('ashtrakat_collector_session')
           if (savedCollectorStr) {
             try {
@@ -338,7 +346,6 @@ export default function DirectorateRootApp() {
               const foundBranch = data.branches.find(b => b.id === colSess.branchId) || data.branches[0]
               if (foundBranch) {
                 const colId = colSess.id || colSess.token || 'col_saved'
-                // تسجيل فتح النظام للمحصل من الجلسة المحفوظة بالتوقيت العراقي
                 logCollectorActivity({
                   branchId: foundBranch.id,
                   collectorId: colId,
@@ -368,18 +375,10 @@ export default function DirectorateRootApp() {
             }
           }
 
-          // فحص جلسة مدير الواردات المحفوظة
-          const dirSession = localStorage.getItem('basra_director_session')
-          if (dirSession) {
-            setActiveView('director_dashboard')
-            setIsLoading(false)
-            return
-          } else {
-            // الرابط الرئيسي بدون توكن يفتح صفحة دخول مدير الواردات حصراً
-            setActiveView('director_login')
-            setIsLoading(false)
-            return
-          }
+          // الرابط الرئيسي بدون جلسة مدير أو محصل يفتح صفحة دخول المدير
+          setActiveView('director_login')
+          setIsLoading(false)
+          return
         }
       } catch (err) {
         console.error('Initialization error:', err)
