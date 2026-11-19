@@ -167,6 +167,20 @@ async function loadFromIndexedDB(branchId: string): Promise<{ subscribers: Subsc
   }
 }
 
+// نسخة السحابة التي تطابق النسخة المحفوظة في الهاتف
+const getBranchServerVersionKey = (branchId: string) => `ashtrakat_branch_server_version_${branchId}`
+
+async function fetchBranchServerVersion(branchId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/branch-sync?branchId=${encodeURIComponent(branchId)}&meta=1`, { cache: 'no-store' })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.success && data.updatedAt ? String(data.updatedAt) : null
+  } catch {
+    return null
+  }
+}
+
 // جلب مشتركي وسجلات ديون فرع معين عند الطلب فقط (يدعم وضع الأوفلاين التام والبيانات الضخمة)
 export async function loadBranchSubscribersAndBilling(
   branchId: string,
@@ -175,6 +189,17 @@ export async function loadBranchSubscribersAndBilling(
   // 1. كاش الجلسة: لا نعيد الشبكة إذا سبق فتح هذا القسم في نفس الجلسة
   if (!forceRefresh && branchSubscribersCache[branchId]) {
     return branchSubscribersCache[branchId]
+  }
+
+  // إذا تغيرت نسخة السحابة منذ آخر تنزيل (استيراد جديد أو تعديل من جهاز آخر) نتجاهل النسخة المحلية القديمة
+  let serverVersion: string | null = null
+  if (typeof window !== 'undefined' && (typeof navigator === 'undefined' || navigator.onLine)) {
+    serverVersion = await fetchBranchServerVersion(branchId)
+    if (serverVersion) {
+      let localVersion: string | null = null
+      try { localVersion = localStorage.getItem(getBranchServerVersionKey(branchId)) } catch {}
+      if (localVersion !== serverVersion) forceRefresh = true
+    }
   }
 
   // الكاش الدائم له الأولوية: لا نعيد تنزيل قاعدة الفرع عند الرجوع إلى الصفحة.
@@ -214,6 +239,9 @@ export async function loadBranchSubscribersAndBilling(
           subscribers = data.subscribers || []
           billing = data.billing || {}
           loadedFromNetwork = true
+          if (serverVersion && typeof window !== 'undefined') {
+            try { localStorage.setItem(getBranchServerVersionKey(branchId), serverVersion) } catch {}
+          }
 
           // حفظ نسخة محلية دائمة في IndexedDB (تتسع لمئات الآلاف من المشتركين)
           if (typeof window !== 'undefined') {

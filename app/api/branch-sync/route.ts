@@ -17,6 +17,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'معرف الفرع مطلوب' }, { status: 400 })
     }
 
+    // نسخة بيانات الفرع في السحابة (وقت آخر حفظ) حتى يعرف الهاتف إن كانت نسخته المحلية قديمة
+    if (searchParams.get('meta') === '1') {
+      const metaRes = await fetch(
+        `${SB_URL}/rest/v1/app_sync?key=eq.branch_subscribers_${branchId}&select=updated_at`,
+        { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }, cache: 'no-store' }
+      )
+      if (!metaRes.ok) {
+        return NextResponse.json({ success: false, error: 'قاعدة البيانات غير متاحة حالياً' }, { status: 503 })
+      }
+      const metaRows = await metaRes.json()
+      return NextResponse.json({ success: true, updatedAt: metaRows?.[0]?.updated_at || null })
+    }
+
     // إذا طُلب جزء محدد بعينه
     if (requestedChunk !== null) {
       const chunkKey = `branch_subscribers_${branchId}_chunk_${requestedChunk}`
