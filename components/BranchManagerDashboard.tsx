@@ -1706,17 +1706,18 @@ export default function BranchManagerDashboard({
     if (wFrom === '' && wTo === '') {
       assignedSubs = []
     } else if (wFrom !== '' && wTo !== '') {
-      const fromNum = parseInt(wFrom, 10)
-      const toNum = parseInt(wTo, 10)
-      if (!isNaN(fromNum) && !isNaN(toNum) && fromNum > 0 && toNum > 0) {
-        const start = Math.min(fromNum, toNum)
-        const end = Math.max(fromNum, toNum)
-        const generated: number[] = []
-        for (let id = start; id <= end; id++) {
-          generated.push(id)
-        }
-        assignedSubs = generated
+      const fromNum = Number(wFrom)
+      const toNum = Number(wTo)
+      if (!Number.isInteger(fromNum) || !Number.isInteger(toNum) || fromNum <= 0 || toNum <= 0) {
+        alert('يرجى إدخال أرقام اشتراكات صحيحة في حقلي من وإلى')
+        return
       }
+      savedRangeFrom = Math.min(fromNum, toNum)
+      savedRangeTo = Math.max(fromNum, toNum)
+      assignedSubs = []
+    } else {
+      alert('يرجى إدخال رقم البداية والنهاية معاً، أو مسح النطاق بالكامل')
+      return
     }
 
     let updatedWriters = [...(branch.writers || [])]
