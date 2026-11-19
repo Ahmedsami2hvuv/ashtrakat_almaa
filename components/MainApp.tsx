@@ -48,6 +48,8 @@ export interface Subscriber {
   createdAt?: string
   dossier?: string
   notes?: string
+  // مشترك مستورد من الإكسل بدون رقم اشتراك (أُعطي الرقم التالي المتاح)
+  noFileNumber?: boolean
 }
 
 export type Pricing = Record<PropertyType, Record<MeterType, number>>

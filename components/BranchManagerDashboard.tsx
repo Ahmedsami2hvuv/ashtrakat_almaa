@@ -131,15 +131,27 @@ function readSheetRowsWithHeaderDetection(sheet: XLSX.WorkSheet): any[] {
     return count === 0 ? key : `${key} (${count + 1})`
   })
   const idColumn = headerRow.findIndex((h: any) => idSet.has(normalizeArabicKey(h)))
+  const nameColumns = headerRow
+    .map((h: any, j: number) => ({ h: normalizeArabicKey(h), j }))
+    .filter(x => x.h.startsWith('اسم المشترك') || nameSet.has(x.h))
+    .map(x => x.j)
   const rows: any[] = []
   for (let i = headerIndex + 1; i < matrix.length; i++) {
     const r = matrix[i] || []
-    // السطر بلا رقم اشتراك (عناوين فرعية مثل "سجل رقم" أو أسطر ناقصة) لا يُستورد حتى لا تتكرر الأرقام عند إعادة الاستيراد
-    if (!/\d/.test(String(r[idColumn] ?? ''))) continue
     const obj: any = {}
     keys.forEach((k: string, j: number) => {
       if (k) obj[k] = r[j] ?? ''
     })
+    const idNumber = parseInt(String(r[idColumn] ?? '').replace(/[^\d]/g, ''), 10)
+    if (!(idNumber > 0)) {
+      // سطر بلا رقم اشتراك: يُستورد فقط إذا كان فيه اسم حقيقي ومعلومة أخرى (صنف/مساحة/منطقة...)،
+      // أما العناوين الفرعية مثل "سجل رقم" أو سطر فيه اسم فقط فتُتجاهل
+      const nameText = nameColumns.map((j: number) => String(r[j] ?? '').trim()).find((v: string) => v !== '') || ''
+      const hasOtherInfo = r.some((v: any, j: number) => j !== idColumn && !nameColumns.includes(j) && keys[j] && String(v ?? '').trim() !== '')
+      if (!nameText || nameText.includes('سجل رقم') || !hasOtherInfo) continue
+      obj.__noNumber = true
+      if (idColumn >= 0 && keys[idColumn]) obj[keys[idColumn]] = ''
+    }
     rows.push(obj)
   }
   return rows
@@ -1361,8 +1373,20 @@ export default function BranchManagerDashboard({
           ])
           
           let subId: number = 0
-          const parsedId = parseInt(String(idVal || '').replace(/[^\d]/g, ''), 10)
-          if (!isNaN(parsedId) && parsedId > 0) {
+          const isUnnumbered = row.__noNumber === true
+          const parsedId = isUnnumbered ? NaN : parseInt(String(idVal || '').replace(/[^\d]/g, ''), 10)
+          if (isUnnumbered) {
+            // مشترك بلا رقم في الملف: نطابقه بالاسم مع من استُورد سابقاً بلا رقم حتى لا يتكرر، وإلا نعطيه الرقم التالي المتاح
+            if (!name) return
+            const normalizedName = normalizeArabicKey(name)
+            const previous = currentSubscribers.find(s => s.noFileNumber && normalizeArabicKey(s.name) === normalizedName)
+            if (previous) {
+              subId = previous.id
+            } else {
+              maxSubId++
+              subId = maxSubId
+            }
+          } else if (!isNaN(parsedId) && parsedId > 0) {
             subId = parsedId
           } else {
             // فحص أي عمود يحتوي على رقم تسلسلي للمشترك
@@ -1554,7 +1578,8 @@ export default function BranchManagerDashboard({
               fee: 0,
               order: maxOrder,
               statuses,
-              createdAt: new Date().toISOString()
+              createdAt: new Date().toISOString(),
+              ...(isUnnumbered ? { noFileNumber: true } : {})
             }
             subscriberIdMap.set(subId, newSub)
             currentSubscribers.push(newSub)
