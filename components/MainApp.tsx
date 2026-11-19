@@ -1752,7 +1752,20 @@ export default function MainApp({
       }
     }
 
-    // ترتيب المشتركين الجدد من الأحدث إضافة إلى الأقدم
+    // بدون بحث: الترتيب تصاعدي حسب رقم الاشتراك (الصفحة 1 = #1 إلى #100 وهكذا)
+    const byIdAsc = (a: Subscriber, b: Subscriber) => a.id - b.id
+    if (!q) {
+      normalList.sort(byIdAsc)
+    }
+
+    // إضافة يدوية لعدد قليل من المشتركين: تظهر في المقدمة (الأحدث أولاً) ليسهل الوصول إليها.
+    // عند رفع ملف كامل (عدد كبير يحمل شارة جديد) نلتزم بالترتيب التصاعدي للجميع.
+    const RECENT_ON_TOP_LIMIT = 10
+    if (q || recentList.length > RECENT_ON_TOP_LIMIT) {
+      if (q) return list
+      return [...recentList, ...normalList].sort(byIdAsc)
+    }
+
     recentList.sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
