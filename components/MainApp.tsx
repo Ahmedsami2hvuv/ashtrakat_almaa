@@ -5057,8 +5057,10 @@ export default function MainApp({
                 const currentIndex = navList.findIndex((s) => s.id === activeSubscriber.id)
                 const prevSub = currentIndex > 0 ? navList[currentIndex - 1] : null
                 const nextSub = currentIndex >= 0 && currentIndex < navList.length - 1 ? navList[currentIndex + 1] : null
+                // أزرار التنقل تعرض أول اسمين فقط حتى لا تكبر الأزرار مع الأسماء الطويلة
+                const shortNavName = (name: string) => String(name || '').trim().split(/\s+/).slice(0, 2).join(' ')
                 return (
-                  <div className="subscriber-content px-2 pt-2.5 flex gap-2">
+                  <div className="subscriber-content px-2 pt-2.5 flex gap-2 w-full max-w-full overflow-hidden">
                     <button
                       onClick={() => {
                         if (prevSub) {
@@ -5070,15 +5072,15 @@ export default function MainApp({
                         }
                       }}
                       disabled={!prevSub}
-                      className={`flex-1 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                      className={`flex-1 basis-0 min-w-0 overflow-hidden px-2 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
-                      <span className="text-[18px] leading-none font-bold text-slate-700">‹</span>
-                      <div className="text-right overflow-hidden">
+                      <span className="text-[18px] leading-none font-bold text-slate-700 shrink-0">‹</span>
+                      <div className="text-right overflow-hidden min-w-0 flex-1">
                         {prevSub ? (
                           <>
                             <div className="text-[10px] text-slate-500 font-bold leading-tight">السابق</div>
-                            <div className="truncate max-w-[150px] leading-tight text-[12.5px] font-bold text-slate-900">
-                              <span className="font-mono">{formatNumber(prevSub.id)}</span> - {prevSub.name}
+                            <div className="truncate whitespace-nowrap max-w-full leading-tight text-[12.5px] font-bold text-slate-900">
+                              <span className="font-mono">{formatNumber(prevSub.id)}</span> - {shortNavName(prevSub.name)}
                             </div>
                           </>
                         ) : (
@@ -5097,21 +5099,21 @@ export default function MainApp({
                         }
                       }}
                       disabled={!nextSub}
-                      className={`flex-1 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                      className={`flex-1 basis-0 min-w-0 overflow-hidden px-2 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
-                      <div className="text-left overflow-hidden">
+                      <div className="text-left overflow-hidden min-w-0 flex-1">
                         {nextSub ? (
                           <>
                             <div className="text-[10px] text-slate-500 font-bold leading-tight">التالي</div>
-                            <div className="truncate max-w-[150px] leading-tight text-[12.5px] font-bold text-slate-900">
-                              <span className="font-mono">{formatNumber(nextSub.id)}</span> - {nextSub.name}
+                            <div className="truncate whitespace-nowrap max-w-full leading-tight text-[12.5px] font-bold text-slate-900">
+                              <span className="font-mono">{formatNumber(nextSub.id)}</span> - {shortNavName(nextSub.name)}
                             </div>
                           </>
                         ) : (
                           <span className="text-[11px] text-slate-400">لا يوجد تالي</span>
                         )}
                       </div>
-                      <span className="text-[18px] leading-none font-bold text-slate-700">›</span>
+                      <span className="text-[18px] leading-none font-bold text-slate-700 shrink-0">›</span>
                     </button>
                   </div>
                 )
