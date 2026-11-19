@@ -125,6 +125,14 @@ export default function DirectorateRootApp() {
           const token = params.get('token')
           const branchId = params.get('branch')
 
+          // /mder مخصص حصراً للوحة مدير الواردات، ولا يجوز أن تستولي عليه جلسة المحصل المحفوظة.
+          if (window.location.pathname === '/mder' && !role) {
+            const directorSession = localStorage.getItem('basra_director_session')
+            setActiveView(directorSession ? 'director_dashboard' : 'director_login')
+            setIsLoading(false)
+            return
+          }
+
           // إذا كان الرابط رابطاً مباشراً لمسؤول فرع
           if (role === 'manager') {
             if (!token) {
