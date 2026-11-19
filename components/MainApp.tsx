@@ -5060,7 +5060,7 @@ export default function MainApp({
                 // أزرار التنقل تعرض أول اسمين فقط حتى لا تكبر الأزرار مع الأسماء الطويلة
                 const shortNavName = (name: string) => String(name || '').trim().split(/\s+/).slice(0, 2).join(' ')
                 return (
-                  <div className="subscriber-content px-2 pt-2.5 flex gap-2 w-full max-w-full overflow-hidden">
+                  <div className="subscriber-content px-2 pt-2.5 flex justify-between items-stretch gap-2 w-full max-w-full overflow-hidden">
                     <button
                       onClick={() => {
                         if (prevSub) {
@@ -5072,10 +5072,10 @@ export default function MainApp({
                         }
                       }}
                       disabled={!prevSub}
-                      className={`flex-1 basis-0 min-w-0 overflow-hidden px-2 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                      className={`flex-initial w-auto max-w-[48%] min-w-0 overflow-hidden px-3 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${prevSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
                       <span className="text-[18px] leading-none font-bold text-slate-700 shrink-0">‹</span>
-                      <div className="text-right overflow-hidden min-w-0 flex-1">
+                      <div className="text-right overflow-hidden min-w-0">
                         {prevSub ? (
                           <>
                             <div className="text-[10px] text-slate-500 font-bold leading-tight">السابق</div>
@@ -5099,9 +5099,9 @@ export default function MainApp({
                         }
                       }}
                       disabled={!nextSub}
-                      className={`flex-1 basis-0 min-w-0 overflow-hidden px-2 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
+                      className={`flex-initial w-auto max-w-[48%] min-w-0 overflow-hidden px-3 min-h-[46px] rounded-xl border text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${nextSub ? 'bg-white border-sky-200 text-slate-700 hover:bg-sky-50' : 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'}`}
                     >
-                      <div className="text-left overflow-hidden min-w-0 flex-1">
+                      <div className="text-left overflow-hidden min-w-0">
                         {nextSub ? (
                           <>
                             <div className="text-[10px] text-slate-500 font-bold leading-tight">التالي</div>
