@@ -142,6 +142,39 @@ export async function GET(request: Request) {
   }
 }
 
+// عدد المشتركين المحفوظين حالياً في السحابة لهذا الفرع (لمنع استبدالهم بنسخة قديمة ناقصة)
+async function getExistingSubscribersCount(branchId: string): Promise<number> {
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/app_sync?key=eq.branch_subscribers_${branchId}&select=value`,
+      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }, cache: 'no-store' }
+    )
+    if (!res.ok) return 0
+    const rows = await res.json()
+    const v = rows && rows[0]?.value
+    if (!v) return 0
+    if (v.isChunked) return Number(v.totalSubscribers) || 0
+    return Array.isArray(v.subscribers) ? v.subscribers.length : 0
+  } catch {
+    return 0
+  }
+}
+
+// رفض الحفظ إذا كانت النسخة المرسلة أقل من نصف المحفوظ (نسخة قديمة في هاتف)
+function shrinkBlocked(existing: number, incoming: number, allowShrink: unknown): boolean {
+  return allowShrink !== true && existing >= 2000 && incoming < existing * 0.5
+}
+
+function shrinkResponse(existing: number, incoming: number) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: `تم إيقاف الحفظ: نسخة هذا الجهاز فيها ${incoming} مشترك فقط بينما السحابة فيها ${existing}. حدّث الصفحة لتنزيل النسخة الكاملة أولاً.`
+    },
+    { status: 409 }
+  )
+}
+
 // حفظ مشتركي وديون الفرع عبر السيرفر بأمان (يدعم الدفعات والأجزاء)
 export async function POST(request: Request) {
   try {
@@ -156,6 +189,13 @@ export async function POST(request: Request) {
 
     // 1. إذا كان الطلب عبارة عن حفظ جزء محدد (Chunk)
     if (isChunk && typeof chunkIndex === 'number') {
+      if (chunkIndex === 0) {
+        const existing = await getExistingSubscribersCount(branchId)
+        const incomingMax = (Number(totalChunks) || 1) * 2000
+        if (shrinkBlocked(existing, incomingMax, body.allowShrink)) {
+          return shrinkResponse(existing, incomingMax)
+        }
+      }
       const chunkKey = `branch_subscribers_${branchId}_chunk_${chunkIndex}`
       const chunkPayload = {
         key: chunkKey,
@@ -190,6 +230,11 @@ export async function POST(request: Request) {
 
     // 2. إذا كان الطلب لإنهاء وتثبيت الفهرس المجمع لجميع الأجزاء
     if (isFinalize) {
+      const existingBeforeFinalize = await getExistingSubscribersCount(branchId)
+      const incomingTotal = typeof body.totalSubscribers === 'number' ? body.totalSubscribers : 0
+      if (shrinkBlocked(existingBeforeFinalize, incomingTotal, body.allowShrink)) {
+        return shrinkResponse(existingBeforeFinalize, incomingTotal)
+      }
       const branchKey = `branch_subscribers_${branchId}`
       const metaPayload = {
         key: branchKey,
@@ -223,6 +268,11 @@ export async function POST(request: Request) {
     }
 
     // 3. الحفظ المعتاد للبيانات الأحادية الصغيرة (أقل من حجم الحد الأقصى)
+    const existingCount = await getExistingSubscribersCount(branchId)
+    const incomingCount = Array.isArray(subscribers) ? subscribers.length : 0
+    if (shrinkBlocked(existingCount, incomingCount, body.allowShrink)) {
+      return shrinkResponse(existingCount, incomingCount)
+    }
     const branchKey = `branch_subscribers_${branchId}`
     const payload = {
       key: branchKey,

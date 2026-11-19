@@ -39,7 +39,8 @@ export function generateWhatsAppLink(phone: string, message: string): string {
 const branchSubscribersCache: Record<string, { subscribers: Subscriber[]; billing: BillingRecords; timestamp: number }> = {}
 
 // مفتاح التخزين المحلي لبيانات المشتركين لكل فرع
-const getBranchStorageKey = (branchId: string) => `ashtrakat_branch_subscribers_${branchId}`
+// v2: تجاهل النسخ المحلية القديمة الناقصة (قبل استعادة بيانات 2026-11-19) وتنزيل النسخة الكاملة من السحابة
+const getBranchStorageKey = (branchId: string) => `ashtrakat_branch_subscribers_v2_${branchId}`
 const getPendingSyncKey = (branchId: string) => `ashtrakat_pending_sync_${branchId}`
 
 // فحص وجود أي بيانات معلقة بانتظار المزامنة
@@ -105,7 +106,7 @@ export async function syncPendingOfflineData(): Promise<{ success: boolean; sync
 }
 
 // ==================== دعم IndexedDB لتخزين مئات آلاف المشتركين بدون قيود ====================
-const IDB_NAME = 'AshtrakatDB'
+const IDB_NAME = 'AshtrakatDB_v2'
 const IDB_VERSION = 1
 const IDB_STORE = 'branch_cache'
 
