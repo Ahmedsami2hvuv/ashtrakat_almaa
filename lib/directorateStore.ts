@@ -40,8 +40,8 @@ const branchSubscribersCache: Record<string, { subscribers: Subscriber[]; billin
 
 // مفتاح التخزين المحلي لبيانات المشتركين لكل فرع
 // v2: تجاهل النسخ المحلية القديمة الناقصة (قبل استعادة بيانات 2026-11-19) وتنزيل النسخة الكاملة من السحابة
-const getBranchStorageKey = (branchId: string) => `ashtrakat_branch_subscribers_v2_${branchId}`
-const getPendingSyncKey = (branchId: string) => `ashtrakat_pending_sync_${branchId}`
+const getBranchStorageKey = (branchId: string) => `ashtrakat_branch_subscribers_v3_${branchId}`
+const getPendingSyncKey = (branchId: string) => `ashtrakat_pending_sync_v3_${branchId}`
 
 // فحص وجود أي بيانات معلقة بانتظار المزامنة
 export function getPendingSyncCount(): number {
@@ -50,7 +50,7 @@ export function getPendingSyncCount(): number {
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && key.startsWith('ashtrakat_pending_sync_')) {
+      if (key && key.startsWith('ashtrakat_pending_sync_v3_')) {
         count++
       }
     }
@@ -69,7 +69,7 @@ export async function syncPendingOfflineData(): Promise<{ success: boolean; sync
     const pendingKeys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && key.startsWith('ashtrakat_pending_sync_')) {
+      if (key && key.startsWith('ashtrakat_pending_sync_v3_')) {
         pendingKeys.push(key)
       }
     }
@@ -106,7 +106,8 @@ export async function syncPendingOfflineData(): Promise<{ success: boolean; sync
 }
 
 // ==================== دعم IndexedDB لتخزين مئات آلاف المشتركين بدون قيود ====================
-const IDB_NAME = 'AshtrakatDB_v2'
+// v3: تجاهل كل النسخ المحلية بعد مسح المشتركين بتاريخ 2026-11-19
+const IDB_NAME = 'AshtrakatDB_v3'
 const IDB_VERSION = 1
 const IDB_STORE = 'branch_cache'
 
