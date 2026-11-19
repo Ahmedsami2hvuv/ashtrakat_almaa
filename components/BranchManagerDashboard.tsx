@@ -89,6 +89,68 @@ function HamburgerIcon({ open }: { open: boolean }) {
   return open ? <X size={20} color="#0f172a" /> : <Menu size={20} color="#0f172a" strokeWidth={2.2} />
 }
 
+// توحيد النص العربي للمقارنة: ة/ه، أ/إ/آ/ا، ى/ي، حذف التطويل والمسافات الزائدة
+function normalizeArabicKey(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\u0640/g, '')
+    .replace(/[\u064B-\u0652]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+// قراءة ورقة الإكسل مع اكتشاف سطر العناوين تلقائياً (قد يسبقه سطر فارغ أو عنوان للتقرير)
+function readSheetRowsWithHeaderDetection(sheet: XLSX.WorkSheet): any[] {
+  const matrix: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false })
+  const idHeaders = ['الاشتراك', 'رقم الاشتراك', 'رقم المشترك', 'اشتراك', 'رقم_المشترك', 'id', 'sub_id']
+  const nameHeaders = ['اسم المشترك', 'الاسم', 'اسم', 'name']
+  const idSet = new Set(idHeaders.map(normalizeArabicKey))
+  const nameSet = new Set(nameHeaders.map(normalizeArabicKey))
+  let headerIndex = -1
+  for (let i = 0; i < Math.min(matrix.length, 30); i++) {
+    const cells = (matrix[i] || []).map(normalizeArabicKey)
+    if (cells.some(c => idSet.has(c)) && cells.some(c => nameSet.has(c))) {
+      headerIndex = i
+      break
+    }
+  }
+  if (headerIndex === -1) {
+    // الشكل القديم: العناوين في أول سطر
+    return XLSX.utils.sheet_to_json(sheet, { defval: '' })
+  }
+  const headerRow = matrix[headerIndex] || []
+  const used = new Map<string, number>()
+  const keys = headerRow.map((h: any) => {
+    const key = String(h ?? '').replace(/\s+/g, ' ').trim()
+    if (!key) return ''
+    const count = used.get(key) || 0
+    used.set(key, count + 1)
+    return count === 0 ? key : `${key} (${count + 1})`
+  })
+  const idColumn = headerRow.findIndex((h: any) => idSet.has(normalizeArabicKey(h)))
+  const rows: any[] = []
+  for (let i = headerIndex + 1; i < matrix.length; i++) {
+    const r = matrix[i] || []
+    // السطر بلا رقم اشتراك (عناوين فرعية مثل "سجل رقم" أو أسطر ناقصة) لا يُستورد حتى لا تتكرر الأرقام عند إعادة الاستيراد
+    if (!/\d/.test(String(r[idColumn] ?? ''))) continue
+    const obj: any = {}
+    keys.forEach((k: string, j: number) => {
+      if (k) obj[k] = r[j] ?? ''
+    })
+    rows.push(obj)
+  }
+  return rows
+}
+
+// توحيد كتابة المساحة/العداد: 4/مكعب أو 4\مكعب ← 4/م مكعب
+function normalizeMeterText(value: string): string {
+  const m = value.replace(/\s+/g, ' ').trim().match(/^(\d+)\s*[\/\\]\s*(?:م\s*)?مكعب$/)
+  return m ? `${m[1]}/م مكعب` : value.trim()
+}
+
 // أرقام اشتراكات الكاتب: القائمة المحفوظة، أو النطاق (من/إلى) المحفوظ عند عدم وجود قائمة
 function getWriterSubscriberIds(writer: { assignedSubscriberIds?: number[]; rangeFrom?: number; rangeTo?: number }): number[] {
   if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
@@ -1244,7 +1306,7 @@ export default function BranchManagerDashboard({
         }
 
         const sheet = workbook.Sheets[sheetName]
-        const rawRows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+        const rawRows: any[] = readSheetRowsWithHeaderDetection(sheet)
 
         if (!rawRows || rawRows.length === 0) {
           throw new Error('ورقة العمل لا تحتوي على بيانات أو سطور مقروءة.')
@@ -1253,7 +1315,7 @@ export default function BranchManagerDashboard({
         // إعداد الهياكل للربط والمعالجة
         const currentAreas = [...(branch.areas || [])]
         const areaMap = new Map<string, Area>()
-        currentAreas.forEach(a => areaMap.set(a.name.trim().toLowerCase(), a))
+        currentAreas.forEach(a => areaMap.set(normalizeArabicKey(a.name), a))
 
         const currentWriters = [...(branch.writers || [])]
         const writerMap = new Map<string, BranchWriter>()
@@ -1277,13 +1339,16 @@ export default function BranchManagerDashboard({
         rawRows.forEach((row) => {
           // 1. استخراج اسم المشترك (فحص جميع الأعمدة المحتملة لأن بعض الملفات تكرر عمود اسم المشترك)
           let name = ''
-          const nameKeys = Object.keys(row).filter(k => 
-            k.includes('اسم المشترك') || k.includes('الاسم') || k.includes('المشترك') || k.toLowerCase().includes('name')
-          )
+          // أول عمود "اسم المشترك" غير فارغ له الأولوية (عند تكرار العمود يكون الأول هو الاسم الحالي)
+          const nameKeys = Object.keys(row).filter(k => {
+            const nk = normalizeArabicKey(k)
+            return nk.startsWith('اسم المشترك') || nk === 'الاسم' || nk === 'اسم' || nk.includes('name')
+          })
           for (const nk of nameKeys) {
-            const val = String(row[nk] || '').trim()
-            if (val && !val.includes('سجل رقم') && val.length > name.length) {
+            const val = String(row[nk] ?? '').replace(/\s+/g, ' ').trim()
+            if (val && !val.includes('سجل رقم')) {
               name = val
+              break
             }
           }
           if (!name) {
@@ -1327,7 +1392,7 @@ export default function BranchManagerDashboard({
           let assignedAreaId = ''
 
           if (areaName && areaName !== 'بدون عنوان' && areaName !== 'متنوع') {
-            const lowerArea = areaName.toLowerCase()
+            const lowerArea = normalizeArabicKey(areaName)
             if (areaMap.has(lowerArea)) {
               assignedAreaId = areaMap.get(lowerArea)!.id
             } else {
@@ -1374,7 +1439,7 @@ export default function BranchManagerDashboard({
           const meterVal = extractFieldValue(row, [
             'المساحة', 'المساحه', 'عدد المتر', 'المتر', 'العداد', 'نوع العداد', 'قطر العداد', 'القطر', 'meter', 'volume'
           ])
-          const meterText = String(meterVal || '').trim() || '4/م مكعب'
+          const meterText = normalizeMeterText(String(meterVal || '')) || '4/م مكعب'
 
           // 8. فحص واستخراج الحالات (مغلق، مهدوم، إيقاف حساب، قطعه فارغه، إلخ)
           const allRowText = Object.values(row).join(' ')
@@ -1414,6 +1479,10 @@ export default function BranchManagerDashboard({
           ])
           const writerName = String(writerVal || '').trim()
 
+          // 12. رقم العقار إن وجد
+          const propertyNumberVal = extractFieldValue(row, ['رقم العقار', 'رقم_العقار', 'property_no'])
+          const propertyNumberText = String(propertyNumberVal || '').trim()
+
           if (writerName) {
             const lowerWriter = writerName.toLowerCase()
             let writerObj = writerMap.get(lowerWriter)
@@ -1448,6 +1517,7 @@ export default function BranchManagerDashboard({
           if (areaName) addrParts.push(`المنطقة: ${areaName}`)
           if (dossierText) addrParts.push(`إضبارة: ${dossierText}`)
           if (noteText) addrParts.push(`ملاحظة: ${noteText}`)
+          if (propertyNumberText) addrParts.push(`رقم العقار: ${propertyNumberText}`)
           const detailedAddress = addrParts.join(' | ') || 'تم الاستيراد من ملف إكسل'
 
           const existingSub = subscriberIdMap.get(subId)
