@@ -340,7 +340,9 @@ export default function DirectorateRootApp() {
 
           // فحص جلسة المحصل المحفوظة بالهاتف فقط إذا لم توجد جلسة مدير
           const savedCollectorStr = localStorage.getItem('ashtrakat_collector_session')
-          if (savedCollectorStr) {
+          // استعادة جلسة المحصل المحفوظة مسموحة فقط عند انقطاع الإنترنت؛
+          // عند الاتصال، يفتح الرابط الرئيسي صفحة مدير الواردات ولا يستولي حساب المحصل عليها.
+          if (!navigator.onLine && savedCollectorStr) {
             try {
               const colSess = JSON.parse(savedCollectorStr)
               const foundBranch = data.branches.find(b => b.id === colSess.branchId) || data.branches[0]
