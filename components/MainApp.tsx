@@ -959,11 +959,18 @@ export default function MainApp({
     const hasSpecificSubs = assignedSubscriberIds && assignedSubscriberIds.length > 0
     const hasSpecificAreas = assignedAreaIds && assignedAreaIds.length > 0
 
-    if (hasSpecificSubs) {
+    if (userRole === 'writer' && effectiveWriterRange) {
+      subscribers.forEach(sub => {
+        if (sub.id >= effectiveWriterRange.from && sub.id <= effectiveWriterRange.to) {
+          allowedSubIdSet.add(sub.id)
+        }
+      })
+    } else if (hasSpecificSubs) {
       assignedSubscriberIds.forEach(id => allowedSubIdSet.add(id))
     } else if (hasSpecificAreas) {
       subscribers.forEach(sub => {
-        if (sub.areaId && assignedAreaIds.includes(sub.areaId)) {
+        if ((sub.areaId && assignedAreaIds.includes(sub.areaId)) ||
+            (sub.areaIds && sub.areaIds.some(areaId => assignedAreaIds.includes(areaId)))) {
           allowedSubIdSet.add(sub.id)
         }
       })
