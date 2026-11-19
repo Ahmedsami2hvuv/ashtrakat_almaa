@@ -864,11 +864,6 @@ export default function MainApp({
     if (userRole !== 'writer') return null
     let from = writerRangeFrom
     let to = writerRangeTo
-    if ((from === undefined || to === undefined) && assignedSubscriberIds && assignedSubscriberIds.length > 0) {
-      const sorted = [...assignedSubscriberIds].sort((a, b) => a - b)
-      from = sorted[0]
-      to = sorted[sorted.length - 1]
-    }
     if (from !== undefined && to !== undefined && from > 0 && to > 0) {
       return {
         from: Math.min(from, to),
@@ -972,7 +967,7 @@ export default function MainApp({
           allowedSubIdSet.add(sub.id)
         }
       })
-    } else {
+    } else if (userRole !== 'writer') {
       subscribers.forEach(sub => allowedSubIdSet.add(sub.id))
     }
 
@@ -1479,6 +1474,8 @@ export default function MainApp({
         const allowedSet = new Set(assignedSubscriberIds)
         return subscribers.filter((s) => allowedSet.has(s.id))
       }
+      // الكاتب الذي لم يُخصص له أي اشتراك لا يرى جميع مشتركي الفرع.
+      return []
     }
 
     // المحصل: لا نسمح بظهور اشتراكات خارج التخصيص.
