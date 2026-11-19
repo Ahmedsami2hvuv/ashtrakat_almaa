@@ -28,6 +28,7 @@ type ActiveView =
   | 'branch_manager'
   | 'subscriber_app'
   | 'writer_out_of_hours'
+  | 'public_home'
 
 export default function DirectorateRootApp() {
   const [directorateData, setDirectorateData] = useState<DirectorateData | null>(() => {
@@ -330,6 +331,14 @@ export default function DirectorateRootApp() {
             }
           }
 
+          // الرابط الجذري العام يعرض اسم المديرية فقط، ولا يستعيد أي جلسة محفوظة.
+          // روابط المدير والمحصل والكاتب المباشرة أعلاه تبقى تعمل عبر معاملات role/token.
+          if (window.location.pathname === '/' && !role) {
+            setActiveView('public_home')
+            setIsLoading(false)
+            return
+          }
+
           // فحص جلسة المحصل المحفوظة بالهاتف أولاً (لتمكين الفتح المباشر دون نت)
           const savedCollectorStr = localStorage.getItem('ashtrakat_collector_session')
           if (savedCollectorStr) {
@@ -454,6 +463,17 @@ export default function DirectorateRootApp() {
         </div>
         <h2 className="text-xl font-black">مديرية ماء محافظة البصرة</h2>
       </div>
+    )
+  }
+
+  // الصفحة العامة عند فتح النطاق دون امتداد: اسم المديرية فقط
+  if (activeView === 'public_home') {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center p-6" dir="rtl">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-800 text-center">
+          مديرية ماء البصرة
+        </h1>
+      </main>
     )
   }
 
