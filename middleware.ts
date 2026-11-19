@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * Give each branch-manager section a real, bookmarkable URL while keeping the
- * existing single-page app and preserving the manager token query parameters.
+ * Keep the main director dashboard available at /mder and preserve the
+ * existing branch-manager URLs while serving the same single-page app.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  if (pathname === '/manager' || pathname.startsWith('/manager/')) {
+  if (
+    pathname === '/mder' ||
+    pathname === '/manager' ||
+    pathname.startsWith('/manager/')
+  ) {
     const rewriteUrl = request.nextUrl.clone()
     rewriteUrl.pathname = '/'
     return NextResponse.rewrite(rewriteUrl)
@@ -15,5 +19,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/manager', '/manager/:path*']
+  matcher: ['/mder', '/manager', '/manager/:path*']
 }
