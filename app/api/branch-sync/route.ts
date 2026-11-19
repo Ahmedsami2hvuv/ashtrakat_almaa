@@ -57,6 +57,14 @@ export async function GET(request: Request) {
     let subscribers: any[] = []
     let billing: any = {}
 
+    // قاعدة البيانات غير متاحة (متوقفة أو قيد الاستعادة): لا نرجع قائمة فارغة كأنها ناجحة
+    if (!res.ok) {
+      return NextResponse.json(
+        { success: false, error: `قاعدة البيانات غير متاحة حالياً (${res.status})` },
+        { status: 503 }
+      )
+    }
+
     if (res.ok) {
       const rows = await res.json()
       const rowVal = rows && rows[0]?.value

@@ -183,7 +183,7 @@ export async function loadBranchSubscribersAndBilling(
       if (localRaw) {
         const localData = JSON.parse(localRaw)
         // نقبل الكاش فقط إذا وُجدت بيانات فعلية أو ختم زمني يؤكد أنه تحميل سابق ناجح
-        if (Array.isArray(localData.subscribers) && (localData.subscribers.length > 0 || localData.timestamp)) {
+        if (Array.isArray(localData.subscribers) && localData.subscribers.length > 0) {
           const cachedData = { subscribers: localData.subscribers as Subscriber[], billing: (localData.billing || {}) as BillingRecords, timestamp: Number(localData.timestamp || Date.now()) }
           branchSubscribersCache[branchId] = cachedData
           return cachedData
@@ -191,7 +191,7 @@ export async function loadBranchSubscribersAndBilling(
       }
     } catch {}
     const persistentData = await loadFromIndexedDB(branchId)
-    if (persistentData && Array.isArray(persistentData.subscribers) && (persistentData.subscribers.length > 0 || (persistentData as any).timestamp)) {
+    if (persistentData && Array.isArray(persistentData.subscribers) && persistentData.subscribers.length > 0) {
       const cachedData = { ...persistentData, timestamp: Date.now() }
       branchSubscribersCache[branchId] = cachedData
       return cachedData

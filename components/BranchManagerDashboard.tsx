@@ -89,6 +89,23 @@ function HamburgerIcon({ open }: { open: boolean }) {
   return open ? <X size={20} color="#0f172a" /> : <Menu size={20} color="#0f172a" strokeWidth={2.2} />
 }
 
+// أرقام اشتراكات الكاتب: القائمة المحفوظة، أو النطاق (من/إلى) المحفوظ عند عدم وجود قائمة
+function getWriterSubscriberIds(writer: { assignedSubscriberIds?: number[]; rangeFrom?: number; rangeTo?: number }): number[] {
+  if (writer.assignedSubscriberIds && writer.assignedSubscriberIds.length > 0) {
+    return writer.assignedSubscriberIds
+  }
+  const from = Number(writer.rangeFrom)
+  const to = Number(writer.rangeTo)
+  if (Number.isInteger(from) && Number.isInteger(to) && from > 0 && to > 0) {
+    const start = Math.min(from, to)
+    const end = Math.max(from, to)
+    const ids: number[] = []
+    for (let id = start; id <= end; id++) ids.push(id)
+    return ids
+  }
+  return []
+}
+
 export default function BranchManagerDashboard({
   branch,
   currentManager,
@@ -719,11 +736,13 @@ export default function BranchManagerDashboard({
       const currentWriters = branch.writers || []
       const updatedWriters = currentWriters.map(writer => {
         if (bulkSelectedWriterIds.includes(writer.id)) {
-          const existingIds = new Set(writer.assignedSubscriberIds || [])
+          const existingIds = new Set(getWriterSubscriberIds(writer))
           idsToAdd.forEach(id => existingIds.add(id))
           return {
             ...writer,
-            assignedSubscriberIds: Array.from(existingIds)
+            assignedSubscriberIds: Array.from(existingIds),
+            rangeFrom: undefined,
+            rangeTo: undefined
           }
         }
         return writer
@@ -815,10 +834,12 @@ export default function BranchManagerDashboard({
       const currentWriters = branch.writers || []
       const updatedWriters = currentWriters.map(writer => {
         if (bulkSelectedWriterIds.includes(writer.id)) {
-          const filteredIds = (writer.assignedSubscriberIds || []).filter(id => !idsToRemove.has(id))
+          const filteredIds = getWriterSubscriberIds(writer).filter(id => !idsToRemove.has(id))
           return {
             ...writer,
-            assignedSubscriberIds: filteredIds
+            assignedSubscriberIds: filteredIds,
+            rangeFrom: undefined,
+            rangeTo: undefined
           }
         }
         return writer
@@ -901,7 +922,9 @@ export default function BranchManagerDashboard({
       if (w.id === writerId) {
         return {
           ...w,
-          assignedSubscriberIds: []
+          assignedSubscriberIds: [],
+          rangeFrom: undefined,
+          rangeTo: undefined
         }
       }
       return w
@@ -3479,7 +3502,7 @@ export default function BranchManagerDashboard({
                 <div className="writer-grid">
                   {filteredWriters.map((writer) => {
                     const assignedAreas = (branch.areas || []).filter(a => (writer.assignedAreaIds || []).includes(a.id))
-                    const sortedSubIds = Array.from(new Set(writer.assignedSubscriberIds || [])).sort((a, b) => a - b)
+                    const sortedSubIds = Array.from(new Set(getWriterSubscriberIds(writer))).sort((a, b) => a - b)
                     const subCount = sortedSubIds.length
                     const minId = sortedSubIds[0]
                     const maxId = sortedSubIds[sortedSubIds.length - 1]
@@ -6108,7 +6131,7 @@ export default function BranchManagerDashboard({
             <div className="max-h-60 overflow-y-auto space-y-1.5 p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
               {(branch.writers || []).map(writer => {
                 const isChecked = bulkSelectedWriterIds.includes(writer.id)
-                const assignedCount = writer.assignedSubscriberIds?.length || 0
+                const assignedCount = getWriterSubscriberIds(writer).length
                 return (
                   <label
                     key={writer.id}
