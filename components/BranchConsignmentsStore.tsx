@@ -361,10 +361,10 @@ export default function BranchConsignmentsStore({
           نافذة منبثقة: تفاصيل الوصولات والمشتركين داخل الإرسالية
           ======================================================== */}
       {viewingDetailsConsignment && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div data-backdrop-close className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="app-modal-panel bg-white rounded-2xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             {/* ترويسة النافذة */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div className="app-modal-header p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center">
                   <FileText className="w-5 h-5" />
@@ -393,7 +393,7 @@ export default function BranchConsignmentsStore({
                   <span>فتح في ورقة A4</span>
                 </button>
 
-                <button
+                <button data-modal-close
                   onClick={() => setViewingDetailsConsignment(null)}
                   className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition"
                 >
@@ -403,7 +403,7 @@ export default function BranchConsignmentsStore({
             </div>
 
             {/* محتوى الجدول */}
-            <div className="p-4 overflow-y-auto flex-1">
+            <div className="app-modal-body p-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-3 gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl mb-4 text-xs font-bold text-center">
                 <div>
                   <span className="text-slate-500 block text-[10px]">المبلغ الكلي</span>
@@ -466,7 +466,7 @@ export default function BranchConsignmentsStore({
             </div>
 
             {/* تذييل النافذة */}
-            <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 text-right">
+            <div className="app-modal-footer p-3 sm:p-4 bg-slate-50 border-t border-slate-200 text-right">
               <button
                 onClick={() => setViewingDetailsConsignment(null)}
                 style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}

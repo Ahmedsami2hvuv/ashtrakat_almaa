@@ -255,7 +255,7 @@ export default function ConsignmentAiScannerModal({
   const calculatedTotal = validRows.reduce((s, r) => s + (r.amount || 0), 0)
 
   return (
-    <div
+    <div className="app-modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -269,7 +269,7 @@ export default function ConsignmentAiScannerModal({
       }}
       dir="rtl"
     >
-      <div
+      <div className="app-modal-panel"
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '24px',
@@ -285,7 +285,7 @@ export default function ConsignmentAiScannerModal({
         }}
       >
         {/* ===================== الرأسية ===================== */}
-        <div
+        <div className="app-modal-header"
           style={{
             flexShrink: 0,
             padding: '16px 24px',
@@ -310,7 +310,7 @@ export default function ConsignmentAiScannerModal({
             </div>
           </div>
 
-          <button
+          <button data-modal-close
             type="button"
             onClick={onClose}
             className="p-2 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-xl transition cursor-pointer"
@@ -320,7 +320,7 @@ export default function ConsignmentAiScannerModal({
         </div>
 
         {/* ===================== المحتوى الداخلي ===================== */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px' }} className="space-y-4">
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px' }} className="app-modal-body space-y-4">
           {/* الخطوة 1: اختيار الصورة ومعاينتها بتصميم عريض ومريح */}
           {!scannedResult && (
             <div>
@@ -722,7 +722,7 @@ export default function ConsignmentAiScannerModal({
         </div>
 
         {/* ===================== الشريط السفلي للأزرار ===================== */}
-        <div
+        <div className="app-modal-footer"
           style={{
             flexShrink: 0,
             padding: '14px 24px',

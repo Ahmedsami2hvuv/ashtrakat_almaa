@@ -41,6 +41,7 @@ export const viewport: Viewport = {
 }
 
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+import ModalViewportGuard from '@/components/ModalViewportGuard'
 
 export default function RootLayout({
   children,
@@ -51,6 +52,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={`${tajawal.variable} ${cairo.variable}`}>
       <body className={tajawal.className}>
         <ServiceWorkerRegister />
+        <ModalViewportGuard />
         {children}
       </body>
     </html>

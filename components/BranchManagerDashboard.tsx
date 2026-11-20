@@ -2286,7 +2286,7 @@ export default function BranchManagerDashboard({
         }
         .mgr-drawer-panel {
           position: absolute; top: 0; bottom: 0; right: 0; left: auto;
-          width: 290px; max-width: 85vw; display: flex; flex-direction: column;
+          width: 290px; max-width: 85vw; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
           background: rgba(255,255,255,.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
           border-left: 1px solid rgba(255,255,255,.9);
           box-shadow: -12px 0 40px rgba(15,23,42,.18);
@@ -4038,11 +4038,11 @@ export default function BranchManagerDashboard({
       {/* النوافذ المنبثقة (Modals) */}
       {/* نافذة إضافة قائمة مناطق (كل منطقة بسطر) */}
       {showAreasListModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
+        <div className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="app-modal-panel bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-xl">
+            <div className="app-modal-header flex items-center justify-between">
               <h3 className="text-base font-black text-slate-900">إضافة قائمة مناطق دفعة واحدة</h3>
-                <button
+                <button data-modal-close
                   onClick={() => setShowAreasListModal(false)}
                   className="text-slate-400 hover:text-slate-600 p-1 flex items-center justify-center"
                 >
@@ -4061,7 +4061,7 @@ export default function BranchManagerDashboard({
               className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none leading-relaxed"
             />
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="app-modal-footer flex items-center justify-between pt-2">
               <span className="text-[11px] text-slate-400 font-bold">
                 عدد الأسطر المكتوبة: {areasListText.split('\n').filter(s => s.trim()).length} منطقة
               </span>
@@ -4087,9 +4087,9 @@ export default function BranchManagerDashboard({
 
       {/* نافذة استيراد المشتركين */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-xl">
-            <h3 className="text-base font-black text-slate-900">استيراد مشتركين جدد</h3>
+        <div className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="app-modal-panel bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-xl">
+            <h3 className="app-modal-header text-base font-black text-slate-900">استيراد مشتركين جدد</h3>
             <p className="text-xs text-slate-500">الصق قائمة الأسماء مع أرقام المشتركين (مثال: 5202 نوري عبد الصمد):</p>
 
             <textarea
@@ -4100,8 +4100,8 @@ export default function BranchManagerDashboard({
               className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
 
-            <div className="flex gap-2 justify-end pt-2">
-              <button
+            <div className="app-modal-footer flex gap-2 justify-end pt-2">
+              <button data-modal-close
                 onClick={() => setShowImportModal(false)}
                 className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition"
               >
@@ -4120,9 +4120,9 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تأكيد مسح جميع المشتركين */}
       {showWipeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-xl border border-red-200">
-            <h3 className="text-base font-black text-red-700 flex items-center gap-2">
+        <div className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
+          <div className="app-modal-panel bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-xl border border-red-200">
+            <h3 className="app-modal-header text-base font-black text-red-700 flex items-center gap-2">
               <Trash2 className="w-5 h-5" />
               مسح جميع المشتركين
             </h3>
@@ -4138,8 +4138,8 @@ export default function BranchManagerDashboard({
               placeholder="مسح"
               className="w-full px-3.5 py-2.5 bg-white border border-red-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500"
             />
-            <div className="flex gap-2 justify-end pt-2">
-              <button
+            <div className="app-modal-footer flex gap-2 justify-end pt-2">
+              <button data-modal-close
                 type="button"
                 onClick={() => setShowWipeModal(false)}
                 disabled={isWiping}
@@ -4186,11 +4186,11 @@ export default function BranchManagerDashboard({
               setExcelError(null)
             }
           }}
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 overflow-y-auto"
+          className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 overflow-y-auto"
         >
-          <div className="bg-white rounded-3xl p-5 md:p-6 max-w-xl w-full space-y-4 shadow-2xl my-auto border border-slate-100 relative">
+          <div className="app-modal-panel bg-white rounded-3xl p-5 md:p-6 max-w-xl w-full space-y-4 shadow-2xl my-auto border border-slate-100 relative">
             {/* الترويسة مع زر إغلاق بارز وواضح */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="app-modal-header flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
                   <FileSpreadsheet className="w-5 h-5" />
@@ -4205,7 +4205,7 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => {
                   setShowExcelModal(false)
@@ -4418,7 +4418,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل محصل - تصميم متناسق ومريح مع 4 مناطق في السطر دائماً */}
       {showCollectorModal && (
-        <div 
+        <div className="app-modal-overlay" 
           style={{
             position: 'fixed',
             inset: 0,
@@ -4431,7 +4431,7 @@ export default function BranchManagerDashboard({
             padding: '16px'
           }}
         >
-          <div 
+          <div className="app-modal-panel" 
             style={{
               backgroundColor: '#ffffff',
               borderRadius: '24px',
@@ -4447,9 +4447,9 @@ export default function BranchManagerDashboard({
             }}
           >
             {/* الرأس المدمج بدون أي فراغ زائد - مع الحقول وأدوات البحث في حزمة واحدة أنيقة */}
-            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="space-y-2.5">
+            <div style={{ flexShrink: 0, padding: '12px 16px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }} className="app-modal-header--tall app-modal-header space-y-2.5">
               {/* السطر الأول: العنوان على اليمين وزر الإغلاق على اليسار */}
-              <div className="flex items-center justify-between">
+              <div className="app-modal-titlebar flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
                     <Wallet className="w-4 h-4" />
@@ -4462,7 +4462,7 @@ export default function BranchManagerDashboard({
                   </div>
                 </div>
 
-                <button
+                <button data-modal-close
                   type="button"
                   onClick={() => {
                     setShowCollectorModal(false)
@@ -4647,7 +4647,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* صندوق شبكة المناطق: 4 مناطق في السطر دائماً ومقاس مصغر */}
-            <div 
+            <div className="app-modal-body" 
               style={{
                 flex: 1,
                 minHeight: 0,
@@ -4725,7 +4725,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* أزرار الإجراءات في الأسفل مثبتة دائماً وظاهرة بحجم مدمج */}
-            <div 
+            <div className="app-modal-footer" 
               style={{
                 flexShrink: 0,
                 padding: '10px 16px',
@@ -4764,7 +4764,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة إضافة / تعديل كاتب - تصميم متناسق ومريح مع 4 مناطق في السطر دائماً */}
       {showWriterModal && (
-        <div 
+        <div className="app-modal-overlay" 
           style={{
             position: 'fixed',
             inset: 0,
@@ -4777,7 +4777,7 @@ export default function BranchManagerDashboard({
             padding: '16px'
           }}
         >
-          <div 
+          <div className="app-modal-panel" 
             style={{
               backgroundColor: '#ffffff',
               borderRadius: '20px',
@@ -4792,7 +4792,7 @@ export default function BranchManagerDashboard({
             }}
           >
             {/* رأس النافذة الأنيق */}
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+            <div className="app-modal-header p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
                   <BookOpen className="w-5 h-5" />
@@ -4807,7 +4807,7 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => {
                   setShowWriterModal(false)
@@ -4819,7 +4819,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* جسم النافذة القابل للتمرير إن لزم الأمر */}
-            <div className="p-4 space-y-3.5 overflow-y-auto max-h-[calc(90vh-130px)]">
+            <div className="app-modal-body p-4 space-y-3.5 overflow-y-auto max-h-[calc(90vh-130px)]">
               {/* حقول الاسم ورقم الهاتف جنباً إلى جنب في نفس السطر */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -4975,7 +4975,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* أزرار الإجراءات في الأسفل بارزة وواضحة جداً */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+            <div className="app-modal-footer p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowWriterModal(false)}
@@ -5009,7 +5009,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة سجل نشاط وإحصائيات الكاتب الشاملة (اليومي، الشهري، السنوي) */}
       {showWriterStatsModal && statsSelectedWriter && (
-        <div
+        <div data-backdrop-close className="app-modal-overlay"
           style={{
             position: 'fixed',
             inset: 0,
@@ -5023,11 +5023,11 @@ export default function BranchManagerDashboard({
           }}
           dir="rtl"
         >
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
+          <div className="app-modal-panel bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
             {/* 1. رأس النافذة */}
             <div
               style={{ backgroundColor: '#1e1b4b', color: '#ffffff' }}
-              className="p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md"
+              className="app-modal-header p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md"
             >
               <div className="flex items-center gap-3">
                 <div
@@ -5066,7 +5066,7 @@ export default function BranchManagerDashboard({
                   <RefreshCw className={`w-4 h-4 ${isLoadingWriterStats ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline font-black">تحديث</span>
                 </button>
-                <button
+                <button data-modal-close
                   type="button"
                   onClick={() => setShowWriterStatsModal(false)}
                   style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.25)' }}
@@ -5151,7 +5151,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* 3. بطاقات الإحصائيات الأربعة الكبيرة */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-white">
+            <div className="app-modal-body p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-white">
               {(() => {
                 const currentPeriod: PeriodStats = writerStats
                   ? statsTimeTab === 'today'
@@ -5452,7 +5452,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* زر الإغلاق السفلي */}
-            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-end">
+            <div className="app-modal-footer p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setShowWriterStatsModal(false)}
@@ -5467,7 +5467,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة سجل نشاط وإحصائيات المحصل الشاملة (اليومي، الشهري، السنوي) */}
       {showCollectorStatsModal && statsSelectedCollector && (
-        <div
+        <div data-backdrop-close className="app-modal-overlay"
           style={{
             position: 'fixed',
             inset: 0,
@@ -5481,11 +5481,11 @@ export default function BranchManagerDashboard({
           }}
           dir="rtl"
         >
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
+          <div className="app-modal-panel bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-right">
             {/* 1. رأس النافذة */}
             <div
               style={{ backgroundColor: '#0f294a', color: '#ffffff' }}
-              className="p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md"
+              className="app-modal-header p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md"
             >
               <div className="flex items-center gap-3">
                 <div
@@ -5525,7 +5525,7 @@ export default function BranchManagerDashboard({
                   <span className="hidden sm:inline font-black">تحديث</span>
                 </button>
 
-                <button
+                <button data-modal-close
                   type="button"
                   onClick={() => setShowCollectorStatsModal(false)}
                   style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
@@ -5599,7 +5599,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* 3. جسم النافذة القابل للتمرير */}
-            <div className="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/50">
+            <div className="app-modal-body p-4 sm:p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/50">
               {/* شبكة البطاقات الإحصائية الأربع - تصميم بألوان واضحة وعالية التباين */}
               {(() => {
                 const currentPeriodStats = collectorStats
@@ -5985,7 +5985,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* زر الإغلاق السفلي */}
-            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-end">
+            <div className="app-modal-footer p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setShowCollectorStatsModal(false)}
@@ -6000,7 +6000,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة عرض قائمة أسماء المشتركين المعنيين */}
       {showSubscribersListModal && (
-        <div
+        <div data-backdrop-close className="app-modal-overlay"
           style={{
             position: 'fixed',
             inset: 0,
@@ -6014,10 +6014,10 @@ export default function BranchManagerDashboard({
           }}
           dir="rtl"
         >
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden text-right">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+          <div className="app-modal-panel bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden text-right">
+            <div className="app-modal-header p-4 bg-slate-900 text-white flex items-center justify-between">
               <h4 className="font-black text-sm">{showSubscribersListModal.title}</h4>
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => setShowSubscribersListModal(null)}
                 className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white"
@@ -6026,7 +6026,7 @@ export default function BranchManagerDashboard({
               </button>
             </div>
 
-            <div className="p-4 overflow-y-auto max-h-96 space-y-1.5 flex-1">
+            <div className="app-modal-body p-4 overflow-y-auto max-h-96 space-y-1.5 flex-1">
               {showSubscribersListModal.subscribers.map((s, idx) => (
                 <div
                   key={idx}
@@ -6049,7 +6049,7 @@ export default function BranchManagerDashboard({
               ))}
             </div>
 
-            <div className="p-3 bg-slate-100 border-t border-slate-200 flex justify-end">
+            <div className="app-modal-footer p-3 bg-slate-100 border-t border-slate-200 flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowSubscribersListModal(null)}
@@ -6064,7 +6064,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تخصيص المشتركين للمناطق */}
       {showAssignAreasModal && (
-        <div
+        <div className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -6095,9 +6095,9 @@ export default function BranchManagerDashboard({
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
               boxSizing: 'border-box'
             }}
-            className="space-y-4"
+            className="app-modal-panel space-y-4"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="app-modal-header flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
                   <MapPin className="w-5 h-5" />
@@ -6107,7 +6107,7 @@ export default function BranchManagerDashboard({
                   <p className="text-[11px] text-slate-500 font-bold">المشتركون المحددون: {selectedSubIds.size} مشترك</p>
                 </div>
               </div>
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => setShowAssignAreasModal(false)}
                 className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition"
@@ -6199,7 +6199,7 @@ export default function BranchManagerDashboard({
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="app-modal-footer flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowAssignAreasModal(false)}
@@ -6223,7 +6223,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تخصيص المشتركين للكتّاب */}
       {showAssignWritersModal && (
-        <div
+        <div className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -6254,9 +6254,9 @@ export default function BranchManagerDashboard({
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
               boxSizing: 'border-box'
             }}
-            className="space-y-4"
+            className="app-modal-panel space-y-4"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="app-modal-header flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                   <BookOpen className="w-5 h-5" />
@@ -6266,7 +6266,7 @@ export default function BranchManagerDashboard({
                   <p className="text-[11px] text-slate-500 font-bold">المشتركون المحددون: {selectedSubIds.size} مشترك</p>
                 </div>
               </div>
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => setShowAssignWritersModal(false)}
                 className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition"
@@ -6348,7 +6348,7 @@ export default function BranchManagerDashboard({
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div className="app-modal-footer flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowAssignWritersModal(false)}
@@ -6386,7 +6386,7 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تخصيص المشتركين للمحصلين */}
       {showAssignCollectorsModal && (
-        <div
+        <div className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -6417,9 +6417,9 @@ export default function BranchManagerDashboard({
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
               boxSizing: 'border-box'
             }}
-            className="space-y-4"
+            className="app-modal-panel space-y-4"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="app-modal-header flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
                   <Wallet className="w-5 h-5" />
@@ -6429,7 +6429,7 @@ export default function BranchManagerDashboard({
                   <p className="text-[11px] text-slate-500 font-bold">المشتركون المحددون: {selectedSubIds.size} مشترك</p>
                 </div>
               </div>
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => setShowAssignCollectorsModal(false)}
                 className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition"
@@ -6511,7 +6511,7 @@ export default function BranchManagerDashboard({
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div className="app-modal-footer flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowAssignCollectorsModal(false)}
@@ -6613,11 +6613,11 @@ export default function BranchManagerDashboard({
         const whatsappUrl = sub.phone ? generateWhatsAppLink(sub.phone, whatsappMsg) : ''
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in">
-            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+          <div data-backdrop-close className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in">
+            <div className="app-modal-panel bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
               
               {/* الرأس */}
-              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="app-modal-header p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-sm">
                     <Users className="w-5 h-5" />
@@ -6652,7 +6652,7 @@ export default function BranchManagerDashboard({
                     <span>تطبيق المشتركين</span>
                   </button>
 
-                  <button
+                  <button data-modal-close
                     type="button"
                     onClick={() => setSelectedDetailSubscriber(null)}
                     className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-xl transition"
@@ -6663,7 +6663,7 @@ export default function BranchManagerDashboard({
               </div>
 
               {/* المحتوى الداخلي */}
-              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+              <div className="app-modal-body p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
                 
                 {/* شريط الإضبارة والملاحظات والدين السابق والحالات */}
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
@@ -6855,7 +6855,7 @@ export default function BranchManagerDashboard({
               </div>
 
               {/* أسفل النافذة */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
+              <div className="app-modal-footer p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -6889,10 +6889,10 @@ export default function BranchManagerDashboard({
 
       {/* نافذة تفاصيل المنطقة التفاعلية وإدارة مشتركيها */}
       {selectedAreaForModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="app-modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="app-modal-panel bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             {/* رأس النافذة */}
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div className="app-modal-header p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-sm">
                   <MapPin className="w-5 h-5" />
@@ -6910,7 +6910,7 @@ export default function BranchManagerDashboard({
                 </div>
               </div>
 
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => {
                   setSelectedAreaForModal(null)
@@ -7001,7 +7001,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* جسم النافذة */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <div className="app-modal-body flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               {/* 1. وضع عرض مشتركي المنطقة الحاليين */}
               {!isAssigningToArea ? (
                 <div className="space-y-3">
@@ -7211,7 +7211,7 @@ export default function BranchManagerDashboard({
             </div>
 
             {/* أسفل النافذة */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
+            <div className="app-modal-footer p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
               {isAssigningToArea ? (
                 <>
                   <div className="text-xs font-black text-slate-700">

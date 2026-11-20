@@ -665,7 +665,8 @@ export default function DirectorDashboard({
       <aside
         style={{
           width: '260px',
-          height: '100vh',
+          bottom: 0,
+          overflowY: 'auto',
           backgroundColor: '#1e293b',
           color: '#ffffff',
           position: 'fixed',
@@ -3248,7 +3249,7 @@ export default function DirectorDashboard({
       {/* 3. النافذة المنبثقة لإضافة مسؤول فرع جديد (Modal)         */}
       {/* ======================================================== */}
       {showAddManagerModal && (
-        <div
+        <div className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -3262,7 +3263,7 @@ export default function DirectorDashboard({
             zIndex: 100
           }}
         >
-          <div
+          <div className="app-modal-panel"
             style={{
               background: '#fff',
               padding: '25px',
@@ -3271,7 +3272,7 @@ export default function DirectorDashboard({
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}
           >
-            <h3 style={{ marginBottom: '18px', fontWeight: 800, fontSize: '1.2rem', color: '#1e293b' }}>
+            <h3 className="app-modal-header" style={{ marginBottom: '18px', fontWeight: 800, fontSize: '1.2rem', color: '#1e293b' }}>
               {editingManager ? `تعديل بيانات المسؤول (${editingManager.name})` : 'إضافة مسؤول فرع جديد'}
             </h3>
 
@@ -3346,8 +3347,8 @@ export default function DirectorDashboard({
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
+            <div className="app-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button data-modal-close
                 onClick={() => {
                   setShowAddManagerModal(false)
                   setEditingManager(null)
@@ -3389,7 +3390,7 @@ export default function DirectorDashboard({
       {/* 4. النافذة المنبثقة لإضافة فرع جديد                       */}
       {/* ======================================================== */}
       {showAddBranchModal && (
-        <div
+        <div className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -3403,7 +3404,7 @@ export default function DirectorDashboard({
             zIndex: 100
           }}
         >
-          <div
+          <div className="app-modal-panel"
             style={{
               background: '#fff',
               padding: '25px',
@@ -3412,7 +3413,7 @@ export default function DirectorDashboard({
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}
           >
-            <h3 style={{ marginBottom: '18px', fontWeight: 800, fontSize: '1.2rem', color: '#1e293b' }}>
+            <h3 className="app-modal-header" style={{ marginBottom: '18px', fontWeight: 800, fontSize: '1.2rem', color: '#1e293b' }}>
               إضافة فرع واردات جديد
             </h3>
 
@@ -3439,8 +3440,8 @@ export default function DirectorDashboard({
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
+            <div className="app-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button data-modal-close
                 onClick={() => setShowAddBranchModal(false)}
                 style={{
                   background: '#94a3b8',
@@ -3520,7 +3521,7 @@ export default function DirectorDashboard({
         const waUrl = generateWhatsAppLink(viewingSubscriber.phone, directWaMsg)
 
         return (
-          <div
+          <div data-backdrop-close className="app-modal-overlay"
             style={{
               position: 'fixed',
               top: 0,
@@ -3536,7 +3537,7 @@ export default function DirectorDashboard({
               padding: '12px'
             }}
           >
-            <div
+            <div className="app-modal-panel"
               style={{
                 background: '#f0f9ff',
                 borderRadius: '20px',
@@ -3551,7 +3552,7 @@ export default function DirectorDashboard({
               }}
             >
               {/* 1. رأس البطاقة (Hero Header) */}
-              <div
+              <div className="app-modal-header"
                 style={{
                   backgroundColor: '#ffffff',
                   borderBottom: '1px solid #e0f2fe',
@@ -3656,7 +3657,7 @@ export default function DirectorDashboard({
                   </div>
                 </div>
 
-                <button
+                <button data-modal-close
                   onClick={() => {
                     setViewingSubscriber(null)
                     setShowViewingSubscriberContact(false)
@@ -3681,7 +3682,7 @@ export default function DirectorDashboard({
               </div>
 
               {/* 2. جسم البطاقة القابل للتمرير */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+              <div className="app-modal-body" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
                 
                 {/* شريط السنوات (2026 أحمر أيقوني، 2027، 2028) */}
                 <div
@@ -4146,7 +4147,7 @@ export default function DirectorDashboard({
               </div>
 
               {/* 4. أسفل البطاقة (Footer) */}
-              <div
+              <div className="app-modal-footer"
                 style={{
                   backgroundColor: '#ffffff',
                   borderTop: '1px solid #e0f2fe',
@@ -4184,7 +4185,7 @@ export default function DirectorDashboard({
 
             {/* نافذة التواصل والموقع والصور المنبثقة للمشترك */}
             {showViewingSubscriberContact && (
-              <div
+              <div data-backdrop-close className="app-modal-overlay"
                 style={{
                   position: 'fixed',
                   top: 0,
@@ -4199,7 +4200,7 @@ export default function DirectorDashboard({
                   padding: '16px'
                 }}
               >
-                <div
+                <div className="app-modal-panel"
                   style={{
                     backgroundColor: '#ffffff',
                     borderRadius: '16px',
@@ -4210,11 +4211,11 @@ export default function DirectorDashboard({
                     overflow: 'hidden'
                   }}
                 >
-                  <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="app-modal-header" style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1e293b' }}>
                       تفاصيل التواصل والموقع والصور
                     </h4>
-                    <button
+                    <button data-modal-close
                       onClick={() => setShowViewingSubscriberContact(false)}
                       style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}
                     >
@@ -4222,7 +4223,7 @@ export default function DirectorDashboard({
                     </button>
                   </div>
 
-                  <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="app-modal-body" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
                       <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '3px' }}>رقم الهاتف:</span>
                       <strong style={{ fontSize: '0.95rem', color: '#0284c7' }} dir="ltr">{viewingSubscriber.phone || 'غير مسجل'}</strong>
@@ -4261,7 +4262,7 @@ export default function DirectorDashboard({
                     )}
                   </div>
 
-                  <div style={{ padding: '12px 18px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="app-modal-footer" style={{ padding: '12px 18px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => setShowViewingSubscriberContact(false)}
                       style={{
@@ -4289,7 +4290,7 @@ export default function DirectorDashboard({
       {/* 6. نافذة تفاصيل المحصل والمناطق والجباية                  */}
       {/* ======================================================== */}
       {viewingCollector && (
-        <div
+        <div data-backdrop-close className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -4303,7 +4304,7 @@ export default function DirectorDashboard({
             zIndex: 110
           }}
         >
-          <div
+          <div className="app-modal-panel"
             style={{
               background: '#fff',
               padding: '25px',
@@ -4315,7 +4316,7 @@ export default function DirectorDashboard({
               boxShadow: '0 4px 25px rgba(0,0,0,0.2)'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+            <div className="app-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b', margin: 0 }}>
                   تقرير المحصل: {viewingCollector.name}
@@ -4324,7 +4325,7 @@ export default function DirectorDashboard({
                   هاتف: {viewingCollector.phone}
                 </span>
               </div>
-              <button
+              <button data-modal-close
                 onClick={() => setViewingCollector(null)}
                 style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -4407,7 +4408,7 @@ export default function DirectorDashboard({
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="app-modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setViewingCollector(null)}
                 style={{

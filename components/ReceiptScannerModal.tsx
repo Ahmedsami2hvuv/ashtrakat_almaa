@@ -819,12 +819,12 @@ export default function ReceiptScannerModal({
       {previewImage && (
         <div
           onClick={() => setPreviewImage(null)}
-          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-3 select-none"
+          className="app-modal-overlay fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-3 select-none"
         >
           {/* شريط الإغلاق العلوي */}
           <div className="w-full max-w-xl flex justify-between items-center py-2 px-1 flex-shrink-0">
             <span className="text-xs text-white/80 font-bold">معاينة صورة الوصل</span>
-            <button
+            <button data-modal-close
               type="button"
               onClick={(e) => {
                 e.stopPropagation()

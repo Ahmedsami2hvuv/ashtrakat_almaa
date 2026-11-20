@@ -5406,15 +5406,15 @@ export default function MainApp({
           فورم إضافة مشترك (A)
       ========================== */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[10050] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white w-full max-w-[460px] rounded-2xl border border-sky-100 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="app-modal-overlay fixed inset-0 z-[10050] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4">
+          <div className="app-modal-panel bg-white w-full max-w-[460px] rounded-2xl border border-sky-100 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* رأس النافذة */}
-            <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+            <div className="app-modal-header px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <h3 className="font-bold text-[14px] text-slate-900">إضافة مشترك جديد</h3>
               </div>
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors text-sm"
@@ -5423,7 +5423,7 @@ export default function MainApp({
               </button>
             </div>
 
-            <form onSubmit={handleAddSubscriberSubmit} className="p-4 space-y-3 overflow-y-auto">
+            <form onSubmit={handleAddSubscriberSubmit} className="app-modal-body p-4 space-y-3 overflow-y-auto">
               {/* السطر الأول: رقم المشترك على اليمين صغير جداً، واسم المشترك على اليسار كبير */}
               <div className="flex gap-2 items-start">
                 {/* رقم المشترك (على اليمين، حجم صغير جداً ومضغوط) */}
@@ -5777,11 +5777,11 @@ export default function MainApp({
           فورم تعديل مشترك (B)
       ========================== */}
       {showEditModal && editSub.id && (
-        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-xl">
-            <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
+        <div className="app-modal-overlay fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
+          <div className="app-modal-panel app-modal-panel--full bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col max-h-[100vh] shadow-xl">
+            <div className="app-modal-header px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
               <h3 className="font-bold text-[13px] text-slate-800">تعديل معلومات المشترك #{editSub.id}</h3>
-              <button
+              <button data-modal-close
                 onClick={() => setShowEditModal(false)}
                 className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
               >
@@ -5789,7 +5789,7 @@ export default function MainApp({
               </button>
             </div>
 
-            <form onSubmit={handleEditSubscriberSubmit} className="p-4 space-y-4 overflow-y-auto">
+            <form onSubmit={handleEditSubscriberSubmit} className="app-modal-body p-4 space-y-4 overflow-y-auto">
               <div>
                 <label className="text-[11px] text-slate-600 font-medium">الاسم</label>
                 <div className="relative mt-1.5">
@@ -6043,10 +6043,10 @@ export default function MainApp({
         if (!targetSub) return null
 
         return (
-          <div className="fixed inset-0 z-[10050] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-            <div className="bg-white w-full max-w-[440px] rounded-2xl border border-sky-100 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
+          <div className="app-modal-overlay fixed inset-0 z-[10050] bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+            <div className="app-modal-panel bg-white w-full max-w-[440px] rounded-2xl border border-sky-100 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
               {/* رأس النافذة */}
-              <div className="px-4 py-3.5 border-b border-sky-100 flex justify-between items-center bg-sky-50/60">
+              <div className="app-modal-header px-4 py-3.5 border-b border-sky-100 flex justify-between items-center bg-sky-50/60">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-sky-600"></span>
                   <div>
@@ -6056,7 +6056,7 @@ export default function MainApp({
                     </div>
                   </div>
                 </div>
-                <button
+                <button data-modal-close
                   type="button"
                   onClick={() => setShowStatusPickerModal(false)}
                   className="w-8 h-8 rounded-xl border border-sky-100 bg-white text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold shadow-2xs"
@@ -6066,7 +6066,7 @@ export default function MainApp({
               </div>
 
               {/* جسم النافذة: خيارات الحالات كأزرار شبكية واضحة */}
-              <div className="p-4 overflow-y-auto space-y-3">
+              <div className="app-modal-body p-4 overflow-y-auto space-y-3">
                 <div className="text-[11.5px] text-slate-600 font-medium">
                   حدد الحالة أو الحالات التي تنطبق على هذا المشترك ميدانياً:
                 </div>
@@ -6114,7 +6114,7 @@ export default function MainApp({
               </div>
 
               {/* أسفل النافذة: زر الحفظ */}
-              <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex gap-2">
+              <div className="app-modal-footer p-3 border-t border-slate-100 bg-slate-50/50 flex gap-2">
                 <button
                   type="button"
                   onClick={handleSaveSubscriberStatuses}
@@ -6140,18 +6140,18 @@ export default function MainApp({
 
       {/* نافذة التواصل والموقع والصور */}
       {showContactModal && activeSubscriber && (
-        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col shadow-xl">
-            <div className="px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
+        <div data-backdrop-close className="app-modal-overlay fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-0 sm:p-4">
+          <div className="app-modal-panel app-modal-panel--full bg-white w-full h-full sm:h-auto sm:max-w-[480px] sm:rounded-2xl border-0 sm:border border-sky-100 flex flex-col shadow-xl">
+            <div className="app-modal-header px-4 py-3 border-b border-sky-50 flex justify-between items-center bg-sky-50/50">
               <h3 className="font-bold text-[13px] text-slate-800">التواصل والموقع والصور</h3>
-              <button
+              <button data-modal-close
                 onClick={() => setShowContactModal(false)}
                 className="w-8 h-8 border border-sky-100 rounded-xl flex items-center justify-center bg-white text-slate-500"
               >
                 
               </button>
             </div>
-            <div className="p-4 space-y-4 overflow-y-auto">
+            <div className="app-modal-body p-4 space-y-4 overflow-y-auto">
               <div className="border border-sky-100 rounded-2xl p-4 bg-sky-50/40">
                 <div className="text-[11px] text-slate-500">رقم الهاتف</div>
                 <div className="font-mono text-[13px] mt-1.5 font-bold" dir="ltr">
@@ -6265,15 +6265,15 @@ export default function MainApp({
           الاستيراد (C) مع البارسر الذكي
       ========================== */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex">
+        <div data-backdrop-close className="app-modal-overlay fixed inset-0 z-[10050] bg-slate-900/25 backdrop-blur-[2px] flex">
           <div className="depth-panel bg-white w-full sm:w-[520px] h-full border-l border-sky-100 flex flex-col mr-auto sm:mr-0 ml-auto shadow-[-8px_0_30px_rgba(0,0,0,0.1)]">
             <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center bg-slate-900 text-white">
               <h3 className="font-bold text-[13px]">الإعدادات</h3>
-              <button
+              <button data-modal-close
                 onClick={() => setShowSettingsModal(false)}
                 className="w-7 h-7 border border-white/20 rounded-lg flex items-center justify-center bg-white/10"
               >
-                
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -6300,7 +6300,7 @@ export default function MainApp({
               })}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-[#f0f9ff]/50">
+            <div className="app-modal-body flex-1 overflow-y-auto p-4 bg-[#f0f9ff]/50">
               {/* تبويب المحصل */}
               {settingsTab === 'collector' && (
                 <div className="space-y-4">
@@ -7212,7 +7212,7 @@ export default function MainApp({
 
       {/* نافذة الإرساليات الجديدة لتعديل السجل الورقي للكاتب */}
       {showWriterConsignmentsModal && (
-        <div
+        <div data-backdrop-close className="app-modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -7228,9 +7228,9 @@ export default function MainApp({
             padding: '16px'
           }}
         >
-          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="app-modal-panel bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* رأس النافذة */}
-            <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-amber-50 to-white">
+            <div className="app-modal-header p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-amber-50 to-white">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
                   <Bell className="w-5 h-5" />
@@ -7275,7 +7275,7 @@ export default function MainApp({
                   <span className="hidden sm:inline">طباعة</span>
                 </button>
 
-                <button
+                <button data-modal-close
                   type="button"
                   onClick={() => setShowWriterConsignmentsModal(false)}
                   className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition"
@@ -7336,7 +7336,7 @@ export default function MainApp({
             </div>
 
             {/* جسم النافذة: الجدول وقائمة الإرساليات */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-5">
+            <div className="app-modal-body flex-1 overflow-y-auto p-4 md:p-5">
               {displayedWriterItems.length === 0 ? (
                 <div className="text-center py-12 bg-slate-50/60 rounded-3xl border border-dashed border-slate-200 my-4 space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
@@ -7436,7 +7436,7 @@ export default function MainApp({
             </div>
 
             {/* ذيل النافذة */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div className="app-modal-footer p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <div>
                 إجمالي الإرساليات المعروضة: <strong className="text-slate-800">{displayedWriterItems.length}</strong> حركة
               </div>

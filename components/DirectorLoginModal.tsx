@@ -47,8 +47,8 @@ export default function DirectorLoginModal({ onSuccess, onCancel }: DirectorLogi
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 font-sans" dir="rtl">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-200">
+    <div className="app-modal-overlay fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 font-sans" dir="rtl">
+      <div className="app-modal-panel bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-200">
         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-blue-700 to-cyan-500 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-500/30">
           ماء
         </div>
@@ -85,7 +85,7 @@ export default function DirectorLoginModal({ onSuccess, onCancel }: DirectorLogi
           </button>
 
           {onCancel && (
-            <button
+            <button data-modal-close
               type="button"
               onClick={onCancel}
               className="w-full py-2.5 text-xs text-slate-500 hover:text-slate-700 font-bold"

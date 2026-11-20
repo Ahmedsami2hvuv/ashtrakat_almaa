@@ -792,3 +792,130 @@ body {
 .animate-fadeIn {
   animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+
+/* =====================================================================
+   النوافذ المنبثقة: دائماً ضمن حجم الشاشة (هاتف وحاسوب)
+   - الرأس وزر الإغلاق ظاهرين دائماً، والجسم يتمرر من الداخل
+   - 100dvh يحسب شريط عنوان المتصفح بالهاتف (مع 100vh احتياطاً)
+   ===================================================================== */
+.app-modal-overlay {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+/* أقصى عرض = عرض الشاشة (بأولوية منخفضة حتى يبقى عرض النافذة الأصلي إذا كان أصغر) */
+:where(.app-modal-panel) {
+  max-width: calc(100vw - 1rem);
+}
+.app-modal-panel {
+  box-sizing: border-box !important;
+  max-height: calc(100vh - 2rem) !important;
+  max-height: calc(100dvh - 2rem) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+/* نوافذ تملأ شاشة الهاتف بالكامل */
+.app-modal-panel.app-modal-panel--full {
+  max-height: 100% !important;
+}
+@media (max-width: 639px) {
+  .app-modal-panel.app-modal-panel--full {
+    max-width: 100%;
+  }
+}
+@media (min-width: 640px) {
+  .app-modal-panel.app-modal-panel--full {
+    max-height: calc(100vh - 2rem) !important;
+    max-height: calc(100dvh - 2rem) !important;
+  }
+}
+.app-modal-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 6;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+/* العنوان يتقلص ويلتف حتى لا يدفع زر الإغلاق خارج الشاشة */
+.app-modal-header > :first-child {
+  min-width: 0;
+  flex: 1 1 0%;
+}
+.app-modal-footer {
+  position: sticky !important;
+  bottom: 0;
+  z-index: 6;
+  flex-shrink: 0 !important;
+}
+.app-modal-header:not([class*="bg-"]):not([style*="background"]),
+.app-modal-footer:not([class*="bg-"]):not([style*="background"]) {
+  background-color: inherit;
+}
+/* يغطي الفراغ (حشوة النافذة) فوق الرأس وتحت الأزرار حتى لا يبين المحتوى من وراها */
+.app-modal-header:not([class*="bg-"]):not([style*="background"]) {
+  box-shadow: 0 -2rem 0 #ffffff;
+}
+.app-modal-footer:not([class*="bg-"]):not([style*="background"]) {
+  box-shadow: 0 2rem 0 #ffffff;
+}
+.app-modal-body {
+  flex: 1 1 auto !important;
+  min-height: min(8rem, 25vh) !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+/* رأس طويل (فيه حقول وبحث): يتمرر هو أيضاً وسطر العنوان وزر الإغلاق يبقى ظاهر */
+.app-modal-header.app-modal-header--tall {
+  max-height: 45vh;
+  max-height: 45dvh;
+  overflow-y: auto;
+}
+.app-modal-titlebar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #ffffff;
+}
+
+/* أصناف مستخدمة بالكود وما كانت معرّفة */
+.z-\[10050\] { z-index: 10050; }
+.flex-initial { flex: 0 1 auto; }
+.flex-shrink-0 { flex-shrink: 0; }
+.shrink { flex-shrink: 1; }
+.w-auto { width: auto; }
+.items-stretch { align-items: stretch; }
+.my-auto { margin-top: auto; margin-bottom: auto; }
+.overflow-auto { overflow: auto; }
+.min-h-\[46px\] { min-height: 46px; }
+.max-w-sm { max-width: 24rem; }
+.max-w-md { max-width: 28rem; }
+.max-w-lg { max-width: 32rem; }
+.max-w-xl { max-width: 36rem; }
+.max-w-2xl { max-width: 42rem; }
+.max-w-4xl { max-width: 56rem; }
+.max-w-5xl { max-width: 64rem; }
+.max-w-6xl { max-width: 72rem; }
+.max-w-7xl { max-width: 80rem; }
+.max-w-full { max-width: 100%; }
+.max-w-\[48\%\] { max-width: 48%; }
+.max-w-\[70\%\] { max-width: 70%; }
+.max-w-\[95vw\] { max-width: 95vw; }
+.max-w-\[42vw\] { max-width: 42vw; }
+.max-w-\[28vw\] { max-width: 28vw; }
+.max-w-\[130px\] { max-width: 130px; }
+.max-w-\[200px\] { max-width: 200px; }
+.max-w-\[220px\] { max-width: 220px; }
+.max-w-\[440px\] { max-width: 440px; }
+.max-w-\[460px\] { max-width: 460px; }
+.max-w-\[1600px\] { max-width: 1600px; }
+.max-w-\[210mm\] { max-width: 210mm; }
+@media (min-width: 640px) {
+  .sm\:max-w-none { max-width: none; }
+  .sm\:max-w-\[220px\] { max-width: 220px; }
+}

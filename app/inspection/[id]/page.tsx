@@ -296,7 +296,7 @@ export default function InspectionCitizenViewPage() {
         {/* نافذة معاينة الصورة المحسنة بالكامل للهواتف */}
         {selectedImage && (
           <div
-            className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 overflow-y-auto"
+            className="app-modal-overlay fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-between p-4 overflow-y-auto"
             onClick={() => setSelectedImage(null)}
           >
             {/* شريط علوي بارز يضمن ظهور زر الإغلاق 100% */}
@@ -304,7 +304,7 @@ export default function InspectionCitizenViewPage() {
               <span className="text-xs font-black text-white bg-white/20 px-3.5 py-1.5 rounded-full border border-white/20">
                 معاينة الصورة
               </span>
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={() => setSelectedImage(null)}
                 className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-5 py-2 rounded-full text-xs font-black shadow-2xl border border-rose-400 cursor-pointer shrink-0"

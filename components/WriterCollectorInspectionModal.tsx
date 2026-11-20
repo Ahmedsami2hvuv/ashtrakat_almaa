@@ -205,7 +205,7 @@ export default function WriterCollectorInspectionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      className="app-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
       style={{
         backgroundColor: 'rgba(15, 23, 42, 0.55)',
         backdropFilter: 'blur(25px)',
@@ -214,11 +214,11 @@ export default function WriterCollectorInspectionModal({
       dir="rtl"
     >
       <div
-        className="relative w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden my-auto border border-white/80 bg-white/95 backdrop-blur-3xl text-slate-900 flex flex-col"
-        style={{ minHeight: '80vh' }}
+        className="app-modal-panel relative w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden my-auto border border-white/80 bg-white/95 backdrop-blur-3xl text-slate-900 flex flex-col"
+        style={{ minHeight: 'min(80vh, calc(100dvh - 2rem))' }}
       >
         {/* رأس النافذة */}
-        <header className="px-6 py-4 border-b border-slate-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between shrink-0">
+        <header className="app-modal-header px-6 py-4 border-b border-slate-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 bg-blue-50 text-blue-700 border border-blue-200 rounded-2xl flex items-center justify-center shadow-xs">
               <FileText className="w-6 h-6 stroke-[2.2]" />
@@ -234,7 +234,7 @@ export default function WriterCollectorInspectionModal({
             </div>
           </div>
 
-          <button
+          <button data-modal-close
             type="button"
             onClick={onClose}
             className="w-10 h-10 rounded-2xl bg-white hover:bg-rose-50 text-slate-900 hover:text-rose-600 flex items-center justify-center transition-all border border-slate-300 shadow-xs cursor-pointer active:scale-95"
@@ -245,7 +245,7 @@ export default function WriterCollectorInspectionModal({
         </header>
 
         {/* جسم النموذج */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 flex-1 flex flex-col justify-between">
+        <form onSubmit={handleSubmit} className="app-modal-body p-6 sm:p-8 space-y-6 flex-1 flex flex-col justify-between">
           <div className="space-y-6">
             {successMessage && (
               <div className="bg-emerald-50 border-2 border-emerald-400 text-emerald-950 p-4 rounded-2xl flex items-center gap-3 animate-fade-in text-sm font-black shadow-sm">

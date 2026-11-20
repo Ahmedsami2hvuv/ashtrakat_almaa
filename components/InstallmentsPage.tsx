@@ -640,8 +640,8 @@ export default function InstallmentsPage({
 
       {/* نافذة النجاح بعد الحفظ */}
       {saveSuccess && successSummary && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl border border-slate-100">
+        <div className="app-modal-overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="app-modal-panel bg-white rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl border border-slate-100">
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
               <Check className="w-7 h-7 stroke-[2.5]" />
             </div>
@@ -669,7 +669,7 @@ export default function InstallmentsPage({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="app-modal-footer flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -695,7 +695,7 @@ export default function InstallmentsPage({
                 إرسالية جديدة
               </button>
 
-              <button
+              <button data-modal-close
                 type="button"
                 onClick={onClose}
                 className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm"
